@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Shattered Realms</title>
+  <link rel="stylesheet" href="src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1>SHATTERED REALMS</h1>
+        <p>Prototype 0.1 — World Map → Territory → Dungeon</p>
+      </div>
+      <button id="backBtn" class="ghost hidden">Return to World</button>
+    </header>
+
+    <main>
+      <section id="worldView" class="panel active">
+        <div class="world-map">
+          <div class="ocean-glow"></div>
+          <button class="realm r1" data-realm="Ashenreach">
+            <span>Ashenreach</span>
+          </button>
+          <button class="realm r2 locked"><span>Frostmere</span></button>
+          <button class="realm r3 locked"><span>Verdant Crown</span></button>
+          <button class="realm r4 locked"><span>Obsidian Vale</span></button>
+          <div class="map-caption">Select Ashenreach to enter the first playable territory.</div>
+        </div>
+      </section>
+
+      <section id="territoryView" class="panel">
+        <div class="hud">
+          <div><strong id="territoryName">Ashenreach</strong><span>Territory Control: <b id="controlValue">0%</b></span></div>
+          <div><span>Hero: Kael</span><span>Army: 120</span><span>Relics: 0</span></div>
+        </div>
+        <div id="territoryBoard" class="territory-board">
+          <div class="fog-layer"></div>
+          <div class="terrain terrain-a"></div>
+          <div class="terrain terrain-b"></div>
+          <button id="hero" class="hero" title="Hero unit">K</button>
+          <button id="city" class="poi city hidden-poi">CITY</button>
+          <button id="dungeon" class="poi dungeon hidden-poi">DUNGEON</button>
+          <button id="beast" class="poi beast hidden-poi">BEAST</button>
+          <div class="instructions">Tap the board to move your hero. Explore to reveal the city, dungeon and encounters.</div>
+        </div>
+      </section>
+
+      <section id="dungeonView" class="panel">
+        <div class="dungeon-scene">
+          <div class="door"></div>
+          <h2>THE SUNDERED VAULT</h2>
+          <p>Dungeon shell loaded. Encounters, rooms, loot and boss logic come next.</p>
+          <button id="leaveDungeon" class="primary">Return to Territory</button>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="src/game.js"></script>
+</body>
+</html>
