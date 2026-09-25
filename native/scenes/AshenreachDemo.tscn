@@ -317,7 +317,7 @@ no_depth_test = true
 
 [node name="MovementBoard" type="Node3D" parent="."]
 
-[node name="HeroUnit" type="Area3D" parent="MovementBoard" groups=["unit"]]
+[node name="HeroUnit" type="Area3D" parent="MovementBoard" groups=["board_piece", "hero_piece"]]
 position = Vector3(0.0, 5.0, 7.5)
 [node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/HeroUnit"]
 shape = SubResource("SphereShape_unit")
@@ -335,7 +335,7 @@ material_override = SubResource("Material_selection")
 
 [node name="HeroLabel" type="Label3D" parent="MovementBoard/HeroUnit"]
 position = Vector3(0, 2.5, 0)
-text = "HERO"
+text = "IGNIS"
 font_size = 28
 pixel_size = 0.025
 outline_size = 5
@@ -519,7 +519,7 @@ theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="UI/MovementPanel/Margin/VBox"]
 layout_mode = 2
-text = "MOVE HERO"
+text = "MOVE IGNIS"
 theme_override_font_sizes/font_size = 22
 
 [node name="Stats" type="Label" parent="UI/MovementPanel/Margin/VBox"]
