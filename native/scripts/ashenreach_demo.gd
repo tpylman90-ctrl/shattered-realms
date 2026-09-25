@@ -217,9 +217,7 @@ func _select_poi(node: Node3D) -> void:
     poi_body.text = data["body"]
     poi_action.text = data["action"]
     poi_panel.visible = true
-    selected_label.text = data["title"]
-    selected_label.global_position = node.global_position + Vector3(0, 2.7, 0)
-    selected_label.visible = true
+    selected_label.visible = false
     selected_ring.global_position = node.global_position + Vector3(0, 0.18, 0)
     selected_ring.visible = true
     status_label.text = data["title"]
