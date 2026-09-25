@@ -1,0 +1,91 @@
+{
+  "territories": {
+    "ashen_wastes": {
+      "name": "The Ashen Wastes",
+      "stronghold": "Ashenreach",
+      "hero": "ignis",
+      "legendary_monster": "inferno_lord_vulgrim",
+      "boards": ["ashenreach"],
+      "dungeons": ["sundered_vault"]
+    },
+    "blighted_marsh": {
+      "name": "The Blighted Marsh",
+      "hero": "morana",
+      "legendary_monster": "mirl_mother_morvana"
+    },
+    "shadowfen_forest": {
+      "name": "Shadowfen Forest",
+      "legendary_monster": "xylos_weaver_of_rot"
+    },
+    "cursed_mire": {
+      "name": "The Cursed Mire",
+      "legendary_monster": "golgotha_soul_tainted"
+    },
+    "dragons_rest": {
+      "name": "Dragon's Rest",
+      "hero": "ignacia",
+      "legendary_monster": "ignis_rex"
+    }
+  },
+  "heroes": {
+    "ignis": {
+      "name": "Ignis, The Magma-Heart",
+      "class": "Pyromancer / Juggernaut",
+      "territory": "ashen_wastes",
+      "signature_ability": "Eruption Strike",
+      "movement_points": 3,
+      "piece_asset": ""
+    }
+  },
+  "legendary_monsters": {
+    "inferno_lord_vulgrim": {
+      "name": "Inferno-Lord Vulgrim",
+      "location": "The Ashen Wastes",
+      "tier": "World-Ending Threat / Apex Entity",
+      "combat_profile": "Cataclysmic fire attacks, boiling magma surges, and heat auras that melt frontline armor over time.",
+      "piece_asset": ""
+    },
+    "mirl_mother_morvana": {
+      "name": "Mirl-Mother Morvana",
+      "location": "The Blighted Marsh",
+      "tier": "Regional Terror / Swarm Patriarch",
+      "combat_profile": "Controls toxic bog tentacles and ancient curses while spawning waves of lesser marsh fiends.",
+      "piece_asset": ""
+    },
+    "xylos_weaver_of_rot": {
+      "name": "Xylos the Weaver of Rot",
+      "location": "Shadowfen Forest",
+      "tier": "Dread Sovereign / Apex Entity",
+      "combat_profile": "Traps targets in necrotic web-spans, drains life through localized web-zones, and inflicts compounding decay.",
+      "piece_asset": ""
+    },
+    "golgotha_soul_tainted": {
+      "name": "Golgotha the Soul-Tainted",
+      "location": "The Cursed Mire / Deadwind Hollow",
+      "tier": "Undead Titan / Necromancy Vanguard",
+      "combat_profile": "Wields spectral slashes and a soul-harvesting aura that raises fallen combatants as temporary phantom thralls.",
+      "piece_asset": ""
+    },
+    "ignis_rex": {
+      "name": "Ignis Rex",
+      "location": "Dragon's Rest",
+      "tier": "Dragon Monarch / Apex Entity",
+      "combat_profile": "Uses sweeping tail attacks, armored scale deflections, and high-intensity localized flame breath barrages.",
+      "piece_asset": ""
+    }
+  },
+  "boards": {
+    "ashenreach": {
+      "name": "Ashenreach",
+      "territory": "ashen_wastes",
+      "type": "stronghold",
+      "dungeon": "sundered_vault"
+    }
+  },
+  "dungeons": {
+    "sundered_vault": {
+      "name": "Sundered Vault",
+      "board": "ashenreach"
+    }
+  }
+}
