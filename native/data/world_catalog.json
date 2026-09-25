@@ -37,8 +37,11 @@
       "origin_territory": "ashen_wastes",
       "signature_ability": "Eruption Strike",
       "movement_points": 3,
-      "unlock_id": "hero_ignis",
-      "piece_asset": ""
+      "unlock_id": "magma_heart_cuirass",
+      "piece_asset": "res://assets/3d/heroes/08f82aae-ba7a-4eb7-9491-097fd56b8b3f_67b8de66283912f7e65b8a74c3120ba0.glb",
+      "piece_scale": 3,
+      "piece_y_offset": 0.08,
+      "unlock_item": "magma_heart_cuirass"
     },
     "vesper": {
       "name": "Vesper, The Frostbinder",
@@ -116,6 +119,13 @@
       "hero_unlock": "vesper",
       "description": "Vesper's crystalline chest armor. Acquiring this relic unlocks Vesper, The Frostbinder, for the player's hero roster.",
       "asset_source": "embedded_in_vesper_glb"
+    },
+    "magma_heart_cuirass": {
+      "name": "Magma-Heart Cuirass",
+      "type": "hero_relic",
+      "hero_unlock": "ignis",
+      "description": "Ignis's molten chest armor. Acquiring this relic unlocks Ignis, The Magma-Heart, for the player's hero roster.",
+      "asset_source": "embedded_in_ignis_glb"
     }
   },
   "player_progression": {
