@@ -234,7 +234,7 @@ func _try_select(screen_position: Vector2) -> void:
     var collider = hit.get("collider")
     if not collider:
         return
-    if collider.is_in_group("unit"):
+    if collider.is_in_group("board_piece"):
         _select_unit(collider)
     elif collider.is_in_group("move_node") and unit_selected:
         _select_move_destination(collider)
@@ -248,8 +248,8 @@ func _select_unit(_unit: Area3D) -> void:
     pending_path.clear()
     movement_panel.visible = true
     movement_confirm.disabled = true
-    movement_stats.text = "Hero selected. Movement points: %d\nTap a highlighted destination." % HERO_MOVE_POINTS
-    status_label.text = "Hero selected — choose a destination"
+    movement_stats.text = "Ignis selected. Movement points: %d\nTap a highlighted destination." % HERO_MOVE_POINTS
+    status_label.text = "Ignis selected — choose a destination"
     _focus_on_poi(hero_unit.global_position)
     _show_reachable_move_nodes()
 
@@ -336,7 +336,7 @@ func _confirm_unit_move() -> void:
     pending_path.clear()
     unit_selected = false
     movement_panel.visible = false
-    status_label.text = "Hero moved to %s" % current_move_node
+    status_label.text = "Ignis moved to %s" % current_move_node
 
 func _animate_unit_path(path: Array[String]) -> void:
     for i in range(1, path.size()):
