@@ -31,10 +31,10 @@ rings = 6
 
 [sub_resource type="StandardMaterial3D" id="Material_marker"]
 transparency = 1
-albedo_color = Color(0.18, 0.78, 0.72, 0.48)
+albedo_color = Color(0.18, 0.78, 0.72, 0.34)
 emission_enabled = true
 emission = Color(0.12, 0.9, 0.82, 1)
-emission_energy_multiplier = 1.25
+emission_energy_multiplier = 0.95
 shading_mode = 0
 
 [sub_resource type="SphereMesh" id="SphereMesh_vault_glow"]
