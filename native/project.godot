@@ -1,0 +1,27 @@
+; Engine configuration file.
+; Shattered Realms - Ashenreach Demo v0.1
+config_version=5
+
+[application]
+config/name="Shattered Realms"
+run/main_scene="res://scenes/AshenreachDemo.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/handheld/orientation=0
+
+[rendering]
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+textures/default_filters/use_nearest_mipmap_filter=false
+
+[input]
+reset_camera={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"physical_keycode":82)]
+}
