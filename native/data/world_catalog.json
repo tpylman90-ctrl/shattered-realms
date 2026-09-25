@@ -47,7 +47,9 @@
       "signature_ability": "Glacial Bastion",
       "movement_points": 3,
       "unlock_id": "hero_vesper",
-      "piece_asset": "res://assets/3d/heroes/vesper.glb"
+      "piece_asset": "res://assets/3d/heroes/c8e77735-5007-49e1-bd65-7588443969df-glb-2048-cachehit_eb682eeb80c6cb205f1321287f05cd39.glb",
+      "piece_scale": 3,
+      "piece_y_offset": 0.08
     }
   },
   "legendary_monsters": {
