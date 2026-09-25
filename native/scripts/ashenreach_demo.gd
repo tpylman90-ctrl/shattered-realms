@@ -11,7 +11,7 @@ var previous_pinch_distance := 0.0
 var touch_start := Vector2.ZERO
 var touch_moved := false
 var zoom_distance := 30.0
-const MIN_ZOOM := 12.0
+const MIN_ZOOM := 17.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
 
