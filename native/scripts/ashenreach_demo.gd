@@ -141,6 +141,10 @@ func _process(delta: float) -> void:
     if selected_ring.visible:
         var ring_pulse := 1.0 + sin(glow_time * 2.3) * 0.12
         selected_ring.scale = Vector3.ONE * ring_pulse
+    var hero_ring := hero_unit.get_node_or_null("BaseRing") as MeshInstance3D
+    if hero_ring:
+        var hero_pulse := 0.92 + sin(glow_time * 2.0) * 0.08
+        hero_ring.scale = Vector3.ONE * hero_pulse
 
 func reset_camera() -> void:
     yaw.rotation.y = deg_to_rad(-28.0)
@@ -245,7 +249,8 @@ func _select_unit(_unit: Area3D) -> void:
     movement_panel.visible = true
     movement_confirm.disabled = true
     movement_stats.text = "Hero selected. Movement points: %d\nTap a highlighted destination." % HERO_MOVE_POINTS
-    status_label.text = "Hero selected"
+    status_label.text = "Hero selected — choose a destination"
+    _focus_on_poi(hero_unit.global_position)
     _show_reachable_move_nodes()
 
 func _show_reachable_move_nodes() -> void:
