@@ -69,6 +69,45 @@ shading_mode = 0
 [sub_resource type="SphereShape3D" id="SphereShape_poi"]
 radius = 1.0
 
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_hero"]
+radius = 0.36
+height = 1.35
+radial_segments = 16
+rings = 8
+
+[sub_resource type="StandardMaterial3D" id="Material_hero"]
+albedo_color = Color(0.18, 0.34, 0.38, 1)
+metallic = 0.15
+roughness = 0.48
+emission_enabled = true
+emission = Color(0.03, 0.28, 0.25, 1)
+emission_energy_multiplier = 0.8
+
+[sub_resource type="SphereShape3D" id="SphereShape_unit"]
+radius = 0.7
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_move"]
+top_radius = 0.24
+bottom_radius = 0.24
+height = 0.05
+radial_segments = 20
+
+[sub_resource type="StandardMaterial3D" id="Material_move"]
+transparency = 1
+albedo_color = Color(0.12, 0.9, 0.76, 0.42)
+emission_enabled = true
+emission = Color(0.08, 0.95, 0.8, 1)
+emission_energy_multiplier = 1.2
+shading_mode = 0
+
+[sub_resource type="StandardMaterial3D" id="Material_move_target"]
+transparency = 1
+albedo_color = Color(0.95, 0.72, 0.18, 0.65)
+emission_enabled = true
+emission = Color(1, 0.62, 0.08, 1)
+emission_energy_multiplier = 1.8
+shading_mode = 0
+
 [sub_resource type="StyleBoxFlat" id="Style_top"]
 bg_color = Color(0.025, 0.035, 0.045, 0.88)
 corner_radius_bottom_left = 12
@@ -275,6 +314,123 @@ modulate = Color(0.92, 0.96, 0.94, 1)
 outline_modulate = Color(0.01, 0.02, 0.025, 0.96)
 billboard = 1
 no_depth_test = true
+
+[node name="MovementBoard" type="Node3D" parent="."]
+
+[node name="HeroUnit" type="Area3D" parent="MovementBoard" groups=["unit"]]
+position = Vector3(0.0, 5.0, 7.5)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/HeroUnit"]
+shape = SubResource("SphereShape_unit")
+[node name="Body" type="MeshInstance3D" parent="MovementBoard/HeroUnit"]
+position = Vector3(0, 0.75, 0)
+mesh = SubResource("CapsuleMesh_hero")
+material_override = SubResource("Material_hero")
+
+[node name="MoveNodes" type="Node3D" parent="MovementBoard"]
+
+[node name="BasaltCenter" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(0.0, 4.75, 7.5)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/BasaltCenter"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/BasaltCenter"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+[node name="Rattal" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(7.0, 5.15, 3.0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/Rattal"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/Rattal"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+[node name="CapitalSouth" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(2.0, 5.55, 1.0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/CapitalSouth"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/CapitalSouth"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+[node name="CapitalNorth" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(1.5, 6.25, -2.0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/CapitalNorth"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/CapitalNorth"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+[node name="EastBridge" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(10.0, 5.0, 5.2)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/EastBridge"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/EastBridge"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+[node name="VaultRoad" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(-6.8, 4.65, 7.4)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/VaultRoad"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/VaultRoad"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+[node name="VaultGate" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(-11.0, 5.0, 7.0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/VaultGate"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/VaultGate"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+[node name="MovementPanel" type="PanelContainer" parent="UI"]
+visible = false
+offset_left = 720.0
+offset_top = 455.0
+offset_right = 1248.0
+offset_bottom = 688.0
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="Margin" type="MarginContainer" parent="UI/MovementPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="UI/MovementPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="UI/MovementPanel/Margin/VBox"]
+layout_mode = 2
+text = "MOVE HERO"
+theme_override_font_sizes/font_size = 22
+
+[node name="Stats" type="Label" parent="UI/MovementPanel/Margin/VBox"]
+layout_mode = 2
+text = "Select a highlighted destination."
+autowrap_mode = 2
+
+[node name="ConfirmButton" type="Button" parent="UI/MovementPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "Confirm Move"
+disabled = true
+theme_override_styles/normal = SubResource("Style_button")
+
+[node name="CancelButton" type="Button" parent="UI/MovementPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Cancel"
 
 [node name="CameraRig" type="Node3D" parent="."]
 position = Vector3(0, 3.5, 0)
