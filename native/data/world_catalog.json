@@ -46,10 +46,11 @@
       "origin_territory": "frostpeaks",
       "signature_ability": "Glacial Bastion",
       "movement_points": 3,
-      "unlock_id": "hero_vesper",
+      "unlock_id": "vesper_chestplate",
       "piece_asset": "res://assets/3d/heroes/c8e77735-5007-49e1-bd65-7588443969df-glb-2048-cachehit_eb682eeb80c6cb205f1321287f05cd39.glb",
       "piece_scale": 3,
-      "piece_y_offset": 0.08
+      "piece_y_offset": 0.08,
+      "unlock_item": "vesper_chestplate"
     }
   },
   "legendary_monsters": {
@@ -107,5 +108,20 @@
     "mode": "player_roster",
     "rule": "Any hero present in the player's unlocked_heroes list may be selected for a territory board unless a future scenario explicitly restricts the roster.",
     "current_selected_hero": "ignis"
+  },
+  "collectibles": {
+    "vesper_chestplate": {
+      "name": "Frostbinder Chestplate",
+      "type": "hero_relic",
+      "hero_unlock": "vesper",
+      "description": "Vesper's crystalline chest armor. Acquiring this relic unlocks Vesper, The Frostbinder, for the player's hero roster.",
+      "asset_source": "embedded_in_vesper_glb"
+    }
+  },
+  "player_progression": {
+    "hero_unlock_rule": "A hero becomes selectable when the player owns the collectible referenced by that hero's unlock_item field.",
+    "collectible_types": [
+      "hero_relic"
+    ]
   }
 }
