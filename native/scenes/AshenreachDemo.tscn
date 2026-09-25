@@ -16,12 +16,12 @@ tonemap_mode = 2
 [sub_resource type="BoxShape3D" id="BoxShape_gate"]
 size = Vector3(8.2, 7.0, 5.0)
 
-[sub_resource type="BoxMesh" id="BoxMesh_bedrock"]
-size = Vector3(45, 5.0, 45)
+[sub_resource type="PlaneMesh" id="PlaneMesh_bedrock"]
+size = Vector2(34, 24)
 
 [sub_resource type="StandardMaterial3D" id="Material_bedrock"]
-albedo_color = Color(0.075, 0.07, 0.062, 1)
-roughness = 0.94
+albedo_color = Color(0.095, 0.085, 0.072, 1)
+roughness = 1.0
 metallic = 0.0
 
 [sub_resource type="StyleBoxFlat" id="Style_top"]
@@ -75,8 +75,8 @@ omni_range = 15.0
 shadow_enabled = false
 
 [node name="BedrockUnderlay" type="MeshInstance3D" parent="."]
-position = Vector3(0, -5.2, 0)
-mesh = SubResource("BoxMesh_bedrock")
+position = Vector3(0, -2.8, 0)
+mesh = SubResource("PlaneMesh_bedrock")
 material_override = SubResource("Material_bedrock")
 cast_shadow = 1
 
@@ -101,25 +101,27 @@ groups = ["dungeon_gate"]
 shape = SubResource("BoxShape_gate")
 
 [node name="SunderedVaultLabel" type="Label3D" parent="."]
-position = Vector3(-11.5, 9.5, 7.0)
+position = Vector3(-11.5, 8.2, 7.0)
 text = "SUNDERED VAULT"
-font_size = 44
-outline_size = 12
-modulate = Color(0.84, 0.96, 0.92, 1)
-outline_modulate = Color(0.015, 0.025, 0.028, 0.95)
+font_size = 28
+pixel_size = 0.035
+outline_size = 5
+modulate = Color(0.84, 0.96, 0.92, 0.96)
+outline_modulate = Color(0.015, 0.025, 0.028, 0.96)
 billboard = 1
-fixed_size = true
+fixed_size = false
 no_depth_test = true
 
 [node name="CapitalLabel" type="Label3D" parent="."]
-position = Vector3(1.5, 10.5, -2.0)
+position = Vector3(1.5, 8.8, -2.0)
 text = "CAPITAL RUINS"
-font_size = 44
-outline_size = 12
-modulate = Color(0.94, 0.9, 0.78, 1)
-outline_modulate = Color(0.015, 0.025, 0.028, 0.95)
+font_size = 28
+pixel_size = 0.035
+outline_size = 5
+modulate = Color(0.94, 0.9, 0.78, 0.96)
+outline_modulate = Color(0.015, 0.025, 0.028, 0.96)
 billboard = 1
-fixed_size = true
+fixed_size = false
 no_depth_test = true
 
 [node name="CameraRig" type="Node3D" parent="."]
