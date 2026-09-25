@@ -36,6 +36,7 @@ var pending_path: Array[String] = []
 var selected_hero_id := "ignis"
 var unlocked_heroes: Array[String] = ["ignis", "vesper"]
 var hero_catalog: Dictionary = {}
+var active_hero_model: Node3D
 var hero_move_points := 3
 
 const MIN_ZOOM := 16.0
@@ -296,8 +297,43 @@ func _apply_selected_hero() -> void:
     hero_label.text = short_name
     status_label.text = "%s selected" % display_name
     $UI/TopBar/Row/HeroButton.text = short_name
-    # The real 3D model will replace the placeholder body when its asset exists.
-    # Selection, movement, stats, and save state remain independent of the model.
+    _apply_hero_visual(data)
+
+func _apply_hero_visual(data: Dictionary) -> void:
+    if active_hero_model and is_instance_valid(active_hero_model):
+        active_hero_model.queue_free()
+        active_hero_model = null
+
+    var placeholder := hero_unit.get_node_or_null("Body") as MeshInstance3D
+    var asset_path: String = data.get("piece_asset", "")
+    if asset_path == "" or not ResourceLoader.exists(asset_path):
+        if placeholder:
+            placeholder.visible = true
+        return
+
+    var packed := load(asset_path) as PackedScene
+    if not packed:
+        if placeholder:
+            placeholder.visible = true
+        return
+
+    var instance := packed.instantiate()
+    if not instance is Node3D:
+        instance.queue_free()
+        if placeholder:
+            placeholder.visible = true
+        return
+
+    active_hero_model = instance as Node3D
+    active_hero_model.name = "HeroModel"
+    var piece_scale := float(data.get("piece_scale", 1.0))
+    var y_offset := float(data.get("piece_y_offset", 0.0))
+    active_hero_model.scale = Vector3.ONE * piece_scale
+    active_hero_model.position = Vector3(0.0, y_offset, 0.0)
+    hero_unit.add_child(active_hero_model)
+
+    if placeholder:
+        placeholder.visible = false
 
 func _select_unit(_unit: Area3D) -> void:
     _close_poi_panel()
