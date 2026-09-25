@@ -34,7 +34,8 @@ var current_move_node := "BasaltCenter"
 var pending_move_node := ""
 var pending_path: Array[String] = []
 var selected_hero_id := "ignis"
-var unlocked_heroes: Array[String] = ["ignis", "vesper"]
+var owned_collectibles: Array[String] = ["vesper_chestplate"]
+var unlocked_heroes: Array[String] = []
 var hero_catalog: Dictionary = {}
 var active_hero_model: Node3D
 var hero_move_points := 3
@@ -141,6 +142,7 @@ func _ready() -> void:
     $UI/TopBar/Row/HeroButton.pressed.connect(_open_hero_select)
     $UI/HeroSelectPanel/Margin/VBox/CloseButton.pressed.connect(_close_hero_select)
     _load_hero_catalog()
+    _refresh_unlocked_heroes()
     _apply_selected_hero()
 
 func _process(delta: float) -> void:
@@ -259,6 +261,26 @@ func _load_hero_catalog() -> void:
     var parsed = JSON.parse_string(file.get_as_text())
     if parsed is Dictionary:
         hero_catalog = parsed.get("heroes", {})
+
+func _refresh_unlocked_heroes() -> void:
+    unlocked_heroes.clear()
+    for hero_id in hero_catalog.keys():
+        var data: Dictionary = hero_catalog[hero_id]
+        var unlock_item: String = data.get("unlock_item", "")
+        if unlock_item == "":
+            # Heroes without a relic requirement can remain available by default.
+            unlocked_heroes.append(hero_id)
+        elif unlock_item in owned_collectibles:
+            unlocked_heroes.append(hero_id)
+
+    if selected_hero_id not in unlocked_heroes and not unlocked_heroes.is_empty():
+        selected_hero_id = unlocked_heroes[0]
+
+func grant_collectible(collectible_id: String) -> void:
+    if collectible_id in owned_collectibles:
+        return
+    owned_collectibles.append(collectible_id)
+    _refresh_unlocked_heroes()
 
 func _open_hero_select() -> void:
     _cancel_unit_move()
