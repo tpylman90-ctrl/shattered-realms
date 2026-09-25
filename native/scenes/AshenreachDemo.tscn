@@ -17,12 +17,15 @@ tonemap_mode = 2
 size = Vector2(36.5, 38.0)
 
 [sub_resource type="StandardMaterial3D" id="Material_bedrock"]
-albedo_color = Color(0.085, 0.075, 0.062, 1)
+albedo_color = Color(0.065, 0.06, 0.052, 1)
 roughness = 1.0
+emission_enabled = true
+emission = Color(0.018, 0.07, 0.065, 1)
+emission_energy_multiplier = 0.7
 
 [sub_resource type="SphereMesh" id="SphereMesh_marker"]
-radius = 0.24
-height = 0.48
+radius = 0.12
+height = 0.24
 radial_segments = 12
 rings = 6
 
@@ -48,6 +51,20 @@ emission = Color(0.04, 0.85, 0.75, 1)
 emission_energy_multiplier = 2.4
 shading_mode = 0
 cull_mode = 1
+
+[sub_resource type="TorusMesh" id="TorusMesh_selection"]
+inner_radius = 0.65
+outer_radius = 0.78
+rings = 24
+ring_segments = 12
+
+[sub_resource type="StandardMaterial3D" id="Material_selection"]
+transparency = 1
+albedo_color = Color(0.12, 0.95, 0.82, 0.65)
+emission_enabled = true
+emission = Color(0.08, 1.0, 0.86, 1)
+emission_energy_multiplier = 2.1
+shading_mode = 0
 
 [sub_resource type="SphereShape3D" id="SphereShape_poi"]
 radius = 1.0
@@ -242,6 +259,12 @@ position = Vector3(0, 1.2, 0)
 mesh = SubResource("SphereMesh_marker")
 material_override = SubResource("Material_marker")
 
+[node name="SelectedPOIRing" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("TorusMesh_selection")
+material_override = SubResource("Material_selection")
+rotation_degrees = Vector3(90, 0, 0)
+
 [node name="SelectedLabel" type="Label3D" parent="."]
 visible = false
 text = ""
@@ -334,6 +357,11 @@ custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 text = "Inspect"
 theme_override_styles/normal = SubResource("Style_button")
+
+[node name="CloseButton" type="Button" parent="UI/POIPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Close"
 
 [node name="Hint" type="Label" parent="UI"]
 offset_left = 16.0
