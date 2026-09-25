@@ -13,6 +13,11 @@ extends Node3D
 @onready var status_label: Label = $UI/TopBar/Status
 @onready var vault_glow: MeshInstance3D = $VaultMistGlow
 @onready var vault_light: OmniLight3D = $VaultMistLight
+@onready var hero_unit: Area3D = $MovementBoard/HeroUnit
+@onready var move_nodes_root: Node3D = $MovementBoard/MoveNodes
+@onready var movement_panel: PanelContainer = $UI/MovementPanel
+@onready var movement_stats: Label = $UI/MovementPanel/Margin/VBox/Stats
+@onready var movement_confirm: Button = $UI/MovementPanel/Margin/VBox/ConfirmButton
 
 var touches: Dictionary = {}
 var previous_pinch_distance := 0.0
@@ -21,10 +26,25 @@ var touch_moved := false
 var zoom_distance := 30.0
 var selected_poi := ""
 var glow_time := 0.0
+var unit_selected := false
+var current_move_node := "BasaltCenter"
+var pending_move_node := ""
+var pending_path: Array[String] = []
+const HERO_MOVE_POINTS := 3
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
+
+const MOVE_GRAPH := {
+    "BasaltCenter": ["Rattal", "CapitalSouth", "VaultRoad"],
+    "Rattal": ["BasaltCenter", "CapitalSouth", "EastBridge"],
+    "CapitalSouth": ["BasaltCenter", "Rattal", "CapitalNorth"],
+    "CapitalNorth": ["CapitalSouth"],
+    "EastBridge": ["Rattal"],
+    "VaultRoad": ["BasaltCenter", "VaultGate"],
+    "VaultGate": ["VaultRoad"]
+}
 
 const POI_DATA := {
     "SunderedVault": {
@@ -108,6 +128,9 @@ func _ready() -> void:
     poi_action.pressed.connect(_on_poi_action)
     $UI/POIPanel/Margin/VBox/CloseButton.pressed.connect(_close_poi_panel)
     $UI/TopBar/ResetButton.pressed.connect(reset_camera)
+    movement_confirm.pressed.connect(_confirm_unit_move)
+    $UI/MovementPanel/Margin/VBox/CancelButton.pressed.connect(_cancel_unit_move)
+    movement_panel.visible = false
 
 func _process(delta: float) -> void:
     glow_time += delta
@@ -130,6 +153,7 @@ func reset_camera() -> void:
     selected_ring.visible = false
     selected_poi = ""
     status_label.text = "Explore Ashenreach"
+    _cancel_unit_move()
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventScreenTouch:
@@ -204,8 +228,138 @@ func _try_select(screen_position: Vector2) -> void:
     if hit.is_empty():
         return
     var collider = hit.get("collider")
-    if collider and collider.is_in_group("poi"):
+    if not collider:
+        return
+    if collider.is_in_group("unit"):
+        _select_unit(collider)
+    elif collider.is_in_group("move_node") and unit_selected:
+        _select_move_destination(collider)
+    elif collider.is_in_group("poi") and not unit_selected:
         _select_poi(collider)
+
+func _select_unit(_unit: Area3D) -> void:
+    _close_poi_panel()
+    unit_selected = true
+    pending_move_node = ""
+    pending_path.clear()
+    movement_panel.visible = true
+    movement_confirm.disabled = true
+    movement_stats.text = "Hero selected. Movement points: %d\nTap a highlighted destination." % HERO_MOVE_POINTS
+    status_label.text = "Hero selected"
+    _show_reachable_move_nodes()
+
+func _show_reachable_move_nodes() -> void:
+    var reachable := _reachable_nodes(current_move_node, HERO_MOVE_POINTS)
+    for child in move_nodes_root.get_children():
+        var marker := child.get_node_or_null("Marker") as MeshInstance3D
+        if marker:
+            marker.visible = child.name in reachable and child.name != current_move_node
+
+func _reachable_nodes(start: String, max_steps: int) -> Array[String]:
+    var result: Array[String] = []
+    var frontier: Array = [[start, 0]]
+    var visited := {start: 0}
+    while not frontier.is_empty():
+        var item = frontier.pop_front()
+        var node_name: String = item[0]
+        var depth: int = item[1]
+        if node_name != start:
+            result.append(node_name)
+        if depth >= max_steps:
+            continue
+        for neighbor in MOVE_GRAPH.get(node_name, []):
+            if not visited.has(neighbor) or visited[neighbor] > depth + 1:
+                visited[neighbor] = depth + 1
+                frontier.append([neighbor, depth + 1])
+    return result
+
+func _shortest_move_path(start: String, goal: String) -> Array[String]:
+    if start == goal:
+        return [start]
+    var frontier: Array[String] = [start]
+    var came_from := {start: ""}
+    while not frontier.is_empty():
+        var current: String = frontier.pop_front()
+        for neighbor in MOVE_GRAPH.get(current, []):
+            if came_from.has(neighbor):
+                continue
+            came_from[neighbor] = current
+            if neighbor == goal:
+                var path: Array[String] = [goal]
+                var cursor: String = current
+                while cursor != "":
+                    path.push_front(cursor)
+                    cursor = came_from[cursor]
+                return path
+            frontier.append(neighbor)
+    return []
+
+func _select_move_destination(node: Area3D) -> void:
+    var destination := String(node.name)
+    var reachable := _reachable_nodes(current_move_node, HERO_MOVE_POINTS)
+    if destination not in reachable:
+        return
+    pending_path = _shortest_move_path(current_move_node, destination)
+    if pending_path.is_empty():
+        return
+    pending_move_node = destination
+    var cost := pending_path.size() - 1
+    movement_stats.text = "Destination: %s\nMovement cost: %d / %d\nRoute: %s" % [
+        destination,
+        cost,
+        HERO_MOVE_POINTS,
+        " → ".join(pending_path)
+    ]
+    movement_confirm.disabled = false
+    for child in move_nodes_root.get_children():
+        var marker := child.get_node_or_null("Marker") as MeshInstance3D
+        if marker:
+            marker.visible = child.name in reachable and child.name != current_move_node
+    var target_marker := node.get_node_or_null("Marker") as MeshInstance3D
+    if target_marker:
+        target_marker.visible = true
+
+func _confirm_unit_move() -> void:
+    if pending_move_node == "" or pending_path.size() < 2:
+        return
+    movement_confirm.disabled = true
+    movement_stats.text = "Moving..."
+    _hide_move_nodes()
+    await _animate_unit_path(pending_path)
+    current_move_node = pending_move_node
+    pending_move_node = ""
+    pending_path.clear()
+    unit_selected = false
+    movement_panel.visible = false
+    status_label.text = "Hero moved to %s" % current_move_node
+
+func _animate_unit_path(path: Array[String]) -> void:
+    for i in range(1, path.size()):
+        var node := move_nodes_root.get_node(path[i]) as Area3D
+        var target := node.global_position + Vector3(0, 0.25, 0)
+        var tween := create_tween()
+        tween.set_trans(Tween.TRANS_SINE)
+        tween.set_ease(Tween.EASE_IN_OUT)
+        tween.tween_property(hero_unit, "global_position", target, 0.55)
+        await tween.finished
+
+func _cancel_unit_move() -> void:
+    unit_selected = false
+    pending_move_node = ""
+    pending_path.clear()
+    if movement_panel:
+        movement_panel.visible = false
+    if movement_confirm:
+        movement_confirm.disabled = true
+    _hide_move_nodes()
+
+func _hide_move_nodes() -> void:
+    if not move_nodes_root:
+        return
+    for child in move_nodes_root.get_children():
+        var marker := child.get_node_or_null("Marker") as MeshInstance3D
+        if marker:
+            marker.visible = false
 
 func _select_poi(node: Node3D) -> void:
     if not POI_DATA.has(node.name):
