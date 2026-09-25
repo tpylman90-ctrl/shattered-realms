@@ -3,30 +3,123 @@ extends Node3D
 @onready var yaw: Node3D = $CameraRig
 @onready var pitch: Node3D = $CameraRig/Pitch
 @onready var camera: Camera3D = $CameraRig/Pitch/Camera3D
-@onready var gate_panel: PanelContainer = $UI/GatePanel
+@onready var poi_panel: PanelContainer = $UI/POIPanel
+@onready var poi_type: Label = $UI/POIPanel/Margin/VBox/Type
+@onready var poi_title: Label = $UI/POIPanel/Margin/VBox/Title
+@onready var poi_body: Label = $UI/POIPanel/Margin/VBox/Body
+@onready var poi_action: Button = $UI/POIPanel/Margin/VBox/ActionButton
+@onready var selected_label: Label3D = $SelectedLabel
 @onready var status_label: Label = $UI/TopBar/Status
+@onready var vault_glow: MeshInstance3D = $VaultMistGlow
+@onready var vault_light: OmniLight3D = $VaultMistLight
 
 var touches: Dictionary = {}
 var previous_pinch_distance := 0.0
 var touch_start := Vector2.ZERO
 var touch_moved := false
 var zoom_distance := 30.0
-const MIN_ZOOM := 17.0
+var selected_poi := ""
+var glow_time := 0.0
+
+const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
 
+const POI_DATA := {
+    "SunderedVault": {
+        "title": "Sundered Vault",
+        "type": "DUNGEON ENTRANCE",
+        "body": "An ancient sealed entrance beneath Ashenreach. Cold teal mist leaks from the forgotten vault.",
+        "action": "Enter"
+    },
+    "CapitalRuins": {
+        "title": "Ashenreach Capital Ruins",
+        "type": "PRIMARY OBJECTIVE",
+        "body": "The shattered seat of regional control. Claiming the capital will decide control of Ashenreach.",
+        "action": "Inspect"
+    },
+    "AshenPlains": {
+        "title": "Ashen Plains",
+        "type": "REGION",
+        "body": "Wind-scoured flats of ash, dead brush, and broken stone.",
+        "action": "Inspect"
+    },
+    "HighlandRidges": {
+        "title": "Highland Ridges",
+        "type": "REGION",
+        "body": "Broken high ground overlooking the eastern approaches.",
+        "action": "Inspect"
+    },
+    "AmbushPass": {
+        "title": "Ambush Pass",
+        "type": "CHOKEPOINT",
+        "body": "A narrow crossing ideal for raids, traps, and sudden attacks.",
+        "action": "Inspect"
+    },
+    "RattalPass": {
+        "title": "Rattal Pass",
+        "type": "CHOKEPOINT",
+        "body": "A constricted route between ruined walls and fractured cliffs.",
+        "action": "Inspect"
+    },
+    "ElevatedOutpost": {
+        "title": "Elevated Outpost",
+        "type": "TACTICAL POINT",
+        "body": "A raised defensive position with long sightlines over the eastern terrain.",
+        "action": "Inspect"
+    },
+    "Overlook": {
+        "title": "Overlook",
+        "type": "VANTAGE POINT",
+        "body": "A high observation point above the lower routes.",
+        "action": "Inspect"
+    },
+    "BasaltBarrens": {
+        "title": "Basalt Barrens",
+        "type": "REGION",
+        "body": "Cracked volcanic ground and weathered ruins stretching through central Ashenreach.",
+        "action": "Inspect"
+    },
+    "RitualTotems": {
+        "title": "Ritual Totems",
+        "type": "RITUAL SITE",
+        "body": "Ancient standing relics marking a forgotten ceremonial ground.",
+        "action": "Inspect"
+    },
+    "SunkenRemnants": {
+        "title": "Sunken Remnants",
+        "type": "RUIN FIELD",
+        "body": "Collapsed structures half-swallowed by the broken land.",
+        "action": "Inspect"
+    },
+    "DeadForest": {
+        "title": "Battle-Scarred Dead Forest",
+        "type": "REGION",
+        "body": "A ruined woodland burned, splintered, and scarred by old conflict.",
+        "action": "Inspect"
+    }
+}
+
 func _ready() -> void:
     reset_camera()
-    gate_panel.visible = false
-    $UI/GatePanel/Margin/VBox/EnterButton.pressed.connect(_on_enter_pressed)
+    poi_panel.visible = false
+    poi_action.pressed.connect(_on_poi_action)
     $UI/TopBar/ResetButton.pressed.connect(reset_camera)
+
+func _process(delta: float) -> void:
+    glow_time += delta
+    var pulse := 1.0 + sin(glow_time * 1.35) * 0.08
+    vault_glow.scale = Vector3.ONE * pulse
+    vault_light.light_energy = 5.0 + sin(glow_time * 1.7) * 0.65
 
 func reset_camera() -> void:
     yaw.rotation.y = deg_to_rad(-28.0)
     pitch.rotation.x = deg_to_rad(-38.0)
     zoom_distance = 30.0
     camera.position = Vector3(0.0, 0.0, zoom_distance)
-    gate_panel.visible = false
+    poi_panel.visible = false
+    selected_label.visible = false
+    selected_poi = ""
     status_label.text = "Explore Ashenreach"
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -102,9 +195,26 @@ func _try_select(screen_position: Vector2) -> void:
     if hit.is_empty():
         return
     var collider = hit.get("collider")
-    if collider and collider.is_in_group("dungeon_gate"):
-        gate_panel.visible = true
-        status_label.text = "Sundered Vault discovered"
+    if collider and collider.is_in_group("poi"):
+        _select_poi(collider)
 
-func _on_enter_pressed() -> void:
-    $UI/GatePanel/Margin/VBox/Body.text = "The vault is sealed in this first environment build. Dungeon exploration is the next gameplay layer."
+func _select_poi(node: Node3D) -> void:
+    if not POI_DATA.has(node.name):
+        return
+    selected_poi = node.name
+    var data: Dictionary = POI_DATA[selected_poi]
+    poi_type.text = data["type"]
+    poi_title.text = data["title"]
+    poi_body.text = data["body"]
+    poi_action.text = data["action"]
+    poi_panel.visible = true
+    selected_label.text = data["title"]
+    selected_label.global_position = node.global_position + Vector3(0, 2.7, 0)
+    selected_label.visible = true
+    status_label.text = data["title"]
+
+func _on_poi_action() -> void:
+    if selected_poi == "SunderedVault":
+        poi_body.text = "The vault is sealed in this environment build. Dungeon exploration is the next gameplay layer."
+    elif selected_poi != "":
+        poi_body.text += "\n\nLocation recorded for future territory gameplay."
