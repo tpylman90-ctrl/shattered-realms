@@ -3,10 +3,13 @@
     "ashen_wastes": {
       "name": "The Ashen Wastes",
       "stronghold": "Ashenreach",
-      "hero": "ignis",
       "legendary_monster": "inferno_lord_vulgrim",
-      "boards": ["ashenreach"],
-      "dungeons": ["sundered_vault"]
+      "boards": [
+        "ashenreach"
+      ],
+      "dungeons": [
+        "sundered_vault"
+      ]
     },
     "blighted_marsh": {
       "name": "The Blighted Marsh",
@@ -31,10 +34,20 @@
     "ignis": {
       "name": "Ignis, The Magma-Heart",
       "class": "Pyromancer / Juggernaut",
-      "territory": "ashen_wastes",
+      "origin_territory": "ashen_wastes",
       "signature_ability": "Eruption Strike",
       "movement_points": 3,
+      "unlock_id": "hero_ignis",
       "piece_asset": ""
+    },
+    "vesper": {
+      "name": "Vesper, The Frostbinder",
+      "class": "Cryomancer / Warden",
+      "origin_territory": "frostpeaks",
+      "signature_ability": "Glacial Bastion",
+      "movement_points": 3,
+      "unlock_id": "hero_vesper",
+      "piece_asset": "res://assets/3d/heroes/vesper.glb"
     }
   },
   "legendary_monsters": {
@@ -87,5 +100,10 @@
       "name": "Sundered Vault",
       "board": "ashenreach"
     }
+  },
+  "hero_selection": {
+    "mode": "player_roster",
+    "rule": "Any hero present in the player's unlocked_heroes list may be selected for a territory board unless a future scenario explicitly restricts the roster.",
+    "current_selected_hero": "ignis"
   }
 }
