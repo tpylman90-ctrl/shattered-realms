@@ -218,3 +218,20 @@ func _on_poi_action() -> void:
         poi_body.text = "The vault is sealed in this environment build. Dungeon exploration is the next gameplay layer."
     elif selected_poi != "":
         poi_body.text += "\n\nLocation recorded for future territory gameplay."
+
+
+func _tune_imported_terrain_materials(node: Node) -> void:
+    if node is MeshInstance3D:
+        var mesh_instance := node as MeshInstance3D
+        if mesh_instance.mesh:
+            for surface_index in range(mesh_instance.mesh.get_surface_count()):
+                var material := mesh_instance.get_active_material(surface_index)
+                if material is StandardMaterial3D:
+                    var tuned := (material as StandardMaterial3D).duplicate() as StandardMaterial3D
+                    tuned.metallic = 0.0
+                    tuned.metallic_texture = null
+                    tuned.roughness = 0.88
+                    tuned.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+                    mesh_instance.set_surface_override_material(surface_index, tuned)
+    for child in node.get_children():
+        _tune_imported_terrain_materials(child)
