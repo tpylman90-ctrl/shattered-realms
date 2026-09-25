@@ -34,7 +34,7 @@ var current_move_node := "BasaltCenter"
 var pending_move_node := ""
 var pending_path: Array[String] = []
 var selected_hero_id := "ignis"
-var owned_collectibles: Array[String] = ["vesper_chestplate"]
+var owned_collectibles: Array[String] = ["vesper_chestplate", "magma_heart_cuirass"]
 var unlocked_heroes: Array[String] = []
 var hero_catalog: Dictionary = {}
 var active_hero_model: Node3D
@@ -364,9 +364,9 @@ func _select_unit(_unit: Area3D) -> void:
     pending_path.clear()
     movement_panel.visible = true
     movement_confirm.disabled = true
-    var hero_name := hero_catalog.get(selected_hero_id, {}).get("name", "Hero")
+    var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
     movement_stats.text = "%s selected. Movement points: %d\nTap a highlighted destination." % [hero_name, hero_move_points]
-    status_label.text = "%s — choose a destination" % hero_catalog.get(selected_hero_id, {}).get("name", "Hero")
+    status_label.text = "%s — choose a destination" % hero_name
     _focus_on_poi(hero_unit.global_position)
     _show_reachable_move_nodes()
 
@@ -453,7 +453,8 @@ func _confirm_unit_move() -> void:
     pending_path.clear()
     unit_selected = false
     movement_panel.visible = false
-    status_label.text = "%s moved to %s" % [hero_catalog.get(selected_hero_id, {}).get("name", "Hero"), current_move_node]
+    var moved_hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
+    status_label.text = "%s moved to %s" % [moved_hero_name, current_move_node]
 
 func _animate_unit_path(path: Array[String]) -> void:
     for i in range(1, path.size()):
