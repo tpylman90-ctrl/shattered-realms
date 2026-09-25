@@ -9,6 +9,7 @@ extends Node3D
 @onready var poi_body: Label = $UI/POIPanel/Margin/VBox/Body
 @onready var poi_action: Button = $UI/POIPanel/Margin/VBox/ActionButton
 @onready var selected_label: Label3D = $SelectedLabel
+@onready var selected_ring: MeshInstance3D = $SelectedPOIRing
 @onready var status_label: Label = $UI/TopBar/Status
 @onready var vault_glow: MeshInstance3D = $VaultMistGlow
 @onready var vault_light: OmniLight3D = $VaultMistLight
@@ -101,24 +102,32 @@ const POI_DATA := {
 }
 
 func _ready() -> void:
+    _tune_imported_terrain_materials($TerrainRoot)
     reset_camera()
     poi_panel.visible = false
     poi_action.pressed.connect(_on_poi_action)
+    $UI/POIPanel/Margin/VBox/CloseButton.pressed.connect(_close_poi_panel)
     $UI/TopBar/ResetButton.pressed.connect(reset_camera)
 
 func _process(delta: float) -> void:
     glow_time += delta
     var pulse := 1.0 + sin(glow_time * 1.35) * 0.08
     vault_glow.scale = Vector3.ONE * pulse
+    vault_glow.position.y = 4.5 + sin(glow_time * 0.8) * 0.12
     vault_light.light_energy = 5.0 + sin(glow_time * 1.7) * 0.65
+    if selected_ring.visible:
+        var ring_pulse := 1.0 + sin(glow_time * 2.3) * 0.12
+        selected_ring.scale = Vector3.ONE * ring_pulse
 
 func reset_camera() -> void:
     yaw.rotation.y = deg_to_rad(-28.0)
     pitch.rotation.x = deg_to_rad(-38.0)
     zoom_distance = 30.0
+    yaw.position = Vector3(0.0, 3.5, 0.0)
     camera.position = Vector3(0.0, 0.0, zoom_distance)
     poi_panel.visible = false
     selected_label.visible = false
+    selected_ring.visible = false
     selected_poi = ""
     status_label.text = "Explore Ashenreach"
 
@@ -211,7 +220,10 @@ func _select_poi(node: Node3D) -> void:
     selected_label.text = data["title"]
     selected_label.global_position = node.global_position + Vector3(0, 2.7, 0)
     selected_label.visible = true
+    selected_ring.global_position = node.global_position + Vector3(0, 0.18, 0)
+    selected_ring.visible = true
     status_label.text = data["title"]
+    _focus_on_poi(node.global_position)
 
 func _on_poi_action() -> void:
     if selected_poi == "SunderedVault":
@@ -219,6 +231,20 @@ func _on_poi_action() -> void:
     elif selected_poi != "":
         poi_body.text += "\n\nLocation recorded for future territory gameplay."
 
+
+func _focus_on_poi(target: Vector3) -> void:
+    var desired := Vector3(target.x, max(target.y, 3.5), target.z)
+    var tween := create_tween()
+    tween.set_trans(Tween.TRANS_CUBIC)
+    tween.set_ease(Tween.EASE_OUT)
+    tween.tween_property(yaw, "position", desired, 0.45)
+
+func _close_poi_panel() -> void:
+    poi_panel.visible = false
+    selected_label.visible = false
+    selected_ring.visible = false
+    selected_poi = ""
+    status_label.text = "Explore Ashenreach"
 
 func _tune_imported_terrain_materials(node: Node) -> void:
     if node is MeshInstance3D:
