@@ -70,21 +70,21 @@ shading_mode = 0
 radius = 1.0
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_hero"]
-radius = 0.36
-height = 1.35
+radius = 0.52
+height = 1.9
 radial_segments = 16
 rings = 8
 
 [sub_resource type="StandardMaterial3D" id="Material_hero"]
-albedo_color = Color(0.18, 0.34, 0.38, 1)
+albedo_color = Color(0.08, 0.52, 0.58, 1)
 metallic = 0.15
 roughness = 0.48
 emission_enabled = true
-emission = Color(0.03, 0.28, 0.25, 1)
-emission_energy_multiplier = 0.8
+emission = Color(0.05, 0.65, 0.62, 1)
+emission_energy_multiplier = 1.8
 
 [sub_resource type="SphereShape3D" id="SphereShape_unit"]
-radius = 0.7
+radius = 1.2
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_move"]
 top_radius = 0.24
@@ -322,9 +322,25 @@ position = Vector3(0.0, 5.0, 7.5)
 [node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/HeroUnit"]
 shape = SubResource("SphereShape_unit")
 [node name="Body" type="MeshInstance3D" parent="MovementBoard/HeroUnit"]
-position = Vector3(0, 0.75, 0)
+position = Vector3(0, 0.95, 0)
 mesh = SubResource("CapsuleMesh_hero")
 material_override = SubResource("Material_hero")
+
+[node name="BaseRing" type="MeshInstance3D" parent="MovementBoard/HeroUnit"]
+position = Vector3(0, 0.08, 0)
+rotation_degrees = Vector3(90, 0, 0)
+scale = Vector3(0.9, 0.9, 0.9)
+mesh = SubResource("TorusMesh_selection")
+material_override = SubResource("Material_selection")
+
+[node name="HeroLabel" type="Label3D" parent="MovementBoard/HeroUnit"]
+position = Vector3(0, 2.5, 0)
+text = "HERO"
+font_size = 28
+pixel_size = 0.025
+outline_size = 5
+billboard = 1
+no_depth_test = true
 
 [node name="MoveNodes" type="Node3D" parent="MovementBoard"]
 
@@ -390,47 +406,6 @@ shape = SubResource("SphereShape_poi")
 visible = false
 mesh = SubResource("CylinderMesh_move")
 material_override = SubResource("Material_move")
-
-[node name="MovementPanel" type="PanelContainer" parent="UI"]
-visible = false
-offset_left = 720.0
-offset_top = 455.0
-offset_right = 1248.0
-offset_bottom = 688.0
-theme_override_styles/panel = SubResource("Style_panel")
-
-[node name="Margin" type="MarginContainer" parent="UI/MovementPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 18
-
-[node name="VBox" type="VBoxContainer" parent="UI/MovementPanel/Margin"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="Title" type="Label" parent="UI/MovementPanel/Margin/VBox"]
-layout_mode = 2
-text = "MOVE HERO"
-theme_override_font_sizes/font_size = 22
-
-[node name="Stats" type="Label" parent="UI/MovementPanel/Margin/VBox"]
-layout_mode = 2
-text = "Select a highlighted destination."
-autowrap_mode = 2
-
-[node name="ConfirmButton" type="Button" parent="UI/MovementPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 48)
-layout_mode = 2
-text = "Confirm Move"
-disabled = true
-theme_override_styles/normal = SubResource("Style_button")
-
-[node name="CancelButton" type="Button" parent="UI/MovementPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 42)
-layout_mode = 2
-text = "Cancel"
 
 [node name="CameraRig" type="Node3D" parent="."]
 position = Vector3(0, 3.5, 0)
@@ -519,11 +494,57 @@ custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 text = "Close"
 
+[node name="MovementPanel" type="PanelContainer" parent="UI"]
+visible = false
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -560.0
+offset_top = -250.0
+offset_right = -24.0
+offset_bottom = -24.0
+theme_override_styles/panel = SubResource("Style_panel")
+
+[node name="Margin" type="MarginContainer" parent="UI/MovementPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="UI/MovementPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="UI/MovementPanel/Margin/VBox"]
+layout_mode = 2
+text = "MOVE HERO"
+theme_override_font_sizes/font_size = 22
+
+[node name="Stats" type="Label" parent="UI/MovementPanel/Margin/VBox"]
+layout_mode = 2
+text = "Select a highlighted destination."
+autowrap_mode = 2
+
+[node name="ConfirmButton" type="Button" parent="UI/MovementPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "Confirm Move"
+disabled = true
+theme_override_styles/normal = SubResource("Style_button")
+
+[node name="CancelButton" type="Button" parent="UI/MovementPanel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Cancel"
+
+
 [node name="Hint" type="Label" parent="UI"]
 offset_left = 16.0
 offset_top = 670.0
 offset_right = 1264.0
 offset_bottom = 712.0
-text = "Drag to orbit • Pinch to zoom • Tap a glowing marker to inspect"
+text = "Drag to orbit • Pinch to zoom • Tap HERO to move • Tap markers to inspect"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.8, 0.84, 0.86, 0.82)
