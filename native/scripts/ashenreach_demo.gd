@@ -18,6 +18,9 @@ extends Node3D
 @onready var movement_panel: PanelContainer = $UI/MovementPanel
 @onready var movement_stats: Label = $UI/MovementPanel/Margin/VBox/Stats
 @onready var movement_confirm: Button = $UI/MovementPanel/Margin/VBox/ConfirmButton
+@onready var hero_select_panel: PanelContainer = $UI/HeroSelectPanel
+@onready var hero_roster_box: VBoxContainer = $UI/HeroSelectPanel/Margin/VBox/Roster
+@onready var hero_label: Label3D = $MovementBoard/HeroUnit/HeroLabel
 
 var touches: Dictionary = {}
 var previous_pinch_distance := 0.0
@@ -30,7 +33,10 @@ var unit_selected := false
 var current_move_node := "BasaltCenter"
 var pending_move_node := ""
 var pending_path: Array[String] = []
-const HERO_MOVE_POINTS := 3
+var selected_hero_id := "ignis"
+var unlocked_heroes: Array[String] = ["ignis", "vesper"]
+var hero_catalog: Dictionary = {}
+var hero_move_points := 3
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -131,6 +137,10 @@ func _ready() -> void:
     movement_confirm.pressed.connect(_confirm_unit_move)
     $UI/MovementPanel/Margin/VBox/CancelButton.pressed.connect(_cancel_unit_move)
     movement_panel.visible = false
+    $UI/TopBar/Row/HeroButton.pressed.connect(_open_hero_select)
+    $UI/HeroSelectPanel/Margin/VBox/CloseButton.pressed.connect(_close_hero_select)
+    _load_hero_catalog()
+    _apply_selected_hero()
 
 func _process(delta: float) -> void:
     glow_time += delta
@@ -241,6 +251,54 @@ func _try_select(screen_position: Vector2) -> void:
     elif collider.is_in_group("poi") and not unit_selected:
         _select_poi(collider)
 
+func _load_hero_catalog() -> void:
+    if not FileAccess.file_exists("res://data/world_catalog.json"):
+        return
+    var file := FileAccess.open("res://data/world_catalog.json", FileAccess.READ)
+    var parsed = JSON.parse_string(file.get_as_text())
+    if parsed is Dictionary:
+        hero_catalog = parsed.get("heroes", {})
+
+func _open_hero_select() -> void:
+    _cancel_unit_move()
+    _close_poi_panel()
+    for child in hero_roster_box.get_children():
+        child.queue_free()
+    for hero_id in unlocked_heroes:
+        if not hero_catalog.has(hero_id):
+            continue
+        var data: Dictionary = hero_catalog[hero_id]
+        var button := Button.new()
+        button.text = "%s  •  %s" % [data.get("name", hero_id), data.get("class", "Hero")]
+        button.custom_minimum_size = Vector2(0, 52)
+        button.disabled = hero_id == selected_hero_id
+        button.pressed.connect(_select_hero.bind(hero_id))
+        hero_roster_box.add_child(button)
+    hero_select_panel.visible = true
+
+func _close_hero_select() -> void:
+    hero_select_panel.visible = false
+
+func _select_hero(hero_id: String) -> void:
+    if hero_id not in unlocked_heroes or not hero_catalog.has(hero_id):
+        return
+    selected_hero_id = hero_id
+    _apply_selected_hero()
+    hero_select_panel.visible = false
+
+func _apply_selected_hero() -> void:
+    if not hero_catalog.has(selected_hero_id):
+        return
+    var data: Dictionary = hero_catalog[selected_hero_id]
+    hero_move_points = int(data.get("movement_points", 3))
+    var display_name: String = data.get("name", selected_hero_id)
+    var short_name := display_name.split(",")[0].to_upper()
+    hero_label.text = short_name
+    status_label.text = "%s selected" % display_name
+    $UI/TopBar/Row/HeroButton.text = short_name
+    # The real 3D model will replace the placeholder body when its asset exists.
+    # Selection, movement, stats, and save state remain independent of the model.
+
 func _select_unit(_unit: Area3D) -> void:
     _close_poi_panel()
     unit_selected = true
@@ -248,13 +306,14 @@ func _select_unit(_unit: Area3D) -> void:
     pending_path.clear()
     movement_panel.visible = true
     movement_confirm.disabled = true
-    movement_stats.text = "Ignis selected. Movement points: %d\nTap a highlighted destination." % HERO_MOVE_POINTS
-    status_label.text = "Ignis selected — choose a destination"
+    var hero_name := hero_catalog.get(selected_hero_id, {}).get("name", "Hero")
+    movement_stats.text = "%s selected. Movement points: %d\nTap a highlighted destination." % [hero_name, hero_move_points]
+    status_label.text = "%s — choose a destination" % hero_catalog.get(selected_hero_id, {}).get("name", "Hero")
     _focus_on_poi(hero_unit.global_position)
     _show_reachable_move_nodes()
 
 func _show_reachable_move_nodes() -> void:
-    var reachable := _reachable_nodes(current_move_node, HERO_MOVE_POINTS)
+    var reachable := _reachable_nodes(current_move_node, hero_move_points)
     for child in move_nodes_root.get_children():
         var marker := child.get_node_or_null("Marker") as MeshInstance3D
         if marker:
@@ -301,7 +360,7 @@ func _shortest_move_path(start: String, goal: String) -> Array[String]:
 
 func _select_move_destination(node: Area3D) -> void:
     var destination := String(node.name)
-    var reachable := _reachable_nodes(current_move_node, HERO_MOVE_POINTS)
+    var reachable := _reachable_nodes(current_move_node, hero_move_points)
     if destination not in reachable:
         return
     pending_path = _shortest_move_path(current_move_node, destination)
@@ -312,7 +371,7 @@ func _select_move_destination(node: Area3D) -> void:
     movement_stats.text = "Destination: %s\nMovement cost: %d / %d\nRoute: %s" % [
         destination,
         cost,
-        HERO_MOVE_POINTS,
+        hero_move_points,
         " → ".join(pending_path)
     ]
     movement_confirm.disabled = false
@@ -336,7 +395,7 @@ func _confirm_unit_move() -> void:
     pending_path.clear()
     unit_selected = false
     movement_panel.visible = false
-    status_label.text = "Ignis moved to %s" % current_move_node
+    status_label.text = "%s moved to %s" % [hero_catalog.get(selected_hero_id, {}).get("name", "Hero"), current_move_node]
 
 func _animate_unit_path(path: Array[String]) -> void:
     for i in range(1, path.size()):
