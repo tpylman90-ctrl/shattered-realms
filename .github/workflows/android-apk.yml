@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -58,12 +58,12 @@ jobs:
 
       - name: Show build output
         run: |
-          find native/build -maxdepth 2 -type f -print || true
+          find native/build -maxdepth 3 -type f -print || true
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: ShatteredRealms_AshenreachDemo_v0.1
-          path: native/build/ShatteredRealms_AshenreachDemo_v0.1.apk
+          path: native/build/Android APK/ShatteredRealms_AshenreachDemo_v0.1.apk
           if-no-files-found: error
           retention-days: 30
