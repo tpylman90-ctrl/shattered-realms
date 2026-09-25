@@ -40,7 +40,7 @@ jobs:
 
       - name: Verify required game assets exist
         run: |
-          test -f native/assets/3d/game-ready/ashenreach_terrain_game.glb
+          test -f native/assets/3d/game-ready/ashenreach_terrain_high.glb
           test -f native/assets/3d/game-ready/ashenreach_gate_game.glb
 
       - name: Export Godot Android debug APK
