@@ -1,0 +1,118 @@
+{
+  "id": "ashenreach",
+  "name": "Ashenreach",
+  "territory": "ashen_wastes",
+  "board_type": "stronghold",
+  "objectives": [
+    {
+      "id": "discover_vault",
+      "label": "Discover the Sundered Vault",
+      "type": "discover_poi",
+      "target": "SunderedVault"
+    },
+    {
+      "id": "claim_capital",
+      "label": "Secure the Capital Ruins",
+      "type": "claim_poi",
+      "target": "CapitalRuins"
+    },
+    {
+      "id": "scout_routes",
+      "label": "Scout 4 strategic locations",
+      "type": "discover_count",
+      "target": 4
+    }
+  ],
+  "poi_rules": {
+    "CapitalRuins": {
+      "claimable": true,
+      "discovery_radius": 5
+    },
+    "SunderedVault": {
+      "claimable": false,
+      "discovery_radius": 5
+    },
+    "AmbushPass": {
+      "claimable": true,
+      "discovery_radius": 4.5
+    },
+    "RattalPass": {
+      "claimable": true,
+      "discovery_radius": 4.5
+    },
+    "ElevatedOutpost": {
+      "claimable": true,
+      "discovery_radius": 4.5
+    },
+    "Overlook": {
+      "claimable": true,
+      "discovery_radius": 4.5
+    },
+    "BasaltBarrens": {
+      "claimable": false,
+      "discovery_radius": 5
+    },
+    "RitualTotems": {
+      "claimable": true,
+      "discovery_radius": 4.5
+    },
+    "SunkenRemnants": {
+      "claimable": false,
+      "discovery_radius": 4.5
+    },
+    "DeadForest": {
+      "claimable": false,
+      "discovery_radius": 5
+    },
+    "AshenPlains": {
+      "claimable": false,
+      "discovery_radius": 5
+    },
+    "HighlandRidges": {
+      "claimable": false,
+      "discovery_radius": 5
+    }
+  },
+  "encounters": {
+    "Rattal": {
+      "name": "Ash Raiders",
+      "type": "skirmish",
+      "danger": 1,
+      "xp": 25,
+      "health_loss": 8,
+      "description": "A raider band springs from the ruined pass."
+    },
+    "CapitalSouth": {
+      "name": "Ashbound Guardians",
+      "type": "elite",
+      "danger": 2,
+      "xp": 40,
+      "health_loss": 14,
+      "description": "Ancient guardians block the approach to the capital."
+    },
+    "EastBridge": {
+      "name": "Magma Hound Pack",
+      "type": "beast",
+      "danger": 2,
+      "xp": 35,
+      "health_loss": 12,
+      "description": "Magma hounds emerge from the fractured bridgeworks."
+    },
+    "VaultRoad": {
+      "name": "Cinder Wraiths",
+      "type": "undead",
+      "danger": 1,
+      "xp": 30,
+      "health_loss": 10,
+      "description": "Cinder wraiths gather along the road to the Sundered Vault."
+    }
+  },
+  "legendary_threat": {
+    "id": "inferno_lord_vulgrim",
+    "name": "Inferno-Lord Vulgrim",
+    "status": "dormant",
+    "heat": 0,
+    "max_heat": 100,
+    "escalation_per_turn": 5
+  }
+}
