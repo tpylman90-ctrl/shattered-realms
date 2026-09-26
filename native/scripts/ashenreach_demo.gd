@@ -1270,6 +1270,8 @@ func _restart_campaign() -> void:
     discovered_pois.clear()
     claimed_pois.clear()
     completed_encounters.clear()
+    if FileAccess.file_exists("user://sundered_vault_save.cfg"):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path("user://sundered_vault_save.cfg"))
 
     if move_nodes_root.has_node(current_move_node):
         var start_node := move_nodes_root.get_node(current_move_node) as Area3D
