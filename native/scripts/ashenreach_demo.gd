@@ -86,7 +86,8 @@ const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
 const HERO_GROUND_CLEARANCE := 0.025
-const ROAD_SAMPLE_SPACING := 0.45
+const ROAD_SAMPLE_SPACING := 0.22
+const ROAD_HEIGHT_TOLERANCE := 0.55
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -113,44 +114,81 @@ const MOVE_GRAPH := {
 const ROAD_PATHS := {
     "BasaltCenter|Rattal": [
         Vector3(0.0, 4.75, 7.5),
-        Vector3(1.8, 4.82, 6.7),
-        Vector3(3.6, 4.92, 5.6),
-        Vector3(5.2, 5.02, 4.4),
+        Vector3(0.7, 4.77, 7.25),
+        Vector3(1.35, 4.80, 6.95),
+        Vector3(2.05, 4.84, 6.62),
+        Vector3(2.75, 4.88, 6.20),
+        Vector3(3.45, 4.92, 5.72),
+        Vector3(4.05, 4.96, 5.25),
+        Vector3(4.65, 5.00, 4.78),
+        Vector3(5.25, 5.04, 4.30),
+        Vector3(5.85, 5.08, 3.82),
+        Vector3(6.45, 5.12, 3.38),
         Vector3(7.0, 5.15, 3.0)
     ],
     "BasaltCenter|CapitalSouth": [
         Vector3(0.0, 4.75, 7.5),
-        Vector3(0.35, 4.86, 5.8),
-        Vector3(0.8, 5.02, 4.2),
-        Vector3(1.35, 5.28, 2.6),
+        Vector3(0.10, 4.78, 6.95),
+        Vector3(-0.12, 4.82, 6.35),
+        Vector3(-0.28, 4.88, 5.72),
+        Vector3(-0.05, 4.94, 5.15),
+        Vector3(0.28, 5.00, 4.60),
+        Vector3(0.58, 5.08, 4.02),
+        Vector3(0.82, 5.16, 3.45),
+        Vector3(1.05, 5.26, 2.92),
+        Vector3(1.28, 5.36, 2.40),
+        Vector3(1.52, 5.44, 1.90),
+        Vector3(1.76, 5.50, 1.42),
         Vector3(2.0, 5.55, 1.0)
     ],
     "BasaltCenter|VaultRoad": [
         Vector3(0.0, 4.75, 7.5),
-        Vector3(-1.8, 4.70, 7.45),
-        Vector3(-3.6, 4.67, 7.30),
-        Vector3(-5.2, 4.65, 7.35),
+        Vector3(-0.65, 4.74, 7.52),
+        Vector3(-1.25, 4.72, 7.50),
+        Vector3(-1.90, 4.70, 7.46),
+        Vector3(-2.55, 4.69, 7.38),
+        Vector3(-3.15, 4.68, 7.30),
+        Vector3(-3.75, 4.67, 7.28),
+        Vector3(-4.35, 4.66, 7.30),
+        Vector3(-4.95, 4.65, 7.34),
+        Vector3(-5.55, 4.65, 7.38),
+        Vector3(-6.15, 4.65, 7.40),
         Vector3(-6.8, 4.65, 7.4)
     ],
     "Rattal|CapitalSouth": [
         Vector3(7.0, 5.15, 3.0),
-        Vector3(5.8, 5.18, 2.8),
-        Vector3(4.5, 5.26, 2.35),
-        Vector3(3.2, 5.40, 1.7),
+        Vector3(6.45, 5.16, 3.02),
+        Vector3(5.90, 5.18, 2.90),
+        Vector3(5.35, 5.21, 2.72),
+        Vector3(4.80, 5.25, 2.48),
+        Vector3(4.28, 5.29, 2.25),
+        Vector3(3.78, 5.34, 2.00),
+        Vector3(3.28, 5.40, 1.72),
+        Vector3(2.82, 5.45, 1.48),
+        Vector3(2.38, 5.50, 1.23),
         Vector3(2.0, 5.55, 1.0)
     ],
     "Rattal|EastBridge": [
         Vector3(7.0, 5.15, 3.0),
-        Vector3(7.9, 5.10, 3.55),
-        Vector3(8.8, 5.04, 4.15),
-        Vector3(9.45, 5.00, 4.75),
+        Vector3(7.42, 5.13, 3.22),
+        Vector3(7.82, 5.11, 3.50),
+        Vector3(8.18, 5.08, 3.82),
+        Vector3(8.58, 5.06, 4.08),
+        Vector3(8.95, 5.04, 4.38),
+        Vector3(9.30, 5.02, 4.65),
+        Vector3(9.66, 5.01, 4.92),
         Vector3(10.0, 5.0, 5.2)
     ],
     "CapitalSouth|CapitalNorth": [
         Vector3(2.0, 5.55, 1.0),
-        Vector3(1.9, 5.72, 0.25),
-        Vector3(1.75, 5.91, -0.55),
-        Vector3(1.6, 6.08, -1.3),
+        Vector3(2.04, 5.62, 0.65),
+        Vector3(2.00, 5.70, 0.30),
+        Vector3(1.92, 5.78, -0.05),
+        Vector3(1.84, 5.86, -0.42),
+        Vector3(1.76, 5.94, -0.78),
+        Vector3(1.69, 6.02, -1.10),
+        Vector3(1.62, 6.10, -1.42),
+        Vector3(1.56, 6.18, -1.72),
         Vector3(1.5, 6.25, -2.0)
     ],
     "VaultRoad|VaultGate": [
@@ -700,9 +738,9 @@ func _densify_and_ground_path(control_points: Array) -> Array:
     if control_points.is_empty():
         return result
 
-    var first: Vector3 = control_points[0]
-    first = _ground_point(first)
-    result.append(first)
+    var first_expected: Vector3 = control_points[0]
+    var first_grounded: Vector3 = _road_floor_point(first_expected)
+    result.append(first_grounded)
 
     for i in range(control_points.size() - 1):
         var a: Vector3 = control_points[i]
@@ -712,11 +750,21 @@ func _densify_and_ground_path(control_points: Array) -> Array:
 
         for step in range(1, steps + 1):
             var t: float = float(step) / float(steps)
-            var p: Vector3 = a.lerp(b, t)
-            p = _ground_point(p)
+            var expected: Vector3 = a.lerp(b, t)
+            var p: Vector3 = _road_floor_point(expected)
             result.append(p)
 
     return result
+
+func _road_floor_point(expected: Vector3) -> Vector3:
+    var grounded: Vector3 = _ground_point(expected)
+
+    # Do not let wall tops, rubble or props become temporary walking surfaces.
+    # The authored centerline already contains the intended road-floor profile.
+    if absf(grounded.y - expected.y) <= ROAD_HEIGHT_TOLERANCE:
+        return grounded
+
+    return Vector3(expected.x, expected.y + HERO_GROUND_CLEARANCE, expected.z)
 
 func _animate_unit_path(path: Array[String]) -> String:
     var reached_node: String = path[0]
