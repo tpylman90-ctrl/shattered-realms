@@ -17,6 +17,7 @@ extends Node3D
 @onready var move_nodes_root: Node3D = $MovementBoard/MoveNodes
 @onready var movement_panel: PanelContainer = $UI/MovementPanel
 @onready var movement_stats: Label = $UI/MovementPanel/Margin/VBox/Stats
+@onready var movement_title: Label = $UI/MovementPanel/Margin/VBox/Title
 @onready var movement_confirm: Button = $UI/MovementPanel/Margin/VBox/ConfirmButton
 @onready var hero_select_panel: PanelContainer = $UI/HeroSelectPanel
 @onready var hero_roster_box: VBoxContainer = $UI/HeroSelectPanel/Margin/VBox/Roster
@@ -561,6 +562,8 @@ func _apply_selected_hero() -> void:
     status_label.text = "%s selected" % display_name
     $UI/TopBar/Row/HeroButton.text = short_name
     _apply_hero_visual(data)
+    if movement_title:
+        movement_title.text = "MOVE %s" % short_name
 
 func _apply_hero_visual(data: Dictionary) -> void:
     if active_hero_model and is_instance_valid(active_hero_model):
@@ -599,7 +602,7 @@ func _apply_hero_visual(data: Dictionary) -> void:
     active_hero_model.position = Vector3(x_offset, y_offset + extra_y, z_offset)
     hero_unit.add_child(active_hero_model)
     await get_tree().process_frame
-    _snap_visual_to_ground(active_hero_model, 0.02)
+    _snap_visual_to_ground(active_hero_model, 0.0)
 
     if placeholder:
         placeholder.visible = false
@@ -647,6 +650,9 @@ func _select_unit(_unit: Area3D) -> void:
     movement_panel.visible = true
     movement_confirm.disabled = true
     var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
+    var hero_short: String = hero_name.split(",")[0].to_upper()
+    if movement_title:
+        movement_title.text = "MOVE %s" % hero_short
     movement_stats.text = "%s selected. Movement points: %d\nTap a highlighted destination." % [hero_name, hero_move_points]
     status_label.text = "%s — choose a destination" % hero_name
     _focus_on_poi(hero_unit.global_position)
@@ -1593,7 +1599,7 @@ func _refresh_enemy_board() -> void:
         piece.add_child(label)
 
         await get_tree().process_frame
-        _snap_visual_children_to_ground(piece, 0.02)
+        _snap_visual_children_to_ground(piece, 0.0)
         enemy_pieces[node_name] = piece
 
     _refresh_enemy_visibility()
