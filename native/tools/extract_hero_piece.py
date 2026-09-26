@@ -130,6 +130,18 @@ def extract(source, output, x_center_threshold):
     xs = [pos[v*3] for v in used]
     ys = [pos[v*3+1] for v in used]
     zs = [pos[v*3+2] for v in used]
+
+    # Ground the generated playable piece: shift the entire position buffer so
+    # the lowest vertex used by the selected hero sits exactly at local Y=0.
+    min_y_used = min(ys)
+    ground_offset = -min_y_used
+    if abs(ground_offset) > 1e-8:
+        for v in range(pos_count):
+            pos[v * 3 + 1] += ground_offset
+        pos_bytes = pos.tobytes()
+        raw[pos_start:pos_start + len(pos_bytes)] = pos_bytes
+        ys = [y + ground_offset for y in ys]
+
     print(
         f"{os.path.basename(output)}: {len(kept)//3} triangles, "
         f"bounds x=({min(xs):.3f},{max(xs):.3f}) "
