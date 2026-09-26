@@ -11,6 +11,9 @@ var sentinel_defeated := false
 var relic_claimed := false
 var ember_seal_effect_applied := false
 var moving := false
+var shrine_used := false
+var trap_triggered := false
+var cache_claimed := false
 
 var status_label: Label
 var objective_label: Label
@@ -21,13 +24,26 @@ var action_primary: Button
 var action_secondary: Button
 var sentinel_piece: Node3D
 var relic_glow: MeshInstance3D
+var shrine_glow: MeshInstance3D
+var trap_glow: MeshInstance3D
 
 const NODES: Array[Vector3] = [
     Vector3(0.0, 0.03, 7.0),
     Vector3(0.0, 0.03, 2.8),
-    Vector3(-2.4, 0.03, -1.0),
-    Vector3(0.0, 0.03, -4.8)
+    Vector3(-2.4, 0.03, -0.8),
+    Vector3(2.4, 0.03, -0.8),
+    Vector3(0.0, 0.03, -3.3),
+    Vector3(0.0, 0.03, -5.3)
 ]
+
+const DUNGEON_GRAPH := {
+    0: [1],
+    1: [0, 2, 3],
+    2: [1, 4],
+    3: [1, 4],
+    4: [2, 3, 5],
+    5: [4]
+}
 
 func _ready() -> void:
     _load_campaign_state()
@@ -118,6 +134,12 @@ func _build_dungeon_geometry() -> void:
     chamber.rotation_degrees.y = 0.0
     relic_glow = _add_box("RelicGlow", Vector3(0.0,0.85,-5.3), Vector3(0.75,1.0,0.75), ember)
     relic_glow.visible = not relic_claimed
+
+    shrine_glow = _add_box("ShrineRune", Vector3(2.4,0.08,-0.8), Vector3(1.25,0.08,1.25), teal)
+    shrine_glow.visible = not shrine_used
+
+    trap_glow = _add_box("TrapRune", Vector3(0.0,0.07,-3.3), Vector3(1.6,0.06,1.2), ember)
+    trap_glow.visible = not trap_triggered
 
     var teal_light := OmniLight3D.new()
     teal_light.position = Vector3(0.0,2.2,-1.0)
@@ -271,7 +293,7 @@ func _build_ui() -> void:
     margin.add_child(box)
 
     var title := Label.new()
-    title.text = "SUNDERED VAULT  •  FIRST CHAMBER"
+    title.text = "SUNDERED VAULT  •  LOWER HALLS"
     title.add_theme_font_size_override("font_size", 24)
     box.add_child(title)
 
@@ -352,14 +374,21 @@ func _try_select_node(screen_pos: Vector2) -> void:
         _try_move_to(target_index)
 
 func _try_move_to(target_index: int) -> void:
-    if abs(target_index - current_node) != 1:
-        status_label.text = "Move through the chamber one section at a time."
+    var neighbors: Array = DUNGEON_GRAPH.get(current_node, [])
+    if target_index not in neighbors:
+        status_label.text = "That chamber is not connected from here."
         return
-    if current_node == 1 and target_index == 2 and not sentinel_defeated:
+    if target_index == 2 and not sentinel_defeated:
         _open_sentinel_encounter()
         return
+
     await _move_to(target_index)
-    if current_node == 3 and not relic_claimed:
+
+    if current_node == 3 and not shrine_used:
+        _open_shrine()
+    elif current_node == 4 and not trap_triggered:
+        _trigger_trap()
+    elif current_node == 5 and not relic_claimed:
         _open_relic_chamber()
 
 func _move_to(target_index: int) -> void:
@@ -383,7 +412,8 @@ func _refresh_node_markers() -> void:
             var idx: int = int(child.get_meta("node_index"))
             var marker := child.get_node_or_null("Marker") as MeshInstance3D
             if marker:
-                marker.visible = not moving and abs(idx-current_node) == 1
+                var neighbors: Array = DUNGEON_GRAPH.get(current_node, [])
+                marker.visible = not moving and idx in neighbors
 
 func _open_sentinel_encounter() -> void:
     action_title.text = "Vault Sentinel"
@@ -404,6 +434,37 @@ func _fight_sentinel() -> void:
     status_label.text = "The Vault Sentinel falls. The inner chamber is open."
     _save_campaign_state()
     await _move_to(2)
+
+func _open_shrine() -> void:
+    action_title.text = "Rune Shrine"
+    action_body.text = "Ancient cooling runes still hold power here. The shrine can restore 25 health once before its light fades.\n\nHealth: %d/100" % hero_health
+    action_primary.text = "Rest at Shrine"
+    for connection in action_primary.pressed.get_connections():
+        action_primary.pressed.disconnect(connection.callable)
+    action_primary.pressed.connect(_use_shrine)
+    action_panel.visible = true
+
+func _use_shrine() -> void:
+    shrine_used = true
+    hero_health = mini(100, hero_health + 25)
+    if shrine_glow:
+        shrine_glow.visible = false
+    action_panel.visible = false
+    status_label.text = "The Rune Shrine restores your strength."
+    _save_campaign_state()
+    _save_dungeon_state()
+    _refresh_objective()
+
+func _trigger_trap() -> void:
+    trap_triggered = true
+    var trap_damage: int = 10
+    hero_health = maxi(1, hero_health - trap_damage)
+    if trap_glow:
+        trap_glow.visible = false
+    status_label.text = "A buried ember ward erupts beneath you. -%d health." % trap_damage
+    _save_campaign_state()
+    _save_dungeon_state()
+    _refresh_objective()
 
 func _open_relic_chamber() -> void:
     action_title.text = "Ember Seal"
@@ -430,11 +491,11 @@ func _close_action() -> void:
 
 func _refresh_objective() -> void:
     if relic_claimed:
-        objective_label.text = "OBJECTIVE COMPLETE • Ember Seal recovered"
+        objective_label.text = "OBJECTIVE COMPLETE • Ember Seal recovered • Return to Ashenreach"
     elif sentinel_defeated:
-        objective_label.text = "OBJECTIVE • Reach the relic chamber"
+        objective_label.text = "OBJECTIVE • Navigate the lower halls and reach the Ember Seal"
     else:
-        objective_label.text = "OBJECTIVE • Defeat the Vault Sentinel and breach the inner chamber"
+        objective_label.text = "OBJECTIVE • Find a route past the Vault Sentinel"
 
 func _load_campaign_state() -> void:
     var cfg := ConfigFile.new()
@@ -448,6 +509,8 @@ func _load_campaign_state() -> void:
         sentinel_defeated = bool(dungeon.get_value("vault","sentinel_defeated",false))
         relic_claimed = bool(dungeon.get_value("vault","relic_claimed",false))
         ember_seal_effect_applied = bool(dungeon.get_value("vault","ember_seal_effect_applied",false))
+        shrine_used = bool(dungeon.get_value("vault","shrine_used",false))
+        trap_triggered = bool(dungeon.get_value("vault","trap_triggered",false))
 
 func _save_campaign_state() -> void:
     var cfg := ConfigFile.new()
@@ -466,6 +529,8 @@ func _save_dungeon_state() -> void:
     cfg.set_value("vault","sentinel_defeated",sentinel_defeated)
     cfg.set_value("vault","relic_claimed",relic_claimed)
     cfg.set_value("vault","ember_seal_effect_applied",ember_seal_effect_applied)
+    cfg.set_value("vault","shrine_used",shrine_used)
+    cfg.set_value("vault","trap_triggered",trap_triggered)
     cfg.save("user://sundered_vault_save.cfg")
 
 func _return_to_map() -> void:
