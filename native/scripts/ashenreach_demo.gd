@@ -82,13 +82,21 @@ const HERO_GROUND_CLEARANCE := 0.025
 const ROAD_SAMPLE_SPACING := 0.45
 
 const MOVE_GRAPH := {
-    "BasaltCenter": ["Rattal", "CapitalSouth", "VaultRoad"],
-    "Rattal": ["BasaltCenter", "CapitalSouth", "EastBridge"],
+    "BasaltCenter": ["Rattal", "CapitalSouth", "VaultRoad", "RitualTotemsNode", "SunkenRemnantsNode"],
+    "Rattal": ["BasaltCenter", "CapitalSouth", "EastBridge", "AmbushPassNode"],
     "CapitalSouth": ["BasaltCenter", "Rattal", "CapitalNorth"],
-    "CapitalNorth": ["CapitalSouth"],
-    "EastBridge": ["Rattal"],
-    "VaultRoad": ["BasaltCenter", "VaultGate"],
-    "VaultGate": ["VaultRoad"]
+    "CapitalNorth": ["CapitalSouth", "HighlandRidgesNode", "AshenPlainsNode"],
+    "EastBridge": ["Rattal", "ElevatedOutpostNode"],
+    "VaultRoad": ["BasaltCenter", "VaultGate", "DeadForestNode", "SunkenRemnantsNode"],
+    "VaultGate": ["VaultRoad"],
+    "AmbushPassNode": ["Rattal", "ElevatedOutpostNode"],
+    "ElevatedOutpostNode": ["AmbushPassNode", "EastBridge", "OverlookNode", "HighlandRidgesNode"],
+    "OverlookNode": ["ElevatedOutpostNode", "RitualTotemsNode"],
+    "HighlandRidgesNode": ["ElevatedOutpostNode", "CapitalNorth", "AshenPlainsNode"],
+    "AshenPlainsNode": ["CapitalNorth", "HighlandRidgesNode", "DeadForestNode"],
+    "DeadForestNode": ["VaultRoad", "AshenPlainsNode", "SunkenRemnantsNode"],
+    "RitualTotemsNode": ["BasaltCenter", "OverlookNode", "SunkenRemnantsNode"],
+    "SunkenRemnantsNode": ["BasaltCenter", "VaultRoad", "DeadForestNode", "RitualTotemsNode"]
 }
 
 # Ordered road-center waypoints. These force pieces to follow the board's
@@ -142,6 +150,55 @@ const ROAD_PATHS := {
         Vector3(-9.0, 4.78, 7.25),
         Vector3(-10.0, 4.88, 7.12),
         Vector3(-11.0, 5.0, 7.0)
+    ]
+,
+    "Rattal|AmbushPassNode": [
+        Vector3(7.0, 5.15, 3.0), Vector3(8.8, 5.0, 2.2), Vector3(10.6, 4.9, 1.0), Vector3(12.5, 4.8, 0.0)
+    ],
+    "AmbushPassNode|ElevatedOutpostNode": [
+        Vector3(12.5, 4.8, 0.0), Vector3(13.2, 5.0, 1.8), Vector3(14.0, 5.3, 3.4), Vector3(15.0, 5.6, 5.0)
+    ],
+    "EastBridge|ElevatedOutpostNode": [
+        Vector3(10.0, 5.0, 5.2), Vector3(11.8, 5.2, 5.1), Vector3(13.4, 5.4, 5.0), Vector3(15.0, 5.6, 5.0)
+    ],
+    "ElevatedOutpostNode|OverlookNode": [
+        Vector3(15.0, 5.6, 5.0), Vector3(14.8, 5.7, 6.6), Vector3(14.4, 5.7, 7.8), Vector3(14.0, 5.6, 9.0)
+    ],
+    "ElevatedOutpostNode|HighlandRidgesNode": [
+        Vector3(15.0, 5.6, 5.0), Vector3(14.2, 5.8, 1.8), Vector3(13.0, 6.0, -1.8), Vector3(11.5, 6.1, -5.0), Vector3(10.0, 6.0, -8.0)
+    ],
+    "CapitalNorth|HighlandRidgesNode": [
+        Vector3(1.5, 6.25, -2.0), Vector3(3.8, 6.2, -3.0), Vector3(6.0, 6.1, -4.5), Vector3(8.0, 6.0, -6.2), Vector3(10.0, 6.0, -8.0)
+    ],
+    "CapitalNorth|AshenPlainsNode": [
+        Vector3(1.5, 6.25, -2.0), Vector3(-1.8, 6.0, -3.2), Vector3(-5.2, 5.7, -4.7), Vector3(-8.8, 5.4, -6.2), Vector3(-12.0, 5.2, -8.0)
+    ],
+    "HighlandRidgesNode|AshenPlainsNode": [
+        Vector3(10.0, 6.0, -8.0), Vector3(5.0, 5.9, -8.5), Vector3(0.0, 5.7, -8.8), Vector3(-6.0, 5.5, -8.5), Vector3(-12.0, 5.2, -8.0)
+    ],
+    "VaultRoad|DeadForestNode": [
+        Vector3(-6.8, 4.65, 7.4), Vector3(-8.2, 4.4, 8.4), Vector3(-9.5, 4.1, 9.7), Vector3(-10.8, 3.9, 10.9), Vector3(-12.0, 3.8, 12.0)
+    ],
+    "AshenPlainsNode|DeadForestNode": [
+        Vector3(-12.0, 5.2, -8.0), Vector3(-12.2, 4.9, -3.0), Vector3(-12.1, 4.5, 2.0), Vector3(-12.0, 4.1, 7.0), Vector3(-12.0, 3.8, 12.0)
+    ],
+    "BasaltCenter|RitualTotemsNode": [
+        Vector3(0.0, 4.75, 7.5), Vector3(1.3, 4.5, 9.0), Vector3(2.6, 4.2, 10.5), Vector3(4.5, 4.0, 12.5)
+    ],
+    "OverlookNode|RitualTotemsNode": [
+        Vector3(14.0, 5.6, 9.0), Vector3(11.3, 5.2, 10.0), Vector3(8.5, 4.7, 11.0), Vector3(4.5, 4.0, 12.5)
+    ],
+    "BasaltCenter|SunkenRemnantsNode": [
+        Vector3(0.0, 4.75, 7.5), Vector3(-0.5, 4.4, 9.3), Vector3(-1.2, 4.1, 11.0), Vector3(-2.5, 3.8, 13.5)
+    ],
+    "VaultRoad|SunkenRemnantsNode": [
+        Vector3(-6.8, 4.65, 7.4), Vector3(-5.8, 4.3, 9.2), Vector3(-4.5, 4.0, 11.2), Vector3(-2.5, 3.8, 13.5)
+    ],
+    "DeadForestNode|SunkenRemnantsNode": [
+        Vector3(-12.0, 3.8, 12.0), Vector3(-9.0, 3.8, 12.5), Vector3(-6.0, 3.8, 13.0), Vector3(-2.5, 3.8, 13.5)
+    ],
+    "RitualTotemsNode|SunkenRemnantsNode": [
+        Vector3(4.5, 4.0, 12.5), Vector3(2.2, 3.9, 13.0), Vector3(0.0, 3.9, 13.3), Vector3(-2.5, 3.8, 13.5)
     ]
 }
 
