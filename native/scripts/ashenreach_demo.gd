@@ -700,15 +700,302 @@ func _hide_move_nodes() -> void:
         if marker:
             marker.visible = false
 
+
+func _build_game_hud() -> void:
+    game_hud = PanelContainer.new()
+    game_hud.name = "GameHUD"
+    game_hud.offset_left = 22.0
+    game_hud.offset_top = 92.0
+    game_hud.offset_right = 390.0
+    game_hud.offset_bottom = 320.0
+    ui_root.add_child(game_hud)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 14)
+    margin.add_theme_constant_override("margin_top", 12)
+    margin.add_theme_constant_override("margin_right", 14)
+    margin.add_theme_constant_override("margin_bottom", 12)
+    game_hud.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 7)
+    margin.add_child(box)
+
+    turn_label = Label.new()
+    turn_label.add_theme_font_size_override("font_size", 18)
+    box.add_child(turn_label)
+
+    hero_stats_label = Label.new()
+    box.add_child(hero_stats_label)
+
+    objective_label = Label.new()
+    objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(objective_label)
+
+    threat_label = Label.new()
+    box.add_child(threat_label)
+
+    var end_turn := Button.new()
+    end_turn.text = "End Turn"
+    end_turn.custom_minimum_size = Vector2(0, 42)
+    end_turn.pressed.connect(_end_turn)
+    box.add_child(end_turn)
+
+    event_log_label = Label.new()
+    event_log_label.text = "Ashenreach expedition begun."
+    event_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    event_log_label.add_theme_font_size_override("font_size", 12)
+    box.add_child(event_log_label)
+
+    _build_encounter_panel()
+
+func _build_encounter_panel() -> void:
+    encounter_panel = PanelContainer.new()
+    encounter_panel.name = "EncounterPanel"
+    encounter_panel.visible = false
+    encounter_panel.anchor_left = 0.5
+    encounter_panel.anchor_top = 0.5
+    encounter_panel.anchor_right = 0.5
+    encounter_panel.anchor_bottom = 0.5
+    encounter_panel.offset_left = -250.0
+    encounter_panel.offset_top = -150.0
+    encounter_panel.offset_right = 250.0
+    encounter_panel.offset_bottom = 150.0
+    ui_root.add_child(encounter_panel)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 18)
+    margin.add_theme_constant_override("margin_top", 16)
+    margin.add_theme_constant_override("margin_right", 18)
+    margin.add_theme_constant_override("margin_bottom", 16)
+    encounter_panel.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 10)
+    margin.add_child(box)
+
+    var type_label := Label.new()
+    type_label.text = "ENCOUNTER"
+    type_label.add_theme_font_size_override("font_size", 13)
+    box.add_child(type_label)
+
+    encounter_title = Label.new()
+    encounter_title.add_theme_font_size_override("font_size", 24)
+    box.add_child(encounter_title)
+
+    encounter_body = Label.new()
+    encounter_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(encounter_body)
+
+    var engage := Button.new()
+    engage.text = "Engage"
+    engage.custom_minimum_size = Vector2(0, 48)
+    engage.pressed.connect(_resolve_encounter.bind(true))
+    box.add_child(engage)
+
+    var withdraw := Button.new()
+    withdraw.text = "Withdraw"
+    withdraw.custom_minimum_size = Vector2(0, 44)
+    withdraw.pressed.connect(_resolve_encounter.bind(false))
+    box.add_child(withdraw)
+
+func _refresh_game_hud() -> void:
+    if not game_hud:
+        return
+    var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
+    turn_label.text = "TURN %d  •  MOVE %d/%d" % [turn_number, moves_remaining, hero_move_points]
+    hero_stats_label.text = "%s\nHealth %d/100  •  XP %d" % [hero_name, hero_health, hero_xp]
+    objective_label.text = _objective_text()
+    threat_label.text = "Vulgrim threat: %d%%  •  %s" % [vulgrim_heat, _threat_stage()]
+
+func _objective_text() -> String:
+    var lines: Array[String] = ["OBJECTIVES"]
+    var objectives = board_data.get("objectives", [])
+    for raw in objectives:
+        if not raw is Dictionary:
+            continue
+        var objective: Dictionary = raw
+        var done := _objective_complete(objective)
+        var mark := "✓" if done else "◇"
+        lines.append("%s %s" % [mark, str(objective.get("label", "Objective"))])
+    return "\n".join(lines)
+
+func _objective_complete(objective: Dictionary) -> bool:
+    var kind: String = str(objective.get("type", ""))
+    if kind == "discover_poi":
+        return discovered_pois.has(str(objective.get("target", "")))
+    if kind == "claim_poi":
+        return claimed_pois.has(str(objective.get("target", "")))
+    if kind == "discover_count":
+        return discovered_pois.size() >= int(objective.get("target", 0))
+    return false
+
+func _all_objectives_complete() -> bool:
+    var objectives = board_data.get("objectives", [])
+    if objectives.is_empty():
+        return false
+    for raw in objectives:
+        if raw is Dictionary and not _objective_complete(raw):
+            return false
+    return true
+
+func _threat_stage() -> String:
+    if vulgrim_heat >= 80:
+        return "ERUPTION IMMINENT"
+    if vulgrim_heat >= 55:
+        return "Violent"
+    if vulgrim_heat >= 30:
+        return "Stirring"
+    return "Dormant"
+
+func _end_turn() -> void:
+    if encounter_panel and encounter_panel.visible:
+        return
+    turn_number += 1
+    moves_remaining = hero_move_points
+    var threat: Dictionary = board_data.get("legendary_threat", {})
+    vulgrim_heat = min(int(threat.get("max_heat", 100)), vulgrim_heat + int(threat.get("escalation_per_turn", 5)))
+    event_log_label.text = "Turn %d begins. The Ashen Wastes grow more unstable." % turn_number
+    _refresh_game_hud()
+    _save_game_state()
+
+func _reveal_nearby_pois() -> void:
+    var rules: Dictionary = board_data.get("poi_rules", {})
+    for child in $POIs.get_children():
+        if not child is Area3D:
+            continue
+        var poi := child as Area3D
+        var radius := 5.0
+        if rules.has(poi.name):
+            var rule: Dictionary = rules[poi.name]
+            radius = float(rule.get("discovery_radius", 5.0))
+        var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+        var poi_flat := Vector2(poi.global_position.x, poi.global_position.z)
+        if hero_flat.distance_to(poi_flat) <= radius and not discovered_pois.has(poi.name):
+            discovered_pois[poi.name] = true
+            if event_log_label:
+                event_log_label.text = "Discovered: %s" % str(POI_DATA.get(poi.name, {}).get("title", poi.name))
+
+func _refresh_poi_visibility() -> void:
+    for child in $POIs.get_children():
+        if not child is Area3D:
+            continue
+        var poi := child as Area3D
+        var marker := poi.get_node_or_null("Marker") as MeshInstance3D
+        if marker:
+            marker.visible = discovered_pois.has(poi.name)
+
+func _poi_rule(poi_name: String) -> Dictionary:
+    var rules: Dictionary = board_data.get("poi_rules", {})
+    if rules.has(poi_name):
+        return rules[poi_name]
+    return {}
+
+func _trigger_node_encounter(node_name: String) -> void:
+    var encounters: Dictionary = board_data.get("encounters", {})
+    if not encounters.has(node_name) or completed_encounters.has(node_name):
+        return
+    var data: Dictionary = encounters[node_name]
+    current_encounter_node = node_name
+    encounter_title.text = str(data.get("name", "Encounter"))
+    encounter_body.text = "%s\n\nDanger %d  •  Reward %d XP" % [
+        str(data.get("description", "")),
+        int(data.get("danger", 1)),
+        int(data.get("xp", 0))
+    ]
+    encounter_panel.visible = true
+    movement_panel.visible = false
+    event_log_label.text = "Encounter: %s" % str(data.get("name", "Unknown threat"))
+
+func _resolve_encounter(engage: bool) -> void:
+    if current_encounter_node == "":
+        encounter_panel.visible = false
+        return
+    var encounters: Dictionary = board_data.get("encounters", {})
+    if not encounters.has(current_encounter_node):
+        encounter_panel.visible = false
+        current_encounter_node = ""
+        return
+
+    var data: Dictionary = encounters[current_encounter_node]
+    if engage:
+        var loss := int(data.get("health_loss", 0))
+        var gain := int(data.get("xp", 0))
+        hero_health = max(1, hero_health - loss)
+        hero_xp += gain
+        completed_encounters[current_encounter_node] = true
+        event_log_label.text = "%s defeated. +%d XP, -%d health." % [str(data.get("name", "Enemy")), gain, loss]
+    else:
+        moves_remaining = 0
+        event_log_label.text = "Withdrew from %s. Movement exhausted this turn." % str(data.get("name", "encounter"))
+
+    current_encounter_node = ""
+    encounter_panel.visible = false
+    _refresh_game_hud()
+    _save_game_state()
+
+func _save_game_state() -> void:
+    var cfg := ConfigFile.new()
+    cfg.set_value("board", "turn", turn_number)
+    cfg.set_value("board", "moves_remaining", moves_remaining)
+    cfg.set_value("board", "current_move_node", current_move_node)
+    cfg.set_value("board", "selected_hero_id", selected_hero_id)
+    cfg.set_value("board", "hero_health", hero_health)
+    cfg.set_value("board", "hero_xp", hero_xp)
+    cfg.set_value("board", "vulgrim_heat", vulgrim_heat)
+    cfg.set_value("board", "discovered_pois", discovered_pois.keys())
+    cfg.set_value("board", "claimed_pois", claimed_pois.keys())
+    cfg.set_value("board", "completed_encounters", completed_encounters.keys())
+    cfg.save("user://ashenreach_save.cfg")
+
+func _load_game_state() -> void:
+    var cfg := ConfigFile.new()
+    if cfg.load("user://ashenreach_save.cfg") != OK:
+        moves_remaining = hero_move_points
+        return
+
+    turn_number = int(cfg.get_value("board", "turn", 1))
+    moves_remaining = int(cfg.get_value("board", "moves_remaining", hero_move_points))
+    current_move_node = str(cfg.get_value("board", "current_move_node", "BasaltCenter"))
+    selected_hero_id = str(cfg.get_value("board", "selected_hero_id", selected_hero_id))
+    hero_health = int(cfg.get_value("board", "hero_health", 100))
+    hero_xp = int(cfg.get_value("board", "hero_xp", 0))
+    vulgrim_heat = int(cfg.get_value("board", "vulgrim_heat", 0))
+
+    discovered_pois.clear()
+    for key in cfg.get_value("board", "discovered_pois", []):
+        discovered_pois[str(key)] = true
+
+    claimed_pois.clear()
+    for key in cfg.get_value("board", "claimed_pois", []):
+        claimed_pois[str(key)] = true
+
+    completed_encounters.clear()
+    for key in cfg.get_value("board", "completed_encounters", []):
+        completed_encounters[str(key)] = true
+
+    if move_nodes_root.has_node(current_move_node):
+        var node := move_nodes_root.get_node(current_move_node) as Area3D
+        if node:
+            hero_unit.global_position = _ground_point(node.global_position)
+
 func _select_poi(node: Node3D) -> void:
-    if not POI_DATA.has(node.name):
+    if not POI_DATA.has(node.name) or not discovered_pois.has(node.name):
         return
     selected_poi = node.name
     var data: Dictionary = POI_DATA[selected_poi]
     poi_type.text = data["type"]
     poi_title.text = data["title"]
     poi_body.text = data["body"]
-    poi_action.text = data["action"]
+    var rule := _poi_rule(String(node.name))
+    if bool(rule.get("claimable", false)) and not claimed_pois.has(node.name):
+        poi_action.text = "Claim"
+    elif claimed_pois.has(node.name):
+        poi_action.text = "Controlled"
+        poi_action.disabled = true
+    else:
+        poi_action.text = data["action"]
+        poi_action.disabled = false
     poi_panel.visible = true
     selected_label.visible = false
     selected_ring.global_position = node.global_position + Vector3(0, 0.18, 0)
@@ -717,10 +1004,26 @@ func _select_poi(node: Node3D) -> void:
     _focus_on_poi(node.global_position)
 
 func _on_poi_action() -> void:
+    if selected_poi == "":
+        return
+
+    var rule := _poi_rule(selected_poi)
+    if bool(rule.get("claimable", false)) and not claimed_pois.has(selected_poi):
+        claimed_pois[selected_poi] = true
+        poi_action.text = "Controlled"
+        poi_action.disabled = true
+        poi_body.text += "\n\nThis strategic location is now under your control."
+        event_log_label.text = "Claimed: %s" % str(POI_DATA.get(selected_poi, {}).get("title", selected_poi))
+        _refresh_game_hud()
+        _save_game_state()
+        if _all_objectives_complete():
+            event_log_label.text = "Ashenreach secured. All primary objectives complete."
+        return
+
     if selected_poi == "SunderedVault":
-        poi_body.text = "The vault is sealed in this environment build. Dungeon exploration is the next gameplay layer."
-    elif selected_poi != "":
-        poi_body.text += "\n\nLocation recorded for future territory gameplay."
+        poi_body.text = "The Sundered Vault has been discovered. Its dungeon layer will open from this location."
+    else:
+        poi_body.text += "\n\nLocation recorded in the Ashenreach campaign map."
 
 
 func _focus_on_poi(target: Vector3) -> void:
@@ -732,6 +1035,7 @@ func _focus_on_poi(target: Vector3) -> void:
 
 func _close_poi_panel() -> void:
     poi_panel.visible = false
+    poi_action.disabled = false
     selected_label.visible = false
     selected_ring.visible = false
     selected_poi = ""
