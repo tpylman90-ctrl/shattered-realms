@@ -1383,7 +1383,17 @@ func _on_poi_action() -> void:
         return
 
     if selected_poi == "SunderedVault":
-        poi_body.text = "The Sundered Vault has been discovered. Its dungeon layer will open from this location."
+        var vault_gate := move_nodes_root.get_node_or_null("VaultGate") as Area3D
+        if not vault_gate:
+            poi_body.text = "The Sundered Vault entrance is unavailable in this build."
+            return
+        var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+        var gate_flat := Vector2(vault_gate.global_position.x, vault_gate.global_position.z)
+        if hero_flat.distance_to(gate_flat) > 1.5:
+            poi_body.text = "The Sundered Vault has been discovered. Move your hero to the Vault Gate before entering."
+            return
+        _save_game_state()
+        get_tree().change_scene_to_file("res://scenes/SunderedVault.tscn")
     else:
         poi_body.text += "\n\nLocation recorded in the Ashenreach campaign map."
 
