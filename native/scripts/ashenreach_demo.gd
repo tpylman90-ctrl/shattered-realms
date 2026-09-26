@@ -43,6 +43,8 @@ var hero_move_points := 3
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
+const HERO_GROUND_CLEARANCE := 0.025
+const ROAD_SAMPLE_SPACING := 0.45
 
 const MOVE_GRAPH := {
     "BasaltCenter": ["Rattal", "CapitalSouth", "VaultRoad"],
@@ -185,6 +187,11 @@ const POI_DATA := {
 
 func _ready() -> void:
     _tune_imported_terrain_materials($TerrainRoot)
+    _build_terrain_collision($TerrainRoot)
+    await get_tree().physics_frame
+    await get_tree().physics_frame
+    _ground_move_nodes()
+    _ground_hero_to_surface()
     reset_camera()
     poi_panel.visible = false
     poi_action.pressed.connect(_on_poi_action)
@@ -509,6 +516,9 @@ func _confirm_unit_move() -> void:
     _hide_move_nodes()
     await _animate_unit_path(pending_path)
     current_move_node = pending_move_node
+    var landed_node := move_nodes_root.get_node(current_move_node) as Area3D
+    if landed_node:
+        hero_unit.global_position = _ground_point(landed_node.global_position)
     pending_move_node = ""
     pending_path.clear()
     unit_selected = false
@@ -523,14 +533,40 @@ func _road_key(a: String, b: String) -> String:
 
 func _road_points(a: String, b: String) -> Array:
     var key := _road_key(a, b)
+    var control_points: Array = []
+
     if not ROAD_PATHS.has(key):
         var fallback_node := move_nodes_root.get_node(b) as Area3D
-        return [hero_unit.global_position, fallback_node.global_position]
+        control_points = [hero_unit.global_position, fallback_node.global_position]
+    else:
+        control_points = ROAD_PATHS[key].duplicate()
+        if key != "%s|%s" % [a, b]:
+            control_points.reverse()
 
-    var points: Array = ROAD_PATHS[key].duplicate()
-    if key != "%s|%s" % [a, b]:
-        points.reverse()
-    return points
+    return _densify_and_ground_path(control_points)
+
+func _densify_and_ground_path(control_points: Array) -> Array:
+    var result: Array = []
+    if control_points.is_empty():
+        return result
+
+    var first: Vector3 = control_points[0]
+    first = _ground_point(first)
+    result.append(first)
+
+    for i in range(control_points.size() - 1):
+        var a: Vector3 = control_points[i]
+        var b: Vector3 = control_points[i + 1]
+        var flat_distance := Vector2(a.x, a.z).distance_to(Vector2(b.x, b.z))
+        var steps := max(1, int(ceil(flat_distance / ROAD_SAMPLE_SPACING)))
+
+        for step in range(1, steps + 1):
+            var t := float(step) / float(steps)
+            var p := a.lerp(b, t)
+            p = _ground_point(p)
+            result.append(p)
+
+    return result
 
 func _animate_unit_path(path: Array[String]) -> void:
     for edge_index in range(path.size() - 1):
@@ -548,6 +584,48 @@ func _animate_unit_path(path: Array[String]) -> void:
             tween.set_ease(Tween.EASE_IN_OUT)
             tween.tween_property(hero_unit, "global_position", target, duration)
             await tween.finished
+
+func _build_terrain_collision(node: Node) -> void:
+    if node is MeshInstance3D:
+        var mesh_instance := node as MeshInstance3D
+        if mesh_instance.mesh and mesh_instance.mesh.get_surface_count() > 0:
+            var shape := mesh_instance.mesh.create_trimesh_shape()
+            if shape:
+                var body := StaticBody3D.new()
+                body.name = "RuntimeTerrainCollision"
+                body.collision_layer = 8
+                body.collision_mask = 0
+
+                var collision := CollisionShape3D.new()
+                collision.shape = shape
+                body.add_child(collision)
+                mesh_instance.add_child(body)
+
+    for child in node.get_children():
+        if child.name != "RuntimeTerrainCollision":
+            _build_terrain_collision(child)
+
+func _ground_point(point: Vector3) -> Vector3:
+    var from := Vector3(point.x, 30.0, point.z)
+    var to := Vector3(point.x, -10.0, point.z)
+    var query := PhysicsRayQueryParameters3D.create(from, to)
+    query.collide_with_areas = false
+    query.collide_with_bodies = true
+    query.collision_mask = 8
+
+    var hit := get_world_3d().direct_space_state.intersect_ray(query)
+    if not hit.is_empty():
+        point.y = (hit["position"] as Vector3).y + HERO_GROUND_CLEARANCE
+    return point
+
+func _ground_move_nodes() -> void:
+    for child in move_nodes_root.get_children():
+        if child is Area3D:
+            var node := child as Area3D
+            node.global_position = _ground_point(node.global_position)
+
+func _ground_hero_to_surface() -> void:
+    hero_unit.global_position = _ground_point(hero_unit.global_position)
 
 func _cancel_unit_move() -> void:
     unit_selected = false
