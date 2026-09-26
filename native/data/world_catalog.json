@@ -38,10 +38,16 @@
       "signature_ability": "Eruption Strike",
       "movement_points": 3,
       "unlock_id": "magma_heart_cuirass",
-      "piece_asset": "res://assets/3d/heroes/08f82aae-ba7a-4eb7-9491-097fd56b8b3f_67b8de66283912f7e65b8a74c3120ba0.glb",
+      "piece_asset": "res://assets/3d/heroes/generated/ignis_single.glb",
       "piece_scale": 3,
       "piece_y_offset": 0,
-      "unlock_item": "magma_heart_cuirass"
+      "unlock_item": "magma_heart_cuirass",
+      "presentation_asset": "res://assets/3d/heroes/08f82aae-ba7a-4eb7-9491-097fd56b8b3f_67b8de66283912f7e65b8a74c3120ba0.glb",
+      "piece_offset": [
+        0.7,
+        0,
+        -0.13
+      ]
     },
     "vesper": {
       "name": "Vesper, The Frostbinder",
@@ -50,10 +56,16 @@
       "signature_ability": "Glacial Bastion",
       "movement_points": 3,
       "unlock_id": "vesper_chestplate",
-      "piece_asset": "res://assets/3d/heroes/c8e77735-5007-49e1-bd65-7588443969df-glb-2048-cachehit_eb682eeb80c6cb205f1321287f05cd39.glb",
+      "piece_asset": "res://assets/3d/heroes/generated/vesper_single.glb",
       "piece_scale": 3,
       "piece_y_offset": 0,
-      "unlock_item": "vesper_chestplate"
+      "unlock_item": "vesper_chestplate",
+      "presentation_asset": "res://assets/3d/heroes/c8e77735-5007-49e1-bd65-7588443969df-glb-2048-cachehit_eb682eeb80c6cb205f1321287f05cd39.glb",
+      "piece_offset": [
+        0.87,
+        0,
+        0
+      ]
     }
   },
   "legendary_monsters": {
