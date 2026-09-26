@@ -54,6 +54,60 @@ const MOVE_GRAPH := {
     "VaultGate": ["VaultRoad"]
 }
 
+# Ordered road-center waypoints. These force pieces to follow the board's
+# visible roads, bridges and passes instead of interpolating straight across terrain.
+const ROAD_PATHS := {
+    "BasaltCenter|Rattal": [
+        Vector3(0.0, 4.75, 7.5),
+        Vector3(1.8, 4.82, 6.7),
+        Vector3(3.6, 4.92, 5.6),
+        Vector3(5.2, 5.02, 4.4),
+        Vector3(7.0, 5.15, 3.0)
+    ],
+    "BasaltCenter|CapitalSouth": [
+        Vector3(0.0, 4.75, 7.5),
+        Vector3(0.35, 4.86, 5.8),
+        Vector3(0.8, 5.02, 4.2),
+        Vector3(1.35, 5.28, 2.6),
+        Vector3(2.0, 5.55, 1.0)
+    ],
+    "BasaltCenter|VaultRoad": [
+        Vector3(0.0, 4.75, 7.5),
+        Vector3(-1.8, 4.70, 7.45),
+        Vector3(-3.6, 4.67, 7.30),
+        Vector3(-5.2, 4.65, 7.35),
+        Vector3(-6.8, 4.65, 7.4)
+    ],
+    "Rattal|CapitalSouth": [
+        Vector3(7.0, 5.15, 3.0),
+        Vector3(5.8, 5.18, 2.8),
+        Vector3(4.5, 5.26, 2.35),
+        Vector3(3.2, 5.40, 1.7),
+        Vector3(2.0, 5.55, 1.0)
+    ],
+    "Rattal|EastBridge": [
+        Vector3(7.0, 5.15, 3.0),
+        Vector3(7.9, 5.10, 3.55),
+        Vector3(8.8, 5.04, 4.15),
+        Vector3(9.45, 5.00, 4.75),
+        Vector3(10.0, 5.0, 5.2)
+    ],
+    "CapitalSouth|CapitalNorth": [
+        Vector3(2.0, 5.55, 1.0),
+        Vector3(1.9, 5.72, 0.25),
+        Vector3(1.75, 5.91, -0.55),
+        Vector3(1.6, 6.08, -1.3),
+        Vector3(1.5, 6.25, -2.0)
+    ],
+    "VaultRoad|VaultGate": [
+        Vector3(-6.8, 4.65, 7.4),
+        Vector3(-7.9, 4.70, 7.35),
+        Vector3(-9.0, 4.78, 7.25),
+        Vector3(-10.0, 4.88, 7.12),
+        Vector3(-11.0, 5.0, 7.0)
+    ]
+}
+
 const POI_DATA := {
     "SunderedVault": {
         "title": "Sundered Vault",
@@ -456,15 +510,38 @@ func _confirm_unit_move() -> void:
     var moved_hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
     status_label.text = "%s moved to %s" % [moved_hero_name, current_move_node]
 
+func _road_key(a: String, b: String) -> String:
+    if ROAD_PATHS.has("%s|%s" % [a, b]):
+        return "%s|%s" % [a, b]
+    return "%s|%s" % [b, a]
+
+func _road_points(a: String, b: String) -> Array:
+    var key := _road_key(a, b)
+    if not ROAD_PATHS.has(key):
+        var fallback_node := move_nodes_root.get_node(b) as Area3D
+        return [hero_unit.global_position, fallback_node.global_position]
+
+    var points: Array = ROAD_PATHS[key].duplicate()
+    if key != "%s|%s" % [a, b]:
+        points.reverse()
+    return points
+
 func _animate_unit_path(path: Array[String]) -> void:
-    for i in range(1, path.size()):
-        var node := move_nodes_root.get_node(path[i]) as Area3D
-        var target := node.global_position + Vector3(0, 0.25, 0)
-        var tween := create_tween()
-        tween.set_trans(Tween.TRANS_SINE)
-        tween.set_ease(Tween.EASE_IN_OUT)
-        tween.tween_property(hero_unit, "global_position", target, 0.55)
-        await tween.finished
+    for edge_index in range(path.size() - 1):
+        var from_node := path[edge_index]
+        var to_node := path[edge_index + 1]
+        var road_points := _road_points(from_node, to_node)
+
+        # point 0 is the current node; walk every subsequent road-center point.
+        for point_index in range(1, road_points.size()):
+            var target: Vector3 = road_points[point_index]
+            var segment_distance := hero_unit.global_position.distance_to(target)
+            var duration := clamp(segment_distance * 0.16, 0.14, 0.42)
+            var tween := create_tween()
+            tween.set_trans(Tween.TRANS_SINE)
+            tween.set_ease(Tween.EASE_IN_OUT)
+            tween.tween_property(hero_unit, "global_position", target, duration)
+            await tween.finished
 
 func _cancel_unit_move() -> void:
     unit_selected = false
