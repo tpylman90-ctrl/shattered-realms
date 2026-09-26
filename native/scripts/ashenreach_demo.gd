@@ -1254,6 +1254,11 @@ func _refresh_claimed_poi_style() -> void:
             controlled_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
             marker.material_override = controlled_material
 
+func _hero_near_poi(poi: Node3D, radius: float = 2.2) -> bool:
+    var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+    var poi_flat := Vector2(poi.global_position.x, poi.global_position.z)
+    return hero_flat.distance_to(poi_flat) <= radius
+
 func _poi_rule(poi_name: String) -> Dictionary:
     var rules: Dictionary = board_data.get("poi_rules", {})
     if rules.has(poi_name):
@@ -1484,7 +1489,12 @@ func _select_poi(node: Node3D) -> void:
         poi_action.text = "Re-enter"
         poi_action.disabled = false
     elif bool(rule.get("claimable", false)) and not claimed_pois.has(node.name):
-        poi_action.text = "Claim"
+        if _hero_near_poi(node):
+            poi_action.text = "Claim"
+            poi_action.disabled = false
+        else:
+            poi_action.text = "Move Closer"
+            poi_action.disabled = true
     elif claimed_pois.has(node.name):
         poi_action.text = "Controlled"
         poi_action.disabled = true
@@ -1504,6 +1514,10 @@ func _on_poi_action() -> void:
 
     var rule := _poi_rule(selected_poi)
     if bool(rule.get("claimable", false)) and not claimed_pois.has(selected_poi):
+        var poi_node := $POIs.get_node_or_null(selected_poi) as Node3D
+        if not poi_node or not _hero_near_poi(poi_node):
+            poi_body.text += "\n\nMove the hero onto this location before claiming it."
+            return
         claimed_pois[selected_poi] = true
         _refresh_claimed_poi_style()
         poi_action.text = "Controlled"
