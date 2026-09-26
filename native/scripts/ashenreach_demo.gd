@@ -21,6 +21,7 @@ extends Node3D
 @onready var hero_select_panel: PanelContainer = $UI/HeroSelectPanel
 @onready var hero_roster_box: VBoxContainer = $UI/HeroSelectPanel/Margin/VBox/Roster
 @onready var hero_label: Label3D = $MovementBoard/HeroUnit/HeroLabel
+@onready var ui_root: CanvasLayer = $UI
 
 var touches: Dictionary = {}
 var previous_pinch_distance := 0.0
@@ -39,6 +40,27 @@ var unlocked_heroes: Array[String] = []
 var hero_catalog: Dictionary = {}
 var active_hero_model: Node3D
 var hero_move_points := 3
+var moves_remaining := 3
+var pending_move_cost := 0
+var turn_number := 1
+var hero_health := 100
+var hero_xp := 0
+var vulgrim_heat := 0
+var board_data: Dictionary = {}
+var discovered_pois: Dictionary = {}
+var claimed_pois: Dictionary = {}
+var completed_encounters: Dictionary = {}
+var current_encounter_node := ""
+
+var game_hud: PanelContainer
+var turn_label: Label
+var hero_stats_label: Label
+var objective_label: Label
+var threat_label: Label
+var event_log_label: Label
+var encounter_panel: PanelContainer
+var encounter_title: Label
+var encounter_body: Label
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -203,9 +225,16 @@ func _ready() -> void:
     $UI/TopBar/Row/HeroButton.pressed.connect(_open_hero_select)
     $UI/HeroSelectPanel/Margin/VBox/CloseButton.pressed.connect(_close_hero_select)
     _load_hero_catalog()
+    _load_board_data()
     _refresh_unlocked_heroes()
+    _load_game_state()
     _apply_selected_hero()
+    moves_remaining = clamp(moves_remaining, 0, hero_move_points)
     hero_label.visible = false
+    _build_game_hud()
+    _reveal_nearby_pois()
+    _refresh_poi_visibility()
+    _refresh_game_hud()
 
 func _process(delta: float) -> void:
     glow_time += delta
@@ -324,6 +353,15 @@ func _load_hero_catalog() -> void:
     if parsed is Dictionary:
         hero_catalog = parsed.get("heroes", {})
 
+func _load_board_data() -> void:
+    if not FileAccess.file_exists("res://data/ashenreach_board.json"):
+        board_data = {}
+        return
+    var file := FileAccess.open("res://data/ashenreach_board.json", FileAccess.READ)
+    var parsed = JSON.parse_string(file.get_as_text())
+    if parsed is Dictionary:
+        board_data = parsed
+
 func _refresh_unlocked_heroes() -> void:
     unlocked_heroes.clear()
     for hero_id in hero_catalog.keys():
@@ -428,6 +466,7 @@ func _select_unit(_unit: Area3D) -> void:
     unit_selected = true
     hero_label.visible = true
     pending_move_node = ""
+    pending_move_cost = 0
     pending_path.clear()
     movement_panel.visible = true
     movement_confirm.disabled = true
@@ -438,7 +477,7 @@ func _select_unit(_unit: Area3D) -> void:
     _show_reachable_move_nodes()
 
 func _show_reachable_move_nodes() -> void:
-    var reachable := _reachable_nodes(current_move_node, hero_move_points)
+    var reachable := _reachable_nodes(current_move_node, moves_remaining)
     for child in move_nodes_root.get_children():
         var marker := child.get_node_or_null("Marker") as MeshInstance3D
         if marker:
@@ -485,7 +524,7 @@ func _shortest_move_path(start: String, goal: String) -> Array[String]:
 
 func _select_move_destination(node: Area3D) -> void:
     var destination := String(node.name)
-    var reachable := _reachable_nodes(current_move_node, hero_move_points)
+    var reachable := _reachable_nodes(current_move_node, moves_remaining)
     if destination not in reachable:
         return
     pending_path = _shortest_move_path(current_move_node, destination)
@@ -493,10 +532,17 @@ func _select_move_destination(node: Area3D) -> void:
         return
     pending_move_node = destination
     var cost := pending_path.size() - 1
-    movement_stats.text = "Destination: %s\nMovement cost: %d / %d\nRoute: %s" % [
+    if cost > moves_remaining:
+        pending_path.clear()
+        pending_move_node = ""
+        movement_confirm.disabled = true
+        movement_stats.text = "That route costs %d movement points. %d remain this turn." % [cost, moves_remaining]
+        return
+    pending_move_cost = cost
+    movement_stats.text = "Destination: %s\nMovement cost: %d / %d remaining\nRoute: %s" % [
         destination,
         cost,
-        hero_move_points,
+        moves_remaining,
         " → ".join(pending_path)
     ]
     movement_confirm.disabled = false
@@ -513,6 +559,7 @@ func _confirm_unit_move() -> void:
         return
     movement_confirm.disabled = true
     movement_stats.text = "Moving..."
+    moves_remaining = max(0, moves_remaining - pending_move_cost)
     _hide_move_nodes()
     await _animate_unit_path(pending_path)
     current_move_node = pending_move_node
@@ -522,9 +569,16 @@ func _confirm_unit_move() -> void:
     pending_move_node = ""
     pending_path.clear()
     unit_selected = false
+    hero_label.visible = false
     movement_panel.visible = false
+    pending_move_cost = 0
     var moved_hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
     status_label.text = "%s moved to %s" % [moved_hero_name, current_move_node]
+    _reveal_nearby_pois()
+    _refresh_poi_visibility()
+    _trigger_node_encounter(current_move_node)
+    _refresh_game_hud()
+    _save_game_state()
 
 func _road_key(a: String, b: String) -> String:
     if ROAD_PATHS.has("%s|%s" % [a, b]):
