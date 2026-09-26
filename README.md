@@ -1,38 +1,51 @@
 # Shattered Realms
 
-Shattered Realms is an early prototype for a world-map strategy/adventure game built around:
+Shattered Realms is a native Godot strategy/adventure game for Android.
 
-- a world divided into territories
-- zooming into an individual 2.5D territory board
-- fog-of-war exploration
-- hero and army movement
-- hidden cities, enemies and dungeons
-- territory conquest
-- reusable territory/dungeon templates
-- a build-time AI 3D asset pipeline
+## Current vertical slice
 
-## Current prototype
+The active build is centered on **The Ashen Wastes → Ashenreach** and currently supports:
 
-The first build contains:
+- 3D territory-board exploration
+- selectable unlocked heroes
+- road-constrained movement with terrain grounding
+- turn-based movement points
+- route previews
+- discoverable and claimable points of interest
+- visible board encounters that can block routes
+- hero health, XP, levels, signature abilities and defeat/retreat
+- Inferno-Lord Vulgrim territory threat escalation
+- persistent Ashenreach campaign state
+- Sundered Vault dungeon entry from the physical Vault Gate
+- playable Sundered Vault first chamber
+- dungeon encounter, relic recovery and return to Ashenreach
+- Android release APK generation through GitHub Actions
 
-- world map shell
-- Ashenreach as the first selectable territory
-- fog-of-war exploration
-- movable hero
-- hidden city, beast and dungeon POIs
-- dungeon transition
-- Hunyuan3D asset pipeline directories
+## Project layout
 
-## Run it
+- `native/project.godot` — Godot project entry
+- `native/scenes/` — territory and dungeon scenes
+- `native/scripts/` — gameplay logic
+- `native/data/` — world, hero and territory data
+- `native/assets/3d/game-ready/` — approved environment assets
+- `native/assets/3d/heroes/` — source hero presentation GLBs
+- `native/tools/extract_hero_piece.py` — build-time extraction of playable hero figures
+- `.github/workflows/android-apk.yml` — signed Android build pipeline
 
-Download or clone the repository and open `index.html` in a modern browser.
+## Android build
 
-No build step or package install is required for this first prototype.
+Pushes that change `native/**` trigger the Android workflow. The generated artifact is named:
 
-## 3D asset structure
+`ShatteredRealms-Android`
 
-- `assets/3d/generated/` — raw AI-generated models
-- `assets/3d/game-ready/` — approved optimized game assets
-- `tools/hunyuan/` — Hunyuan3D workflow and integration tooling
+The APK uses package id:
 
-The game runtime is intentionally independent of Hunyuan3D so another generator can be substituted later without rewriting the game.
+`com.shatteredrealms.game`
+
+The workflow retains APK artifacts briefly to avoid exhausting GitHub Actions storage during rapid iteration.
+
+## Asset workflow
+
+Hero presentation GLBs may contain multiple presentation elements. The build pipeline extracts the single playable figure into a generated asset before Godot export. Source GLBs remain intact so relic/presentation content can be separated later.
+
+Creature assets should preferably be supplied as one playable creature per GLB. Encounter behavior is data-driven so new models can replace current placeholders without rewriting territory logic.
