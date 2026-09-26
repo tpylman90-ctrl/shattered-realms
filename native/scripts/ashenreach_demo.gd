@@ -198,6 +198,7 @@ func _ready() -> void:
     _load_hero_catalog()
     _refresh_unlocked_heroes()
     _apply_selected_hero()
+    hero_label.visible = false
 
 func _process(delta: float) -> void:
     glow_time += delta
@@ -418,6 +419,7 @@ func _apply_hero_visual(data: Dictionary) -> void:
 func _select_unit(_unit: Area3D) -> void:
     _close_poi_panel()
     unit_selected = true
+    hero_label.visible = true
     pending_move_node = ""
     pending_path.clear()
     movement_panel.visible = true
@@ -549,6 +551,7 @@ func _animate_unit_path(path: Array[String]) -> void:
 
 func _cancel_unit_move() -> void:
     unit_selected = false
+    hero_label.visible = false
     pending_move_node = ""
     pending_path.clear()
     if movement_panel:
