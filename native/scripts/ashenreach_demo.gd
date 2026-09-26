@@ -404,8 +404,12 @@ func _apply_hero_visual(data: Dictionary) -> void:
     active_hero_model.name = "HeroModel"
     var piece_scale := float(data.get("piece_scale", 1.0))
     var y_offset := float(data.get("piece_y_offset", 0.0))
+    var piece_offset = data.get("piece_offset", [0.0, 0.0, 0.0])
+    var x_offset := float(piece_offset[0]) if piece_offset.size() > 0 else 0.0
+    var extra_y := float(piece_offset[1]) if piece_offset.size() > 1 else 0.0
+    var z_offset := float(piece_offset[2]) if piece_offset.size() > 2 else 0.0
     active_hero_model.scale = Vector3.ONE * piece_scale
-    active_hero_model.position = Vector3(0.0, y_offset, 0.0)
+    active_hero_model.position = Vector3(x_offset, y_offset + extra_y, z_offset)
     hero_unit.add_child(active_hero_model)
 
     if placeholder:
