@@ -19,6 +19,8 @@ var action_title: Label
 var action_body: Label
 var action_primary: Button
 var action_secondary: Button
+var sentinel_piece: Node3D
+var relic_glow: MeshInstance3D
 
 const NODES: Array[Vector3] = [
     Vector3(0.0, 0.03, 7.0),
@@ -32,6 +34,7 @@ func _ready() -> void:
     _build_environment()
     _build_dungeon_geometry()
     _build_hero()
+    _build_sentinel_visual()
     _build_ui()
     _refresh_objective()
     _refresh_node_markers()
@@ -113,7 +116,8 @@ func _build_dungeon_geometry() -> void:
 
     var chamber := _add_box("RelicDais", Vector3(0.0,0.2,-5.3), Vector3(3.0,0.4,2.2), stone)
     chamber.rotation_degrees.y = 0.0
-    _add_box("RelicGlow", Vector3(0.0,0.85,-5.3), Vector3(0.75,1.0,0.75), ember)
+    relic_glow = _add_box("RelicGlow", Vector3(0.0,0.85,-5.3), Vector3(0.75,1.0,0.75), ember)
+    relic_glow.visible = not relic_claimed
 
     var teal_light := OmniLight3D.new()
     teal_light.position = Vector3(0.0,2.2,-1.0)
@@ -200,6 +204,50 @@ func _build_move_markers() -> void:
         visual.material_override = _make_material(Color(0.02,0.55,0.55,0.72), Color(0.02,0.9,0.82), 1.6)
         marker.add_child(visual)
         add_child(marker)
+
+func _build_sentinel_visual() -> void:
+    sentinel_piece = Node3D.new()
+    sentinel_piece.name = "VaultSentinel"
+    sentinel_piece.position = NODES[2]
+    sentinel_piece.visible = not sentinel_defeated
+    add_child(sentinel_piece)
+
+    var body := MeshInstance3D.new()
+    var mesh := CapsuleMesh.new()
+    mesh.radius = 0.48
+    mesh.height = 1.75
+    mesh.radial_segments = 14
+    mesh.rings = 7
+    body.mesh = mesh
+    body.position.y = 0.88
+    body.material_override = _make_material(
+        Color(0.18,0.07,0.035),
+        Color(1.0,0.12,0.025),
+        1.8
+    )
+    sentinel_piece.add_child(body)
+
+    var ring := MeshInstance3D.new()
+    var torus := TorusMesh.new()
+    torus.inner_radius = 0.55
+    torus.outer_radius = 0.66
+    ring.mesh = torus
+    ring.position.y = 0.035
+    ring.material_override = _make_material(
+        Color(0.42,0.06,0.025),
+        Color(1.0,0.10,0.02),
+        2.1
+    )
+    sentinel_piece.add_child(ring)
+
+    var label := Label3D.new()
+    label.text = "VAULT SENTINEL"
+    label.font_size = 16
+    label.pixel_size = 0.012
+    label.position = Vector3(0.0,1.85,0.0)
+    label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    label.no_depth_test = true
+    sentinel_piece.add_child(label)
 
 func _build_ui() -> void:
     var canvas := CanvasLayer.new()
@@ -350,6 +398,8 @@ func _fight_sentinel() -> void:
     hero_health = maxi(1, hero_health - 18)
     hero_xp += 50
     sentinel_defeated = true
+    if sentinel_piece:
+        sentinel_piece.visible = false
     action_panel.visible = false
     status_label.text = "The Vault Sentinel falls. The inner chamber is open."
     _save_campaign_state()
@@ -367,6 +417,8 @@ func _open_relic_chamber() -> void:
 func _claim_relic() -> void:
     relic_claimed = true
     hero_xp += 75
+    if relic_glow:
+        relic_glow.visible = false
     action_panel.visible = false
     status_label.text = "Ember Seal claimed. The first chamber is cleared."
     _refresh_objective()
