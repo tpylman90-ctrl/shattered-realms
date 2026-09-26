@@ -40,7 +40,7 @@
       "unlock_id": "magma_heart_cuirass",
       "piece_asset": "res://assets/3d/heroes/08f82aae-ba7a-4eb7-9491-097fd56b8b3f_67b8de66283912f7e65b8a74c3120ba0.glb",
       "piece_scale": 3,
-      "piece_y_offset": 0.08,
+      "piece_y_offset": 0,
       "unlock_item": "magma_heart_cuirass"
     },
     "vesper": {
@@ -52,7 +52,7 @@
       "unlock_id": "vesper_chestplate",
       "piece_asset": "res://assets/3d/heroes/c8e77735-5007-49e1-bd65-7588443969df-glb-2048-cachehit_eb682eeb80c6cb205f1321287f05cd39.glb",
       "piece_scale": 3,
-      "piece_y_offset": 0.08,
+      "piece_y_offset": 0,
       "unlock_item": "vesper_chestplate"
     }
   },
