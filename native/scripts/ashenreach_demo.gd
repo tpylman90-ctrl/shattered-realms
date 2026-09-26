@@ -81,6 +81,7 @@ var end_turn_button: Button
 var fog_root: Node3D
 var fog_tiles: Dictionary = {}
 var revealed_fog_cells: Dictionary = {}
+var scanned_road_paths: Dictionary = {}
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -90,6 +91,10 @@ const ROAD_SAMPLE_SPACING := 0.22
 const ROAD_HEIGHT_TOLERANCE := 0.55
 const LOCAL_FLOOR_PROBE_ABOVE := 0.45
 const LOCAL_FLOOR_PROBE_BELOW := 2.4
+const ROAD_SCAN_SPACING := 0.18
+const ROAD_SCAN_LATERAL := 0.34
+const ROAD_SCAN_MAX_RISE := 0.75
+const ROAD_SCAN_MAX_DROP := 1.25
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -331,7 +336,8 @@ func _ready() -> void:
     _build_terrain_collision($TerrainRoot)
     await get_tree().physics_frame
     await get_tree().physics_frame
-    _ground_move_nodes()
+    _scan_all_road_paths()
+    _ground_move_nodes_from_scans()
     _ground_hero_to_surface()
     reset_camera()
     poi_panel.visible = false
@@ -736,7 +742,7 @@ func _confirm_unit_move() -> void:
     current_move_node = pending_move_node
     var landed_node := move_nodes_root.get_node(current_move_node) as Area3D
     if landed_node:
-        hero_unit.global_position = _local_floor_point(landed_node.global_position)
+        hero_unit.global_position = landed_node.global_position
     pending_move_node = ""
     pending_path.clear()
     unit_selected = false
@@ -758,8 +764,14 @@ func _road_key(a: String, b: String) -> String:
 
 func _road_points(a: String, b: String) -> Array:
     var key := _road_key(a, b)
-    var control_points: Array = []
 
+    if scanned_road_paths.has(key):
+        var cached: Array = scanned_road_paths[key].duplicate()
+        if key != "%s|%s" % [a, b]:
+            cached.reverse()
+        return cached
+
+    var control_points: Array = []
     if not ROAD_PATHS.has(key):
         var fallback_node := move_nodes_root.get_node(b) as Area3D
         control_points = [hero_unit.global_position, fallback_node.global_position]
@@ -768,7 +780,96 @@ func _road_points(a: String, b: String) -> Array:
         if key != "%s|%s" % [a, b]:
             control_points.reverse()
 
-    return _densify_and_ground_path(control_points)
+    return _scan_road_corridor(control_points)
+
+func _scan_all_road_paths() -> void:
+    scanned_road_paths.clear()
+
+    for key_variant in ROAD_PATHS.keys():
+        var key: String = str(key_variant)
+        var control_points: Array = ROAD_PATHS[key]
+        var scanned: Array = _scan_road_corridor(control_points)
+        if scanned.size() >= 2:
+            scanned_road_paths[key] = scanned
+
+func _scan_road_corridor(control_points: Array) -> Array:
+    var result: Array = []
+    if control_points.size() < 2:
+        return result
+
+    var previous_y: float = float((control_points[0] as Vector3).y)
+    var first: Vector3 = _scan_floor_candidate(control_points[0] as Vector3, Vector3.FORWARD, previous_y)
+    result.append(first)
+    previous_y = first.y
+
+    for i in range(control_points.size() - 1):
+        var a: Vector3 = control_points[i]
+        var b: Vector3 = control_points[i + 1]
+        var flat_delta := Vector2(b.x - a.x, b.z - a.z)
+        var flat_distance: float = flat_delta.length()
+        if flat_distance <= 0.001:
+            continue
+
+        var tangent2 := flat_delta.normalized()
+        var tangent := Vector3(tangent2.x, 0.0, tangent2.y)
+        var steps: int = maxi(1, int(ceil(flat_distance / ROAD_SCAN_SPACING)))
+
+        for step in range(1, steps + 1):
+            var t: float = float(step) / float(steps)
+            var expected: Vector3 = a.lerp(b, t)
+            var sampled: Vector3 = _scan_floor_candidate(expected, tangent, previous_y)
+            result.append(sampled)
+            previous_y = sampled.y
+
+    return result
+
+func _scan_floor_candidate(expected: Vector3, tangent: Vector3, previous_y: float) -> Vector3:
+    var perpendicular := Vector3(-tangent.z, 0.0, tangent.x)
+    if perpendicular.length_squared() < 0.0001:
+        perpendicular = Vector3.RIGHT
+    else:
+        perpendicular = perpendicular.normalized()
+
+    var offsets: Array[float] = [0.0, ROAD_SCAN_LATERAL, -ROAD_SCAN_LATERAL, ROAD_SCAN_LATERAL * 2.0, -ROAD_SCAN_LATERAL * 2.0]
+    var best_point := Vector3(expected.x, expected.y + HERO_GROUND_CLEARANCE, expected.z)
+    var best_score := INF
+    var found := false
+
+    for lateral in offsets:
+        var probe_xz := expected + perpendicular * lateral
+        var from := Vector3(probe_xz.x, expected.y + 2.0, probe_xz.z)
+        var to := Vector3(probe_xz.x, expected.y - 3.0, probe_xz.z)
+        var query := PhysicsRayQueryParameters3D.create(from, to)
+        query.collide_with_areas = false
+        query.collide_with_bodies = true
+        query.collision_mask = 8
+
+        var hit := get_world_3d().direct_space_state.intersect_ray(query)
+        if hit.is_empty():
+            continue
+
+        var hit_position := hit["position"] as Vector3
+        var rise: float = hit_position.y - expected.y
+        var delta_from_previous: float = hit_position.y - previous_y
+
+        if rise > ROAD_SCAN_MAX_RISE:
+            continue
+        if rise < -ROAD_SCAN_MAX_DROP:
+            continue
+        if absf(delta_from_previous) > 0.9:
+            continue
+
+        var score: float = absf(rise) * 1.25 + absf(delta_from_previous) * 1.75 + absf(lateral) * 0.18
+        if score < best_score:
+            best_score = score
+            best_point = hit_position + Vector3(0.0, HERO_GROUND_CLEARANCE, 0.0)
+            found = true
+
+    if found:
+        return best_point
+
+    # Last-resort local probe at the authored centerline.
+    return _local_floor_point(expected)
 
 func _densify_and_ground_path(control_points: Array) -> Array:
     var result: Array = []
@@ -878,6 +979,39 @@ func _local_floor_point(point: Vector3) -> Vector3:
         point.y = hit_position.y + HERO_GROUND_CLEARANCE
     return point
 
+func _ground_move_nodes_from_scans() -> void:
+    var endpoint_samples: Dictionary = {}
+
+    for key_variant in scanned_road_paths.keys():
+        var key: String = str(key_variant)
+        var pieces := key.split("|")
+        if pieces.size() != 2:
+            continue
+        var samples: Array = scanned_road_paths[key]
+        if samples.is_empty():
+            continue
+
+        if not endpoint_samples.has(pieces[0]):
+            endpoint_samples[pieces[0]] = []
+        if not endpoint_samples.has(pieces[1]):
+            endpoint_samples[pieces[1]] = []
+
+        endpoint_samples[pieces[0]].append(samples[0])
+        endpoint_samples[pieces[1]].append(samples[samples.size() - 1])
+
+    for child in move_nodes_root.get_children():
+        if not child is Area3D:
+            continue
+        var node := child as Area3D
+        if endpoint_samples.has(node.name):
+            var samples: Array = endpoint_samples[node.name]
+            var total := Vector3.ZERO
+            for sample_variant in samples:
+                total += sample_variant as Vector3
+            node.global_position = total / float(samples.size())
+        else:
+            node.global_position = _local_floor_point(node.global_position)
+
 func _ground_move_nodes() -> void:
     for child in move_nodes_root.get_children():
         if child is Area3D:
@@ -885,6 +1019,11 @@ func _ground_move_nodes() -> void:
             node.global_position = _local_floor_point(node.global_position)
 
 func _ground_hero_to_surface() -> void:
+    if move_nodes_root.has_node(current_move_node):
+        var start_node := move_nodes_root.get_node(current_move_node) as Area3D
+        if start_node:
+            hero_unit.global_position = start_node.global_position
+            return
     hero_unit.global_position = _local_floor_point(hero_unit.global_position)
 
 func _cancel_unit_move() -> void:
@@ -1394,7 +1533,7 @@ func _refresh_enemy_board() -> void:
         var piece := Node3D.new()
         piece.name = "Enemy_%s" % node_name
         enemy_root.add_child(piece)
-        piece.global_position = _local_floor_point(move_node.global_position)
+        piece.global_position = move_node.global_position
 
         var material := StandardMaterial3D.new()
         material.albedo_color = Color(0.17, 0.055, 0.035, 1.0)
@@ -1645,7 +1784,7 @@ func _handle_hero_defeat() -> void:
     if move_nodes_root.has_node(current_move_node):
         var retreat_node := move_nodes_root.get_node(current_move_node) as Area3D
         if retreat_node:
-            hero_unit.global_position = _local_floor_point(retreat_node.global_position)
+            hero_unit.global_position = retreat_node.global_position
     event_log_label.text = "The hero was defeated and forced to retreat. Returned with 50 health; Vulgrim's threat increased."
     encounter_panel.visible = false
     current_encounter_node = ""
@@ -1679,7 +1818,7 @@ func _restart_campaign() -> void:
     if move_nodes_root.has_node(current_move_node):
         var start_node := move_nodes_root.get_node(current_move_node) as Area3D
         if start_node:
-            hero_unit.global_position = _local_floor_point(start_node.global_position)
+            hero_unit.global_position = start_node.global_position
 
     _refresh_enemy_board()
     _refresh_fog_reveal()
@@ -1751,7 +1890,7 @@ func _load_game_state() -> void:
     if move_nodes_root.has_node(current_move_node):
         var node := move_nodes_root.get_node(current_move_node) as Area3D
         if node:
-            hero_unit.global_position = _local_floor_point(node.global_position)
+            hero_unit.global_position = node.global_position
 
 func _select_poi(node: Node3D) -> void:
     if not POI_DATA.has(node.name) or not discovered_pois.has(node.name):
