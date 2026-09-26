@@ -407,6 +407,85 @@ visible = false
 mesh = SubResource("CylinderMesh_move")
 material_override = SubResource("Material_move")
 
+[node name="AmbushPassNode" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(12.5, 4.8, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/AmbushPassNode"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/AmbushPassNode"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+
+[node name="ElevatedOutpostNode" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(15, 5.6, 5)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/ElevatedOutpostNode"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/ElevatedOutpostNode"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+
+[node name="OverlookNode" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(14, 5.6, 9)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/OverlookNode"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/OverlookNode"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+
+[node name="HighlandRidgesNode" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(10, 6, -8)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/HighlandRidgesNode"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/HighlandRidgesNode"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+
+[node name="AshenPlainsNode" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(-12, 5.2, -8)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/AshenPlainsNode"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/AshenPlainsNode"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+
+[node name="DeadForestNode" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(-12, 3.8, 12)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/DeadForestNode"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/DeadForestNode"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+
+[node name="RitualTotemsNode" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(4.5, 4, 12.5)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/RitualTotemsNode"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/RitualTotemsNode"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
+
+[node name="SunkenRemnantsNode" type="Area3D" parent="MovementBoard/MoveNodes" groups=["move_node"]]
+position = Vector3(-2.5, 3.8, 13.5)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MovementBoard/MoveNodes/SunkenRemnantsNode"]
+shape = SubResource("SphereShape_poi")
+[node name="Marker" type="MeshInstance3D" parent="MovementBoard/MoveNodes/SunkenRemnantsNode"]
+visible = false
+mesh = SubResource("CylinderMesh_move")
+material_override = SubResource("Material_move")
+
 [node name="CameraRig" type="Node3D" parent="."]
 position = Vector3(0, 3.5, 0)
 
