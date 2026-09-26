@@ -302,7 +302,7 @@ material_override = SubResource("Material_marker")
 visible = false
 mesh = SubResource("TorusMesh_selection")
 material_override = SubResource("Material_selection")
-rotation_degrees = Vector3(90, 0, 0)
+rotation_degrees = Vector3(0, 0, 0)
 
 [node name="SelectedLabel" type="Label3D" parent="."]
 visible = false
@@ -327,18 +327,18 @@ mesh = SubResource("CapsuleMesh_hero")
 material_override = SubResource("Material_hero")
 
 [node name="BaseRing" type="MeshInstance3D" parent="MovementBoard/HeroUnit"]
-position = Vector3(0, 0.08, 0)
-rotation_degrees = Vector3(90, 0, 0)
-scale = Vector3(0.9, 0.9, 0.9)
+position = Vector3(0, 0.05, 0)
+rotation_degrees = Vector3(0, 0, 0)
+scale = Vector3(0.72, 0.72, 0.72)
 mesh = SubResource("TorusMesh_selection")
 material_override = SubResource("Material_selection")
 
 [node name="HeroLabel" type="Label3D" parent="MovementBoard/HeroUnit"]
-position = Vector3(0, 2.5, 0)
+position = Vector3(0, 2.15, 0)
 text = "IGNIS"
-font_size = 28
-pixel_size = 0.025
-outline_size = 5
+font_size = 20
+pixel_size = 0.014
+outline_size = 4
 billboard = 1
 no_depth_test = true
 
