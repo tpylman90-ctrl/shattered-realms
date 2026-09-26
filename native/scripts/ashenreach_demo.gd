@@ -71,6 +71,7 @@ var campaign_status_label: Label
 var ability_button: Button
 var enemy_root: Node3D
 var enemy_pieces: Dictionary = {}
+var route_preview: MeshInstance3D
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -242,9 +243,11 @@ func _ready() -> void:
     moves_remaining = clamp(moves_remaining, 0, hero_move_points)
     hero_label.visible = false
     _build_game_hud()
+    _build_route_preview()
     _build_enemy_board()
     _reveal_nearby_pois()
     _refresh_poi_visibility()
+    _refresh_claimed_poi_style()
     _refresh_enemy_visibility()
     _refresh_game_hud()
 
@@ -563,6 +566,7 @@ func _select_move_destination(node: Area3D) -> void:
         " → ".join(pending_path)
     ]
     movement_confirm.disabled = false
+    _show_route_preview(pending_path)
     for child in move_nodes_root.get_children():
         var marker := child.get_node_or_null("Marker") as MeshInstance3D
         if marker:
@@ -710,6 +714,7 @@ func _ground_hero_to_surface() -> void:
     hero_unit.global_position = _ground_point(hero_unit.global_position)
 
 func _cancel_unit_move() -> void:
+    _hide_route_preview()
     unit_selected = false
     hero_label.visible = false
     pending_move_node = ""
@@ -969,6 +974,46 @@ func _refresh_poi_visibility() -> void:
         if marker:
             marker.visible = discovered_pois.has(poi.name)
 
+func _build_route_preview() -> void:
+    route_preview = MeshInstance3D.new()
+    route_preview.name = "RoutePreview"
+    route_preview.visible = false
+    add_child(route_preview)
+
+func _show_route_preview(path: Array[String]) -> void:
+    if not route_preview or path.size() < 2:
+        return
+
+    var mesh := ImmediateMesh.new()
+    var material := StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.albedo_color = Color(0.12, 0.82, 0.72, 0.85)
+    material.emission_enabled = true
+    material.emission = Color(0.08, 0.9, 0.78, 1.0)
+    material.emission_energy_multiplier = 1.4
+
+    mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+
+    for edge_index in range(path.size() - 1):
+        var from_node: String = path[edge_index]
+        var to_node: String = path[edge_index + 1]
+        var points: Array = _road_points(from_node, to_node)
+        for i in range(points.size() - 1):
+            var a: Vector3 = points[i] + Vector3(0.0, 0.055, 0.0)
+            var b: Vector3 = points[i + 1] + Vector3(0.0, 0.055, 0.0)
+            mesh.surface_add_vertex(a)
+            mesh.surface_add_vertex(b)
+
+    mesh.surface_end()
+    route_preview.mesh = mesh
+    route_preview.visible = true
+
+func _hide_route_preview() -> void:
+    if route_preview:
+        route_preview.visible = false
+        route_preview.mesh = null
+
 func _build_enemy_board() -> void:
     enemy_root = Node3D.new()
     enemy_root.name = "EnemyBoard"
@@ -1065,6 +1110,24 @@ func _refresh_enemy_visibility() -> void:
 func _node_has_active_encounter(node_name: String) -> bool:
     var encounters: Dictionary = board_data.get("encounters", {})
     return encounters.has(node_name) and not completed_encounters.has(node_name)
+
+func _refresh_claimed_poi_style() -> void:
+    for child in $POIs.get_children():
+        if not child is Area3D:
+            continue
+        var poi := child as Area3D
+        var marker := poi.get_node_or_null("Marker") as MeshInstance3D
+        if not marker:
+            continue
+        if claimed_pois.has(poi.name):
+            var controlled_material := StandardMaterial3D.new()
+            controlled_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+            controlled_material.albedo_color = Color(0.18, 0.72, 0.34, 0.66)
+            controlled_material.emission_enabled = true
+            controlled_material.emission = Color(0.12, 0.8, 0.28, 1.0)
+            controlled_material.emission_energy_multiplier = 1.25
+            controlled_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+            marker.material_override = controlled_material
 
 func _poi_rule(poi_name: String) -> Dictionary:
     var rules: Dictionary = board_data.get("poi_rules", {})
@@ -1199,6 +1262,7 @@ func _restart_campaign() -> void:
     pending_move_node = ""
     pending_move_cost = 0
     pending_path.clear()
+    _hide_route_preview()
     discovered_pois.clear()
     claimed_pois.clear()
     completed_encounters.clear()
@@ -1303,6 +1367,7 @@ func _on_poi_action() -> void:
     var rule := _poi_rule(selected_poi)
     if bool(rule.get("claimable", false)) and not claimed_pois.has(selected_poi):
         claimed_pois[selected_poi] = true
+        _refresh_claimed_poi_style()
         poi_action.text = "Controlled"
         poi_action.disabled = true
         poi_body.text += "\n\nThis strategic location is now under your control."
