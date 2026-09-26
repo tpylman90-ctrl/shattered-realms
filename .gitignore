@@ -1,0 +1,14 @@
+# Godot editor/import cache
+native/.godot/
+
+# Local Android build output
+native/build/
+
+# Build-time generated playable hero meshes
+native/assets/3d/heroes/generated/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
