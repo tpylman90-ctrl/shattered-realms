@@ -9,6 +9,7 @@ var hero_xp := 0
 var current_node := 0
 var sentinel_defeated := false
 var relic_claimed := false
+var ember_seal_effect_applied := false
 var moving := false
 
 var status_label: Label
@@ -369,8 +370,8 @@ func _claim_relic() -> void:
     action_panel.visible = false
     status_label.text = "Ember Seal claimed. The first chamber is cleared."
     _refresh_objective()
-    _save_dungeon_state()
     _save_campaign_state()
+    _save_dungeon_state()
 
 func _close_action() -> void:
     action_panel.visible = false
@@ -394,6 +395,7 @@ func _load_campaign_state() -> void:
     if dungeon.load("user://sundered_vault_save.cfg") == OK:
         sentinel_defeated = bool(dungeon.get_value("vault","sentinel_defeated",false))
         relic_claimed = bool(dungeon.get_value("vault","relic_claimed",false))
+        ember_seal_effect_applied = bool(dungeon.get_value("vault","ember_seal_effect_applied",false))
 
 func _save_campaign_state() -> void:
     var cfg := ConfigFile.new()
@@ -401,15 +403,17 @@ func _save_campaign_state() -> void:
     cfg.set_value("board","hero_health",hero_health)
     cfg.set_value("board","hero_xp",hero_xp)
     cfg.set_value("board","sundered_vault_cleared",relic_claimed)
-    if relic_claimed:
+    if relic_claimed and not ember_seal_effect_applied:
         var current_heat: int = int(cfg.get_value("board","vulgrim_heat",0))
         cfg.set_value("board","vulgrim_heat",maxi(0,current_heat - 15))
+        ember_seal_effect_applied = true
     cfg.save("user://ashenreach_save.cfg")
 
 func _save_dungeon_state() -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("vault","sentinel_defeated",sentinel_defeated)
     cfg.set_value("vault","relic_claimed",relic_claimed)
+    cfg.set_value("vault","ember_seal_effect_applied",ember_seal_effect_applied)
     cfg.save("user://sundered_vault_save.cfg")
 
 func _return_to_map() -> void:
