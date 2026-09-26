@@ -69,6 +69,8 @@ var encounter_body: Label
 var boss_button: Button
 var campaign_status_label: Label
 var ability_button: Button
+var enemy_root: Node3D
+var enemy_pieces: Dictionary = {}
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -240,8 +242,10 @@ func _ready() -> void:
     moves_remaining = clamp(moves_remaining, 0, hero_move_points)
     hero_label.visible = false
     _build_game_hud()
+    _build_enemy_board()
     _reveal_nearby_pois()
     _refresh_poi_visibility()
+    _refresh_enemy_visibility()
     _refresh_game_hud()
 
 func _process(delta: float) -> void:
@@ -257,6 +261,11 @@ func _process(delta: float) -> void:
     if hero_ring:
         var hero_pulse := 0.92 + sin(glow_time * 2.0) * 0.08
         hero_ring.scale = Vector3.ONE * hero_pulse
+    for enemy_id in enemy_pieces.keys():
+        var piece := enemy_pieces[enemy_id] as Node3D
+        if piece and is_instance_valid(piece):
+            var pulse_scale: float = 1.0 + sin(glow_time * 2.0 + float(String(enemy_id).length())) * 0.04
+            piece.scale = Vector3.ONE * pulse_scale
 
 func reset_camera() -> void:
     yaw.rotation.y = deg_to_rad(-28.0)
@@ -630,13 +639,13 @@ func _densify_and_ground_path(control_points: Array) -> Array:
 
     return result
 
-func _animate_unit_path(path: Array[String]) -> void:
+func _animate_unit_path(path: Array[String]) -> String:
+    var reached_node: String = path[0]
     for edge_index in range(path.size() - 1):
-        var from_node := path[edge_index]
-        var to_node := path[edge_index + 1]
-        var road_points := _road_points(from_node, to_node)
+        var from_node: String = path[edge_index]
+        var to_node: String = path[edge_index + 1]
+        var road_points: Array = _road_points(from_node, to_node)
 
-        # point 0 is the current node; walk every subsequent road-center point.
         for point_index in range(1, road_points.size()):
             var target: Vector3 = road_points[point_index]
             var segment_distance: float = hero_unit.global_position.distance_to(target)
@@ -646,6 +655,17 @@ func _animate_unit_path(path: Array[String]) -> void:
             tween.set_ease(Tween.EASE_IN_OUT)
             tween.tween_property(hero_unit, "global_position", target, duration)
             await tween.finished
+
+        reached_node = to_node
+        moves_remaining = maxi(0, moves_remaining - 1)
+
+        if _node_has_active_encounter(to_node):
+            return reached_node
+
+        if moves_remaining <= 0:
+            return reached_node
+
+    return reached_node
 
 func _build_terrain_collision(node: Node) -> void:
     if node is MeshInstance3D:
@@ -764,6 +784,12 @@ func _build_game_hud() -> void:
     end_turn.custom_minimum_size = Vector2(0, 42)
     end_turn.pressed.connect(_end_turn)
     box.add_child(end_turn)
+
+    var new_campaign := Button.new()
+    new_campaign.text = "Restart Ashenreach"
+    new_campaign.custom_minimum_size = Vector2(0, 40)
+    new_campaign.pressed.connect(_restart_campaign)
+    box.add_child(new_campaign)
 
     event_log_label = Label.new()
     event_log_label.text = "Ashenreach expedition begun."
@@ -913,6 +939,7 @@ func _end_turn() -> void:
         event_log_label.text = "Inferno-Lord Vulgrim has awakened. The apex threat can now be confronted."
     else:
         event_log_label.text = "Turn %d begins. The Ashen Wastes grow more unstable." % turn_number
+    _refresh_enemy_visibility()
     _refresh_game_hud()
     _save_game_state()
 
@@ -941,6 +968,103 @@ func _refresh_poi_visibility() -> void:
         var marker := poi.get_node_or_null("Marker") as MeshInstance3D
         if marker:
             marker.visible = discovered_pois.has(poi.name)
+
+func _build_enemy_board() -> void:
+    enemy_root = Node3D.new()
+    enemy_root.name = "EnemyBoard"
+    add_child(enemy_root)
+    _refresh_enemy_board()
+
+func _refresh_enemy_board() -> void:
+    if not enemy_root:
+        return
+
+    for child in enemy_root.get_children():
+        child.queue_free()
+    enemy_pieces.clear()
+
+    var encounters: Dictionary = board_data.get("encounters", {})
+    for node_name_variant in encounters.keys():
+        var node_name: String = str(node_name_variant)
+        if completed_encounters.has(node_name):
+            continue
+        if not move_nodes_root.has_node(node_name):
+            continue
+
+        var move_node := move_nodes_root.get_node(node_name) as Area3D
+        if not move_node:
+            continue
+
+        var data: Dictionary = encounters[node_name]
+        var piece := Node3D.new()
+        piece.name = "Enemy_%s" % node_name
+        piece.global_position = _ground_point(move_node.global_position)
+        enemy_root.add_child(piece)
+
+        var body := MeshInstance3D.new()
+        var mesh := CapsuleMesh.new()
+        mesh.radius = 0.30
+        mesh.height = 1.05
+        mesh.radial_segments = 12
+        mesh.rings = 6
+        body.mesh = mesh
+        body.position = Vector3(0.0, 0.52, 0.0)
+
+        var material := StandardMaterial3D.new()
+        material.albedo_color = Color(0.34, 0.08, 0.045, 1.0)
+        material.emission_enabled = true
+        material.emission = Color(0.7, 0.12, 0.04, 1.0)
+        material.emission_energy_multiplier = 1.1
+        material.roughness = 0.72
+        body.material_override = material
+        piece.add_child(body)
+
+        var ring := MeshInstance3D.new()
+        var ring_mesh := TorusMesh.new()
+        ring_mesh.inner_radius = 0.44
+        ring_mesh.outer_radius = 0.53
+        ring_mesh.rings = 18
+        ring_mesh.ring_segments = 8
+        ring.mesh = ring_mesh
+        ring.position = Vector3(0.0, 0.035, 0.0)
+
+        var ring_material := StandardMaterial3D.new()
+        ring_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        ring_material.albedo_color = Color(0.8, 0.12, 0.04, 0.62)
+        ring_material.emission_enabled = true
+        ring_material.emission = Color(0.9, 0.11, 0.03, 1.0)
+        ring_material.emission_energy_multiplier = 1.45
+        ring.material_override = ring_material
+        piece.add_child(ring)
+
+        var label := Label3D.new()
+        label.text = str(data.get("name", "Threat"))
+        label.font_size = 16
+        label.pixel_size = 0.014
+        label.position = Vector3(0.0, 1.55, 0.0)
+        label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+        label.no_depth_test = true
+        piece.add_child(label)
+
+        enemy_pieces[node_name] = piece
+
+    _refresh_enemy_visibility()
+
+func _refresh_enemy_visibility() -> void:
+    if enemy_pieces.is_empty():
+        return
+    var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+    for node_name_variant in enemy_pieces.keys():
+        var node_name: String = str(node_name_variant)
+        var piece := enemy_pieces[node_name] as Node3D
+        if not piece or not is_instance_valid(piece):
+            continue
+        var enemy_flat := Vector2(piece.global_position.x, piece.global_position.z)
+        piece.visible = hero_flat.distance_to(enemy_flat) <= 9.0 or node_name == current_move_node
+
+func _node_has_active_encounter(node_name: String) -> bool:
+    var encounters: Dictionary = board_data.get("encounters", {})
+    return encounters.has(node_name) and not completed_encounters.has(node_name)
 
 func _poi_rule(poi_name: String) -> Dictionary:
     var rules: Dictionary = board_data.get("poi_rules", {})
@@ -1002,6 +1126,7 @@ func _resolve_encounter(engage: bool) -> void:
         hero_health = max(0, hero_health - loss)
         hero_xp += gain
         completed_encounters[current_encounter_node] = true
+        _refresh_enemy_board()
         event_log_label.text = "%s defeated. +%d XP, -%d health.%s" % [str(data.get("name", "Enemy")), gain, loss, ability_note]
         if hero_health <= 0:
             _handle_hero_defeat()
@@ -1058,6 +1183,39 @@ func _handle_hero_defeat() -> void:
     event_log_label.text = "The hero was defeated and forced to retreat. Returned with 50 health; Vulgrim's threat increased."
     encounter_panel.visible = false
     current_encounter_node = ""
+
+func _restart_campaign() -> void:
+    turn_number = 1
+    hero_health = 100
+    hero_xp = 0
+    vulgrim_heat = 0
+    territory_secured = false
+    vulgrim_available = false
+    vulgrim_defeated = false
+    signature_ability_used = false
+    signature_ability_primed = false
+    moves_remaining = hero_move_points
+    current_move_node = "BasaltCenter"
+    pending_move_node = ""
+    pending_move_cost = 0
+    pending_path.clear()
+    discovered_pois.clear()
+    claimed_pois.clear()
+    completed_encounters.clear()
+
+    if move_nodes_root.has_node(current_move_node):
+        var start_node := move_nodes_root.get_node(current_move_node) as Area3D
+        if start_node:
+            hero_unit.global_position = _ground_point(start_node.global_position)
+
+    _refresh_enemy_board()
+    _reveal_nearby_pois()
+    _refresh_poi_visibility()
+    _refresh_enemy_visibility()
+    event_log_label.text = "A new Ashenreach expedition has begun."
+    _refresh_game_hud()
+    _save_game_state()
+    reset_camera()
 
 func _save_game_state() -> void:
     var cfg := ConfigFile.new()
