@@ -111,6 +111,38 @@
       "xp": 30,
       "health_loss": 10,
       "description": "Cinder wraiths gather along the road to the Sundered Vault."
+    },
+    "AmbushPassNode": {
+      "name": "Ash Stalkers",
+      "type": "ambush",
+      "danger": 2,
+      "xp": 35,
+      "health_loss": 12,
+      "description": "Ash-cloaked hunters emerge from the shattered pass and cut off the road."
+    },
+    "ElevatedOutpostNode": {
+      "name": "Broken Legion",
+      "type": "elite",
+      "danger": 2,
+      "xp": 45,
+      "health_loss": 15,
+      "description": "Remnants of the old garrison still defend the elevated outpost."
+    },
+    "DeadForestNode": {
+      "name": "Cinder Wolf Pack",
+      "type": "beast",
+      "danger": 2,
+      "xp": 40,
+      "health_loss": 13,
+      "description": "Ember-eyed predators circle through the blackened trunks of the dead forest."
+    },
+    "AshenPlainsNode": {
+      "name": "Ash Wraiths",
+      "type": "undead",
+      "danger": 1,
+      "xp": 30,
+      "health_loss": 9,
+      "description": "Restless shades drift across the open plains and gather around the road."
     }
   },
   "legendary_threat": {
