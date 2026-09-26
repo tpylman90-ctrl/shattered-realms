@@ -54,6 +54,8 @@ var current_encounter_node := ""
 var territory_secured := false
 var vulgrim_available := false
 var vulgrim_defeated := false
+var signature_ability_used := false
+var signature_ability_primed := false
 
 var game_hud: PanelContainer
 var turn_label: Label
@@ -66,6 +68,7 @@ var encounter_title: Label
 var encounter_body: Label
 var boss_button: Button
 var campaign_status_label: Label
+var ability_button: Button
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -744,6 +747,11 @@ func _build_game_hud() -> void:
     campaign_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     box.add_child(campaign_status_label)
 
+    ability_button = Button.new()
+    ability_button.custom_minimum_size = Vector2(0, 42)
+    ability_button.pressed.connect(_prime_signature_ability)
+    box.add_child(ability_button)
+
     boss_button = Button.new()
     boss_button.text = "Confront Vulgrim"
     boss_button.custom_minimum_size = Vector2(0, 44)
@@ -820,7 +828,8 @@ func _refresh_game_hud() -> void:
         return
     var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
     turn_label.text = "TURN %d  •  MOVE %d/%d" % [turn_number, moves_remaining, hero_move_points]
-    hero_stats_label.text = "%s\nHealth %d/100  •  XP %d" % [hero_name, hero_health, hero_xp]
+    var level: int = 1 + int(hero_xp / 100)
+    hero_stats_label.text = "%s\nLevel %d  •  Health %d/100  •  XP %d" % [hero_name, level, hero_health, hero_xp]
     objective_label.text = _objective_text()
     threat_label.text = "Vulgrim threat: %d%%  •  %s" % [vulgrim_heat, _threat_stage()]
     if vulgrim_defeated:
@@ -831,6 +840,10 @@ func _refresh_game_hud() -> void:
         campaign_status_label.text = "Primary objectives complete. Secure the territory."
     else:
         campaign_status_label.text = "Explore, survive, and secure Ashenreach."
+    if ability_button:
+        var ability_name: String = str(hero_catalog.get(selected_hero_id, {}).get("signature_ability", "Signature Ability"))
+        ability_button.text = ("%s READY" % ability_name) if not signature_ability_used else ("%s USED" % ability_name)
+        ability_button.disabled = signature_ability_used
     if boss_button:
         boss_button.visible = vulgrim_available and not vulgrim_defeated
 
@@ -874,11 +887,25 @@ func _threat_stage() -> String:
         return "Stirring"
     return "Dormant"
 
+func _prime_signature_ability() -> void:
+    if signature_ability_used:
+        return
+    signature_ability_used = true
+    signature_ability_primed = true
+    var ability_name: String = str(hero_catalog.get(selected_hero_id, {}).get("signature_ability", "Signature Ability"))
+    event_log_label.text = "%s primed for the next encounter." % ability_name
+    _refresh_game_hud()
+    _save_game_state()
+
 func _end_turn() -> void:
     if encounter_panel and encounter_panel.visible:
         return
     turn_number += 1
     moves_remaining = hero_move_points
+    signature_ability_used = false
+    signature_ability_primed = false
+    if claimed_pois.has("CapitalRuins") and current_move_node in ["CapitalSouth", "CapitalNorth"]:
+        hero_health = min(100, hero_health + 10)
     var threat: Dictionary = board_data.get("legendary_threat", {})
     vulgrim_heat = min(int(threat.get("max_heat", 100)), vulgrim_heat + int(threat.get("escalation_per_turn", 5)))
     if vulgrim_heat >= 100:
@@ -960,12 +987,24 @@ func _resolve_encounter(engage: bool) -> void:
 
     var data: Dictionary = encounters[current_encounter_node]
     if engage:
-        var loss := int(data.get("health_loss", 0))
-        var gain := int(data.get("xp", 0))
-        hero_health = max(1, hero_health - loss)
+        var loss: int = int(data.get("health_loss", 0))
+        var gain: int = int(data.get("xp", 0))
+        var ability_note := ""
+        if signature_ability_primed:
+            if selected_hero_id == "vesper":
+                loss = 0
+                ability_note = " Glacial Bastion absorbed the incoming damage."
+            elif selected_hero_id == "ignis":
+                loss = int(floor(float(loss) * 0.5))
+                gain += 10
+                ability_note = " Eruption Strike broke the enemy line."
+            signature_ability_primed = false
+        hero_health = max(0, hero_health - loss)
         hero_xp += gain
         completed_encounters[current_encounter_node] = true
-        event_log_label.text = "%s defeated. +%d XP, -%d health." % [str(data.get("name", "Enemy")), gain, loss]
+        event_log_label.text = "%s defeated. +%d XP, -%d health.%s" % [str(data.get("name", "Enemy")), gain, loss, ability_note]
+        if hero_health <= 0:
+            _handle_hero_defeat()
     else:
         moves_remaining = 0
         event_log_label.text = "Withdrew from %s. Movement exhausted this turn." % str(data.get("name", "encounter"))
@@ -987,7 +1026,13 @@ func _resolve_vulgrim() -> void:
     var damage: int = 35
     if territory_secured:
         damage = 22
-    hero_health = max(1, hero_health - damage)
+    if signature_ability_primed:
+        if selected_hero_id == "vesper":
+            damage = int(floor(float(damage) * 0.5))
+        elif selected_hero_id == "ignis":
+            damage = int(floor(float(damage) * 0.65))
+        signature_ability_primed = false
+    hero_health = max(0, hero_health - damage)
     hero_xp += 150
     vulgrim_defeated = true
     vulgrim_available = false
@@ -997,6 +1042,22 @@ func _resolve_vulgrim() -> void:
     event_log_label.text = "Inferno-Lord Vulgrim defeated. Ashenreach is fully secured."
     _refresh_game_hud()
     _save_game_state()
+
+func _handle_hero_defeat() -> void:
+    hero_health = 50
+    turn_number += 1
+    moves_remaining = hero_move_points
+    signature_ability_used = false
+    signature_ability_primed = false
+    vulgrim_heat = min(100, vulgrim_heat + 10)
+    current_move_node = "BasaltCenter"
+    if move_nodes_root.has_node(current_move_node):
+        var retreat_node := move_nodes_root.get_node(current_move_node) as Area3D
+        if retreat_node:
+            hero_unit.global_position = _ground_point(retreat_node.global_position)
+    event_log_label.text = "The hero was defeated and forced to retreat. Returned with 50 health; Vulgrim's threat increased."
+    encounter_panel.visible = false
+    current_encounter_node = ""
 
 func _save_game_state() -> void:
     var cfg := ConfigFile.new()
@@ -1010,6 +1071,8 @@ func _save_game_state() -> void:
     cfg.set_value("board", "territory_secured", territory_secured)
     cfg.set_value("board", "vulgrim_available", vulgrim_available)
     cfg.set_value("board", "vulgrim_defeated", vulgrim_defeated)
+    cfg.set_value("board", "signature_ability_used", signature_ability_used)
+    cfg.set_value("board", "signature_ability_primed", signature_ability_primed)
     cfg.set_value("board", "discovered_pois", discovered_pois.keys())
     cfg.set_value("board", "claimed_pois", claimed_pois.keys())
     cfg.set_value("board", "completed_encounters", completed_encounters.keys())
@@ -1031,6 +1094,8 @@ func _load_game_state() -> void:
     territory_secured = bool(cfg.get_value("board", "territory_secured", false))
     vulgrim_available = bool(cfg.get_value("board", "vulgrim_available", false))
     vulgrim_defeated = bool(cfg.get_value("board", "vulgrim_defeated", false))
+    signature_ability_used = bool(cfg.get_value("board", "signature_ability_used", false))
+    signature_ability_primed = bool(cfg.get_value("board", "signature_ability_primed", false))
 
     discovered_pois.clear()
     for key in cfg.get_value("board", "discovered_pois", []):
