@@ -74,12 +74,17 @@ var enemy_root: Node3D
 var enemy_pieces: Dictionary = {}
 var route_preview: MeshInstance3D
 var victory_panel: PanelContainer
+var fog_root: Node3D
+var fog_tiles: Dictionary = {}
+var revealed_fog_cells: Dictionary = {}
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
 const HERO_GROUND_CLEARANCE := 0.025
 const ROAD_SAMPLE_SPACING := 0.45
+const FOG_CELL_SIZE := 4.0
+const FOG_REVEAL_RADIUS := 6.5
 
 const MOVE_GRAPH := {
     "BasaltCenter": ["Rattal", "CapitalSouth", "VaultRoad", "RitualTotemsNode", "SunkenRemnantsNode"],
@@ -305,6 +310,8 @@ func _ready() -> void:
     _build_victory_panel()
     _build_route_preview()
     _build_enemy_board()
+    _build_fog_of_war()
+    _refresh_fog_reveal()
     _reveal_nearby_pois()
     _refresh_poi_visibility()
     _refresh_claimed_poi_style()
@@ -1090,6 +1097,62 @@ func _build_victory_panel() -> void:
     )
     box.add_child(restart_button)
 
+func _build_fog_of_war() -> void:
+    fog_root = Node3D.new()
+    fog_root.name = "FogOfWar"
+    add_child(fog_root)
+
+    var fog_material := StandardMaterial3D.new()
+    fog_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    fog_material.albedo_color = Color(0.015, 0.02, 0.025, 0.72)
+    fog_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    fog_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+    var x_index: int = 0
+    var x: float = -16.0
+    while x <= 16.0:
+        var z_index: int = 0
+        var z: float = -12.0
+        while z <= 16.0:
+            var key := "%d_%d" % [x_index, z_index]
+            var tile := MeshInstance3D.new()
+            tile.name = "Fog_%s" % key
+            var plane := PlaneMesh.new()
+            plane.size = Vector2(FOG_CELL_SIZE + 0.15, FOG_CELL_SIZE + 0.15)
+            tile.mesh = plane
+            tile.material_override = fog_material
+            tile.position = Vector3(x, 7.15, z)
+            tile.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+            fog_root.add_child(tile)
+            fog_tiles[key] = tile
+            z += FOG_CELL_SIZE
+            z_index += 1
+        x += FOG_CELL_SIZE
+        x_index += 1
+
+    _refresh_fog_tiles()
+
+func _refresh_fog_reveal() -> void:
+    if not fog_root:
+        return
+    var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+    for key_variant in fog_tiles.keys():
+        var key: String = str(key_variant)
+        var tile := fog_tiles[key] as MeshInstance3D
+        if not tile:
+            continue
+        var tile_flat := Vector2(tile.global_position.x, tile.global_position.z)
+        if hero_flat.distance_to(tile_flat) <= FOG_REVEAL_RADIUS:
+            revealed_fog_cells[key] = true
+    _refresh_fog_tiles()
+
+func _refresh_fog_tiles() -> void:
+    for key_variant in fog_tiles.keys():
+        var key: String = str(key_variant)
+        var tile := fog_tiles[key] as MeshInstance3D
+        if tile:
+            tile.visible = not revealed_fog_cells.has(key)
+
 func _build_route_preview() -> void:
     route_preview = MeshInstance3D.new()
     route_preview.name = "RoutePreview"
@@ -1401,6 +1464,7 @@ func _restart_campaign() -> void:
     discovered_pois.clear()
     claimed_pois.clear()
     completed_encounters.clear()
+    revealed_fog_cells.clear()
     if FileAccess.file_exists("user://sundered_vault_save.cfg"):
         DirAccess.remove_absolute(ProjectSettings.globalize_path("user://sundered_vault_save.cfg"))
 
@@ -1410,6 +1474,7 @@ func _restart_campaign() -> void:
             hero_unit.global_position = _ground_point(start_node.global_position)
 
     _refresh_enemy_board()
+    _refresh_fog_reveal()
     _reveal_nearby_pois()
     _refresh_poi_visibility()
     _refresh_enemy_visibility()
@@ -1436,6 +1501,7 @@ func _save_game_state() -> void:
     cfg.set_value("board", "discovered_pois", discovered_pois.keys())
     cfg.set_value("board", "claimed_pois", claimed_pois.keys())
     cfg.set_value("board", "completed_encounters", completed_encounters.keys())
+    cfg.set_value("board", "revealed_fog_cells", revealed_fog_cells.keys())
     cfg.save("user://ashenreach_save.cfg")
 
 func _load_game_state() -> void:
@@ -1469,6 +1535,10 @@ func _load_game_state() -> void:
     completed_encounters.clear()
     for key in cfg.get_value("board", "completed_encounters", []):
         completed_encounters[str(key)] = true
+
+    revealed_fog_cells.clear()
+    for key in cfg.get_value("board", "revealed_fog_cells", []):
+        revealed_fog_cells[str(key)] = true
 
     if move_nodes_root.has_node(current_move_node):
         var node := move_nodes_root.get_node(current_move_node) as Area3D
