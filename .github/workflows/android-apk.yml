@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: shattered-realms-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-android:
     name: Build Android APK
@@ -112,4 +116,4 @@ jobs:
           name: ShatteredRealms-Android
           path: native/build/Android APK/ShatteredRealms.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 1
