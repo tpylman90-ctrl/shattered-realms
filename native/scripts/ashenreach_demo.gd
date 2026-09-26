@@ -73,6 +73,7 @@ var ability_button: Button
 var enemy_root: Node3D
 var enemy_pieces: Dictionary = {}
 var route_preview: MeshInstance3D
+var victory_panel: PanelContainer
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -244,6 +245,7 @@ func _ready() -> void:
     moves_remaining = clamp(moves_remaining, 0, hero_move_points)
     hero_label.visible = false
     _build_game_hud()
+    _build_victory_panel()
     _build_route_preview()
     _build_enemy_board()
     _reveal_nearby_pois()
@@ -251,6 +253,10 @@ func _ready() -> void:
     _refresh_claimed_poi_style()
     _refresh_enemy_visibility()
     _refresh_game_hud()
+    if sundered_vault_cleared and event_log_label:
+        event_log_label.text = "Sundered Vault cleared. Ember Seal recovered."
+    if vulgrim_defeated and victory_panel:
+        victory_panel.visible = true
 
 func _process(delta: float) -> void:
     glow_time += delta
@@ -977,6 +983,56 @@ func _refresh_poi_visibility() -> void:
         if marker:
             marker.visible = discovered_pois.has(poi.name)
 
+func _build_victory_panel() -> void:
+    victory_panel = PanelContainer.new()
+    victory_panel.name = "VictoryPanel"
+    victory_panel.visible = false
+    victory_panel.anchor_left = 0.5
+    victory_panel.anchor_top = 0.5
+    victory_panel.anchor_right = 0.5
+    victory_panel.anchor_bottom = 0.5
+    victory_panel.offset_left = -280.0
+    victory_panel.offset_top = -155.0
+    victory_panel.offset_right = 280.0
+    victory_panel.offset_bottom = 155.0
+    ui_root.add_child(victory_panel)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 20)
+    margin.add_theme_constant_override("margin_top", 18)
+    margin.add_theme_constant_override("margin_right", 20)
+    margin.add_theme_constant_override("margin_bottom", 18)
+    victory_panel.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 10)
+    margin.add_child(box)
+
+    var title := Label.new()
+    title.text = "ASHENREACH SECURED"
+    title.add_theme_font_size_override("font_size", 30)
+    box.add_child(title)
+
+    var body := Label.new()
+    body.text = "Inferno-Lord Vulgrim has fallen. The Ashen Wastes stronghold is under your control.\n\nThis territory is complete, but you may continue exploring or restart the Ashenreach campaign."
+    body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(body)
+
+    var continue_button := Button.new()
+    continue_button.text = "Continue Exploring"
+    continue_button.custom_minimum_size = Vector2(0, 48)
+    continue_button.pressed.connect(func(): victory_panel.visible = false)
+    box.add_child(continue_button)
+
+    var restart_button := Button.new()
+    restart_button.text = "Restart Ashenreach"
+    restart_button.custom_minimum_size = Vector2(0, 44)
+    restart_button.pressed.connect(func():
+        victory_panel.visible = false
+        _restart_campaign()
+    )
+    box.add_child(restart_button)
+
 func _build_route_preview() -> void:
     route_preview = MeshInstance3D.new()
     route_preview.name = "RoutePreview"
@@ -1122,7 +1178,16 @@ func _refresh_claimed_poi_style() -> void:
         var marker := poi.get_node_or_null("Marker") as MeshInstance3D
         if not marker:
             continue
-        if claimed_pois.has(poi.name):
+        if poi.name == "SunderedVault" and sundered_vault_cleared:
+            var vault_material := StandardMaterial3D.new()
+            vault_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+            vault_material.albedo_color = Color(0.82, 0.42, 0.12, 0.72)
+            vault_material.emission_enabled = true
+            vault_material.emission = Color(1.0, 0.30, 0.06, 1.0)
+            vault_material.emission_energy_multiplier = 1.5
+            vault_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+            marker.material_override = vault_material
+        elif claimed_pois.has(poi.name):
             var controlled_material := StandardMaterial3D.new()
             controlled_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
             controlled_material.albedo_color = Color(0.18, 0.72, 0.34, 0.66)
@@ -1233,6 +1298,8 @@ func _resolve_vulgrim() -> void:
     event_log_label.text = "Inferno-Lord Vulgrim defeated. Ashenreach is fully secured."
     _refresh_game_hud()
     _save_game_state()
+    if victory_panel:
+        victory_panel.visible = true
 
 func _handle_hero_defeat() -> void:
     hero_health = 50
@@ -1251,6 +1318,8 @@ func _handle_hero_defeat() -> void:
     current_encounter_node = ""
 
 func _restart_campaign() -> void:
+    if victory_panel:
+        victory_panel.visible = false
     turn_number = 1
     hero_health = 100
     hero_xp = 0
@@ -1353,7 +1422,11 @@ func _select_poi(node: Node3D) -> void:
     poi_title.text = data["title"]
     poi_body.text = data["body"]
     var rule := _poi_rule(String(node.name))
-    if bool(rule.get("claimable", false)) and not claimed_pois.has(node.name):
+    if node.name == "SunderedVault" and sundered_vault_cleared:
+        poi_body.text = "The Sundered Vault has been breached. The Ember Seal was recovered and the lower halls are secure."
+        poi_action.text = "Re-enter"
+        poi_action.disabled = false
+    elif bool(rule.get("claimable", false)) and not claimed_pois.has(node.name):
         poi_action.text = "Claim"
     elif claimed_pois.has(node.name):
         poi_action.text = "Controlled"
