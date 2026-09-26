@@ -44,6 +44,13 @@ jobs:
           test -f native/assets/3d/game-ready/ashenreach_terrain_high.glb
           test -f native/assets/3d/game-ready/ashenreach_gate_game.glb
 
+      - name: Generate playable hero meshes
+        shell: bash
+        run: |
+          python3 native/tools/extract_hero_piece.py
+          test -f native/assets/3d/heroes/generated/vesper_single.glb
+          test -f native/assets/3d/heroes/generated/ignis_single.glb
+
       - name: Set monotonic Android version
         shell: bash
         run: |
