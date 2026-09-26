@@ -401,6 +401,9 @@ func _save_campaign_state() -> void:
     cfg.set_value("board","hero_health",hero_health)
     cfg.set_value("board","hero_xp",hero_xp)
     cfg.set_value("board","sundered_vault_cleared",relic_claimed)
+    if relic_claimed:
+        var current_heat: int = int(cfg.get_value("board","vulgrim_heat",0))
+        cfg.set_value("board","vulgrim_heat",maxi(0,current_heat - 15))
     cfg.save("user://ashenreach_save.cfg")
 
 func _save_dungeon_state() -> void:
