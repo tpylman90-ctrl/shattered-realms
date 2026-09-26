@@ -946,6 +946,17 @@ func _refresh_game_hud() -> void:
         var ability_name: String = str(hero_catalog.get(selected_hero_id, {}).get("signature_ability", "Signature Ability"))
         ability_button.text = ("%s READY" % ability_name) if not signature_ability_used else ("%s USED" % ability_name)
         ability_button.disabled = signature_ability_used
+    var bonuses: Array[String] = []
+    if claimed_pois.has("CapitalRuins"):
+        bonuses.append("Capital: recovery")
+    if claimed_pois.has("Overlook"):
+        bonuses.append("Overlook: +reveal")
+    if claimed_pois.has("ElevatedOutpost"):
+        bonuses.append("Outpost: enemy intel")
+    if claimed_pois.has("RitualTotems"):
+        bonuses.append("Totems: slower threat")
+    if not bonuses.is_empty():
+        campaign_status_label.text += "\n" + " • ".join(bonuses)
     if boss_button:
         boss_button.visible = vulgrim_available and not vulgrim_defeated
 
@@ -1011,7 +1022,10 @@ func _end_turn() -> void:
     if claimed_pois.has("CapitalRuins") and current_move_node in ["CapitalSouth", "CapitalNorth"]:
         hero_health = min(100, hero_health + 10)
     var threat: Dictionary = board_data.get("legendary_threat", {})
-    vulgrim_heat = min(int(threat.get("max_heat", 100)), vulgrim_heat + int(threat.get("escalation_per_turn", 5)))
+    var escalation: int = int(threat.get("escalation_per_turn", 5))
+    if claimed_pois.has("RitualTotems"):
+        escalation = maxi(1, escalation - 2)
+    vulgrim_heat = mini(int(threat.get("max_heat", 100)), vulgrim_heat + escalation)
     if vulgrim_heat >= 100:
         vulgrim_available = true
         event_log_label.text = "Inferno-Lord Vulgrim has awakened. The apex threat can now be confronted."
@@ -1142,7 +1156,10 @@ func _refresh_fog_reveal() -> void:
         if not tile:
             continue
         var tile_flat := Vector2(tile.global_position.x, tile.global_position.z)
-        if hero_flat.distance_to(tile_flat) <= FOG_REVEAL_RADIUS:
+        var reveal_radius: float = FOG_REVEAL_RADIUS
+        if claimed_pois.has("Overlook"):
+            reveal_radius += 3.0
+        if hero_flat.distance_to(tile_flat) <= reveal_radius:
             revealed_fog_cells[key] = true
     _refresh_fog_tiles()
 
@@ -1284,7 +1301,10 @@ func _refresh_enemy_visibility() -> void:
         if not piece or not is_instance_valid(piece):
             continue
         var enemy_flat := Vector2(piece.global_position.x, piece.global_position.z)
-        piece.visible = hero_flat.distance_to(enemy_flat) <= 9.0 or node_name == current_move_node
+        var visibility_radius: float = 9.0
+        if claimed_pois.has("ElevatedOutpost"):
+            visibility_radius = 18.0
+        piece.visible = hero_flat.distance_to(enemy_flat) <= visibility_radius or node_name == current_move_node
 
 func _node_has_active_encounter(node_name: String) -> bool:
     var encounters: Dictionary = board_data.get("encounters", {})
@@ -1590,6 +1610,8 @@ func _on_poi_action() -> void:
             return
         claimed_pois[selected_poi] = true
         _refresh_claimed_poi_style()
+        _refresh_fog_reveal()
+        _refresh_enemy_visibility()
         poi_action.text = "Controlled"
         poi_action.disabled = true
         poi_body.text += "\n\nThis strategic location is now under your control."
