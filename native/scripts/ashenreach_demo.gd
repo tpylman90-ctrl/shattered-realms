@@ -74,6 +74,9 @@ var enemy_root: Node3D
 var enemy_pieces: Dictionary = {}
 var route_preview: MeshInstance3D
 var victory_panel: PanelContainer
+var hud_expanded := false
+var hud_details_button: Button
+var restart_button: Button
 var fog_root: Node3D
 var fog_tiles: Dictionary = {}
 var revealed_fog_cells: Dictionary = {}
@@ -808,10 +811,10 @@ func _hide_move_nodes() -> void:
 func _build_game_hud() -> void:
     game_hud = PanelContainer.new()
     game_hud.name = "GameHUD"
-    game_hud.offset_left = 22.0
-    game_hud.offset_top = 92.0
-    game_hud.offset_right = 390.0
-    game_hud.offset_bottom = 320.0
+    game_hud.offset_left = 18.0
+    game_hud.offset_top = 88.0
+    game_hud.offset_right = 350.0
+    game_hud.offset_bottom = 252.0
     ui_root.add_child(game_hud)
 
     var margin := MarginContainer.new()
@@ -826,7 +829,7 @@ func _build_game_hud() -> void:
     margin.add_child(box)
 
     turn_label = Label.new()
-    turn_label.add_theme_font_size_override("font_size", 18)
+    turn_label.add_theme_font_size_override("font_size", 16)
     box.add_child(turn_label)
 
     hero_stats_label = Label.new()
@@ -834,6 +837,8 @@ func _build_game_hud() -> void:
 
     objective_label = Label.new()
     objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    objective_label.add_theme_font_size_override("font_size", 12)
+    objective_label.visible = false
     box.add_child(objective_label)
 
     threat_label = Label.new()
@@ -841,6 +846,7 @@ func _build_game_hud() -> void:
 
     campaign_status_label = Label.new()
     campaign_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    campaign_status_label.add_theme_font_size_override("font_size", 12)
     box.add_child(campaign_status_label)
 
     ability_button = Button.new()
@@ -855,25 +861,50 @@ func _build_game_hud() -> void:
     boss_button.pressed.connect(_open_vulgrim_encounter)
     box.add_child(boss_button)
 
+    var actions := HBoxContainer.new()
+    actions.add_theme_constant_override("separation", 6)
+    box.add_child(actions)
+
     var end_turn := Button.new()
     end_turn.text = "End Turn"
-    end_turn.custom_minimum_size = Vector2(0, 42)
+    end_turn.custom_minimum_size = Vector2(122, 38)
     end_turn.pressed.connect(_end_turn)
-    box.add_child(end_turn)
+    actions.add_child(end_turn)
 
-    var new_campaign := Button.new()
-    new_campaign.text = "Restart Ashenreach"
-    new_campaign.custom_minimum_size = Vector2(0, 40)
-    new_campaign.pressed.connect(_restart_campaign)
-    box.add_child(new_campaign)
+    hud_details_button = Button.new()
+    hud_details_button.text = "Details"
+    hud_details_button.custom_minimum_size = Vector2(92, 38)
+    hud_details_button.pressed.connect(_toggle_hud_details)
+    actions.add_child(hud_details_button)
+
+    restart_button = Button.new()
+    restart_button.text = "Restart Ashenreach"
+    restart_button.custom_minimum_size = Vector2(0, 36)
+    restart_button.visible = false
+    restart_button.pressed.connect(_restart_campaign)
+    box.add_child(restart_button)
 
     event_log_label = Label.new()
     event_log_label.text = "Ashenreach expedition begun."
     event_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    event_log_label.add_theme_font_size_override("font_size", 12)
+    event_log_label.add_theme_font_size_override("font_size", 11)
+    event_log_label.visible = false
     box.add_child(event_log_label)
 
     _build_encounter_panel()
+
+func _toggle_hud_details() -> void:
+    hud_expanded = not hud_expanded
+    if objective_label:
+        objective_label.visible = hud_expanded
+    if event_log_label:
+        event_log_label.visible = hud_expanded
+    if restart_button:
+        restart_button.visible = hud_expanded
+    if hud_details_button:
+        hud_details_button.text = "Hide" if hud_expanded else "Details"
+    if game_hud:
+        game_hud.offset_bottom = 460.0 if hud_expanded else 252.0
 
 func _build_encounter_panel() -> void:
     encounter_panel = PanelContainer.new()
@@ -933,7 +964,12 @@ func _refresh_game_hud() -> void:
     var level: int = 1 + int(hero_xp / 100)
     hero_stats_label.text = "%s\nLevel %d  •  Health %d/100  •  XP %d" % [hero_name, level, hero_health, hero_xp]
     objective_label.text = _objective_text()
-    threat_label.text = "Vulgrim threat: %d%%  •  %s" % [vulgrim_heat, _threat_stage()]
+    var objective_total: int = board_data.get("objectives", []).size()
+    var objective_done: int = 0
+    for raw_objective in board_data.get("objectives", []):
+        if raw_objective is Dictionary and _objective_complete(raw_objective):
+            objective_done += 1
+    threat_label.text = "Objectives %d/%d  •  Vulgrim %d%% %s" % [objective_done, objective_total, vulgrim_heat, _threat_stage()]
     if vulgrim_defeated:
         campaign_status_label.text = "ASHENREACH SECURED • VULGRIM DEFEATED"
     elif territory_secured:
@@ -1116,11 +1152,22 @@ func _build_fog_of_war() -> void:
     fog_root.name = "FogOfWar"
     add_child(fog_root)
 
-    var fog_material := StandardMaterial3D.new()
-    fog_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    fog_material.albedo_color = Color(0.015, 0.02, 0.025, 0.72)
-    fog_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    fog_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    var fog_material := ShaderMaterial.new()
+    var fog_shader := Shader.new()
+    fog_shader.code = """
+shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_never, blend_mix;
+
+void fragment() {
+    vec2 p = UV - vec2(0.5);
+    float d = length(p);
+    float soft_edge = 1.0 - smoothstep(0.33, 0.72, d);
+    float center_texture = 0.90 + 0.10 * sin((UV.x + UV.y) * 18.0);
+    ALBEDO = vec3(0.01, 0.014, 0.018);
+    ALPHA = soft_edge * 0.58 * center_texture;
+}
+"""
+    fog_material.shader = fog_shader
 
     var x_index: int = 0
     var x: float = -16.0
@@ -1132,10 +1179,10 @@ func _build_fog_of_war() -> void:
             var tile := MeshInstance3D.new()
             tile.name = "Fog_%s" % key
             var plane := PlaneMesh.new()
-            plane.size = Vector2(FOG_CELL_SIZE + 0.15, FOG_CELL_SIZE + 0.15)
+            plane.size = Vector2(FOG_CELL_SIZE * 1.9, FOG_CELL_SIZE * 1.9)
             tile.mesh = plane
             tile.material_override = fog_material
-            tile.position = Vector3(x, 7.15, z)
+            tile.position = Vector3(x, 7.05, z)
             tile.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
             fog_root.add_child(tile)
             fog_tiles[key] = tile
