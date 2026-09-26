@@ -56,6 +56,7 @@ var vulgrim_available := false
 var vulgrim_defeated := false
 var signature_ability_used := false
 var signature_ability_primed := false
+var sundered_vault_cleared := false
 
 var game_hud: PanelContainer
 var turn_label: Label
@@ -898,6 +899,8 @@ func _objective_complete(objective: Dictionary) -> bool:
         return claimed_pois.has(str(objective.get("target", "")))
     if kind == "discover_count":
         return discovered_pois.size() >= int(objective.get("target", 0))
+    if kind == "dungeon_clear":
+        return sundered_vault_cleared
     return false
 
 func _all_objectives_complete() -> bool:
@@ -1257,6 +1260,7 @@ func _restart_campaign() -> void:
     vulgrim_defeated = false
     signature_ability_used = false
     signature_ability_primed = false
+    sundered_vault_cleared = false
     moves_remaining = hero_move_points
     current_move_node = "BasaltCenter"
     pending_move_node = ""
@@ -1295,6 +1299,7 @@ func _save_game_state() -> void:
     cfg.set_value("board", "vulgrim_defeated", vulgrim_defeated)
     cfg.set_value("board", "signature_ability_used", signature_ability_used)
     cfg.set_value("board", "signature_ability_primed", signature_ability_primed)
+    cfg.set_value("board", "sundered_vault_cleared", sundered_vault_cleared)
     cfg.set_value("board", "discovered_pois", discovered_pois.keys())
     cfg.set_value("board", "claimed_pois", claimed_pois.keys())
     cfg.set_value("board", "completed_encounters", completed_encounters.keys())
@@ -1318,6 +1323,7 @@ func _load_game_state() -> void:
     vulgrim_defeated = bool(cfg.get_value("board", "vulgrim_defeated", false))
     signature_ability_used = bool(cfg.get_value("board", "signature_ability_used", false))
     signature_ability_primed = bool(cfg.get_value("board", "signature_ability_primed", false))
+    sundered_vault_cleared = bool(cfg.get_value("board", "sundered_vault_cleared", false))
 
     discovered_pois.clear()
     for key in cfg.get_value("board", "discovered_pois", []):
