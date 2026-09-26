@@ -622,10 +622,10 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -560.0
-offset_top = -250.0
-offset_right = -24.0
-offset_bottom = -24.0
+offset_left = -430.0
+offset_top = -205.0
+offset_right = -18.0
+offset_bottom = -18.0
 theme_override_styles/panel = SubResource("Style_panel")
 
 [node name="Margin" type="MarginContainer" parent="UI/MovementPanel"]
@@ -642,7 +642,7 @@ theme_override_constants/separation = 10
 [node name="Title" type="Label" parent="UI/MovementPanel/Margin/VBox"]
 layout_mode = 2
 text = "MOVE IGNIS"
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 18
 
 [node name="Stats" type="Label" parent="UI/MovementPanel/Margin/VBox"]
 layout_mode = 2
@@ -650,7 +650,7 @@ text = "Select a highlighted destination."
 autowrap_mode = 2
 
 [node name="ConfirmButton" type="Button" parent="UI/MovementPanel/Margin/VBox"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 text = "Confirm Move"
 disabled = true
