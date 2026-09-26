@@ -88,6 +88,8 @@ const ROTATE_SPEED := 0.0055
 const HERO_GROUND_CLEARANCE := 0.025
 const ROAD_SAMPLE_SPACING := 0.22
 const ROAD_HEIGHT_TOLERANCE := 0.55
+const LOCAL_FLOOR_PROBE_ABOVE := 0.45
+const LOCAL_FLOOR_PROBE_BELOW := 2.4
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -699,7 +701,7 @@ func _confirm_unit_move() -> void:
     current_move_node = pending_move_node
     var landed_node := move_nodes_root.get_node(current_move_node) as Area3D
     if landed_node:
-        hero_unit.global_position = _ground_point(landed_node.global_position)
+        hero_unit.global_position = _local_floor_point(landed_node.global_position)
     pending_move_node = ""
     pending_path.clear()
     unit_selected = false
@@ -757,13 +759,12 @@ func _densify_and_ground_path(control_points: Array) -> Array:
     return result
 
 func _road_floor_point(expected: Vector3) -> Vector3:
-    var grounded: Vector3 = _ground_point(expected)
+    var grounded: Vector3 = _local_floor_point(expected)
 
-    # Do not let wall tops, rubble or props become temporary walking surfaces.
-    # The authored centerline already contains the intended road-floor profile.
     if absf(grounded.y - expected.y) <= ROAD_HEIGHT_TOLERANCE:
         return grounded
 
+    # Never jump upward to the top of scenery when a road sample is ambiguous.
     return Vector3(expected.x, expected.y + HERO_GROUND_CLEARANCE, expected.z)
 
 func _animate_unit_path(path: Array[String]) -> String:
@@ -827,14 +828,29 @@ func _ground_point(point: Vector3) -> Vector3:
         point.y = (hit["position"] as Vector3).y + HERO_GROUND_CLEARANCE
     return point
 
+func _local_floor_point(point: Vector3) -> Vector3:
+    var reference_y: float = point.y
+    var from := Vector3(point.x, reference_y + LOCAL_FLOOR_PROBE_ABOVE, point.z)
+    var to := Vector3(point.x, reference_y - LOCAL_FLOOR_PROBE_BELOW, point.z)
+    var query := PhysicsRayQueryParameters3D.create(from, to)
+    query.collide_with_areas = false
+    query.collide_with_bodies = true
+    query.collision_mask = 8
+
+    var hit := get_world_3d().direct_space_state.intersect_ray(query)
+    if not hit.is_empty():
+        var hit_position := hit["position"] as Vector3
+        point.y = hit_position.y + HERO_GROUND_CLEARANCE
+    return point
+
 func _ground_move_nodes() -> void:
     for child in move_nodes_root.get_children():
         if child is Area3D:
             var node := child as Area3D
-            node.global_position = _ground_point(node.global_position)
+            node.global_position = _local_floor_point(node.global_position)
 
 func _ground_hero_to_surface() -> void:
-    hero_unit.global_position = _ground_point(hero_unit.global_position)
+    hero_unit.global_position = _local_floor_point(hero_unit.global_position)
 
 func _cancel_unit_move() -> void:
     _hide_route_preview()
@@ -1342,8 +1358,8 @@ func _refresh_enemy_board() -> void:
         var data: Dictionary = encounters[node_name]
         var piece := Node3D.new()
         piece.name = "Enemy_%s" % node_name
-        piece.global_position = _ground_point(move_node.global_position)
         enemy_root.add_child(piece)
+        piece.global_position = _local_floor_point(move_node.global_position)
 
         var material := StandardMaterial3D.new()
         material.albedo_color = Color(0.17, 0.055, 0.035, 1.0)
@@ -1572,7 +1588,7 @@ func _handle_hero_defeat() -> void:
     if move_nodes_root.has_node(current_move_node):
         var retreat_node := move_nodes_root.get_node(current_move_node) as Area3D
         if retreat_node:
-            hero_unit.global_position = _ground_point(retreat_node.global_position)
+            hero_unit.global_position = _local_floor_point(retreat_node.global_position)
     event_log_label.text = "The hero was defeated and forced to retreat. Returned with 50 health; Vulgrim's threat increased."
     encounter_panel.visible = false
     current_encounter_node = ""
@@ -1606,7 +1622,7 @@ func _restart_campaign() -> void:
     if move_nodes_root.has_node(current_move_node):
         var start_node := move_nodes_root.get_node(current_move_node) as Area3D
         if start_node:
-            hero_unit.global_position = _ground_point(start_node.global_position)
+            hero_unit.global_position = _local_floor_point(start_node.global_position)
 
     _refresh_enemy_board()
     _refresh_fog_reveal()
@@ -1678,7 +1694,7 @@ func _load_game_state() -> void:
     if move_nodes_root.has_node(current_move_node):
         var node := move_nodes_root.get_node(current_move_node) as Area3D
         if node:
-            hero_unit.global_position = _ground_point(node.global_position)
+            hero_unit.global_position = _local_floor_point(node.global_position)
 
 func _select_poi(node: Node3D) -> void:
     if not POI_DATA.has(node.name) or not discovered_pois.has(node.name):
