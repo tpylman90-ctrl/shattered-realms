@@ -592,9 +592,44 @@ func _apply_hero_visual(data: Dictionary) -> void:
     active_hero_model.scale = Vector3.ONE * piece_scale
     active_hero_model.position = Vector3(x_offset, y_offset + extra_y, z_offset)
     hero_unit.add_child(active_hero_model)
+    await get_tree().process_frame
+    _snap_visual_to_ground(active_hero_model, 0.02)
 
     if placeholder:
         placeholder.visible = false
+
+func _snap_visual_to_ground(root: Node3D, target_y: float = 0.02) -> void:
+    var lowest: float = INF
+    lowest = _lowest_mesh_y_in_parent(root, root.get_parent() as Node3D, lowest)
+    if lowest < INF:
+        root.position.y += target_y - lowest
+
+func _lowest_mesh_y_in_parent(node: Node, parent_space: Node3D, current_lowest: float) -> float:
+    var lowest := current_lowest
+
+    if node is MeshInstance3D:
+        var mesh_instance := node as MeshInstance3D
+        if mesh_instance.mesh:
+            var box: AABB = mesh_instance.get_aabb()
+            var corners: Array[Vector3] = [
+                box.position,
+                box.position + Vector3(box.size.x, 0.0, 0.0),
+                box.position + Vector3(0.0, box.size.y, 0.0),
+                box.position + Vector3(0.0, 0.0, box.size.z),
+                box.position + Vector3(box.size.x, box.size.y, 0.0),
+                box.position + Vector3(box.size.x, 0.0, box.size.z),
+                box.position + Vector3(0.0, box.size.y, box.size.z),
+                box.position + box.size
+            ]
+            for corner in corners:
+                var world_corner: Vector3 = mesh_instance.to_global(corner)
+                var parent_corner: Vector3 = parent_space.to_local(world_corner)
+                lowest = minf(lowest, parent_corner.y)
+
+    for child in node.get_children():
+        lowest = _lowest_mesh_y_in_parent(child, parent_space, lowest)
+
+    return lowest
 
 func _select_unit(_unit: Area3D) -> void:
     _close_poi_panel()
@@ -1418,9 +1453,31 @@ func _refresh_enemy_board() -> void:
         label.no_depth_test = true
         piece.add_child(label)
 
+        await get_tree().process_frame
+        _snap_visual_children_to_ground(piece, 0.02)
         enemy_pieces[node_name] = piece
 
     _refresh_enemy_visibility()
+
+func _snap_visual_children_to_ground(root: Node3D, target_y: float = 0.02) -> void:
+    var visual_nodes: Array[Node3D] = []
+    for child in root.get_children():
+        if child is MeshInstance3D and child.name != "BaseRing":
+            visual_nodes.append(child as Node3D)
+
+    if visual_nodes.is_empty():
+        return
+
+    var lowest: float = INF
+    for visual in visual_nodes:
+        lowest = _lowest_mesh_y_in_parent(visual, root, lowest)
+
+    if lowest >= INF:
+        return
+
+    var shift: float = target_y - lowest
+    for visual in visual_nodes:
+        visual.position.y += shift
 
 func _refresh_enemy_visibility() -> void:
     if enemy_pieces.is_empty():
