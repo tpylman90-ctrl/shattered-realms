@@ -55,6 +55,29 @@ jobs:
           test -f native/assets/3d/heroes/generated/vesper_single.glb
           test -f native/assets/3d/heroes/generated/ignis_single.glb
 
+      - name: Validate Godot project scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/godot-validate"
+          cd "$RUNNER_TEMP/godot-validate"
+          curl -L --fail --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          GODOT_BIN="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.2-stable_linux.x86_64*' | head -n 1)"
+          chmod +x "$GODOT_BIN"
+          set +e
+          "$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE/native" --editor --quit 2>&1 | tee "$RUNNER_TEMP/godot-validation.log"
+          GODOT_EXIT=${PIPESTATUS[0]}
+          set -e
+          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" "$RUNNER_TEMP/godot-validation.log"; then
+            echo "Godot script validation failed."
+            exit 1
+          fi
+          if [ "$GODOT_EXIT" -ne 0 ]; then
+            echo "Godot validation exited with code $GODOT_EXIT."
+            exit "$GODOT_EXIT"
+          fi
+
       - name: Set monotonic Android version
         shell: bash
         run: |
