@@ -77,6 +77,7 @@ var victory_panel: PanelContainer
 var hud_expanded := false
 var hud_details_button: Button
 var restart_button: Button
+var end_turn_button: Button
 var fog_root: Node3D
 var fog_tiles: Dictionary = {}
 var revealed_fog_cells: Dictionary = {}
@@ -865,11 +866,11 @@ func _build_game_hud() -> void:
     actions.add_theme_constant_override("separation", 6)
     box.add_child(actions)
 
-    var end_turn := Button.new()
-    end_turn.text = "End Turn"
-    end_turn.custom_minimum_size = Vector2(122, 38)
-    end_turn.pressed.connect(_end_turn)
-    actions.add_child(end_turn)
+    end_turn_button = Button.new()
+    end_turn_button.text = "End Turn"
+    end_turn_button.custom_minimum_size = Vector2(122, 38)
+    end_turn_button.pressed.connect(_end_turn)
+    actions.add_child(end_turn_button)
 
     hud_details_button = Button.new()
     hud_details_button.text = "Details"
@@ -993,6 +994,11 @@ func _refresh_game_hud() -> void:
         bonuses.append("Totems: slower threat")
     if not bonuses.is_empty():
         campaign_status_label.text += "\n" + " • ".join(bonuses)
+    if end_turn_button:
+        if moves_remaining <= 0:
+            end_turn_button.text = "End Turn • Ready"
+        else:
+            end_turn_button.text = "End Turn"
     if boss_button:
         boss_button.visible = vulgrim_available and not vulgrim_defeated
 
@@ -1162,9 +1168,11 @@ void fragment() {
     vec2 p = UV - vec2(0.5);
     float d = length(p);
     float soft_edge = 1.0 - smoothstep(0.33, 0.72, d);
-    float center_texture = 0.90 + 0.10 * sin((UV.x + UV.y) * 18.0);
+    float wave_a = sin((UV.x * 17.0) + (UV.y * 11.0));
+    float wave_b = sin((UV.x * 7.0) - (UV.y * 19.0));
+    float center_texture = 0.88 + 0.08 * wave_a + 0.04 * wave_b;
     ALBEDO = vec3(0.01, 0.014, 0.018);
-    ALPHA = soft_edge * 0.58 * center_texture;
+    ALPHA = soft_edge * 0.48 * center_texture;
 }
 """
     fog_material.shader = fog_shader
@@ -1231,10 +1239,10 @@ func _show_route_preview(path: Array[String]) -> void:
     var material := StandardMaterial3D.new()
     material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.albedo_color = Color(0.12, 0.82, 0.72, 0.85)
+    material.albedo_color = Color(0.12, 0.72, 0.66, 0.62)
     material.emission_enabled = true
     material.emission = Color(0.08, 0.9, 0.78, 1.0)
-    material.emission_energy_multiplier = 1.4
+    material.emission_energy_multiplier = 0.85
 
     mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
 
@@ -1289,23 +1297,35 @@ func _refresh_enemy_board() -> void:
         piece.global_position = _ground_point(move_node.global_position)
         enemy_root.add_child(piece)
 
-        var body := MeshInstance3D.new()
-        var mesh := CapsuleMesh.new()
-        mesh.radius = 0.30
-        mesh.height = 1.05
-        mesh.radial_segments = 12
-        mesh.rings = 6
-        body.mesh = mesh
-        body.position = Vector3(0.0, 0.52, 0.0)
-
         var material := StandardMaterial3D.new()
-        material.albedo_color = Color(0.34, 0.08, 0.045, 1.0)
+        material.albedo_color = Color(0.17, 0.055, 0.035, 1.0)
         material.emission_enabled = true
-        material.emission = Color(0.7, 0.12, 0.04, 1.0)
-        material.emission_energy_multiplier = 1.1
-        material.roughness = 0.72
+        material.emission = Color(0.48, 0.07, 0.025, 1.0)
+        material.emission_energy_multiplier = 0.48
+        material.roughness = 0.86
+
+        var body := MeshInstance3D.new()
+        var body_mesh := SphereMesh.new()
+        body_mesh.radius = 0.36
+        body_mesh.height = 0.72
+        body_mesh.radial_segments = 12
+        body_mesh.rings = 6
+        body.mesh = body_mesh
+        body.scale = Vector3(1.25, 0.78, 1.65)
+        body.position = Vector3(0.0, 0.38, 0.0)
         body.material_override = material
         piece.add_child(body)
+
+        var head := MeshInstance3D.new()
+        var head_mesh := SphereMesh.new()
+        head_mesh.radius = 0.20
+        head_mesh.height = 0.40
+        head_mesh.radial_segments = 10
+        head_mesh.rings = 5
+        head.mesh = head_mesh
+        head.position = Vector3(0.0, 0.58, -0.46)
+        head.material_override = material
+        piece.add_child(head)
 
         var ring := MeshInstance3D.new()
         var ring_mesh := TorusMesh.new()
@@ -1318,18 +1338,18 @@ func _refresh_enemy_board() -> void:
 
         var ring_material := StandardMaterial3D.new()
         ring_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-        ring_material.albedo_color = Color(0.8, 0.12, 0.04, 0.62)
+        ring_material.albedo_color = Color(0.72, 0.10, 0.035, 0.42)
         ring_material.emission_enabled = true
-        ring_material.emission = Color(0.9, 0.11, 0.03, 1.0)
-        ring_material.emission_energy_multiplier = 1.45
+        ring_material.emission = Color(0.72, 0.09, 0.025, 1.0)
+        ring_material.emission_energy_multiplier = 0.75
         ring.material_override = ring_material
         piece.add_child(ring)
 
         var label := Label3D.new()
         label.text = str(data.get("name", "Threat"))
-        label.font_size = 16
-        label.pixel_size = 0.014
-        label.position = Vector3(0.0, 1.55, 0.0)
+        label.font_size = 14
+        label.pixel_size = 0.012
+        label.position = Vector3(0.0, 1.22, 0.0)
         label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
         label.no_depth_test = true
         piece.add_child(label)
