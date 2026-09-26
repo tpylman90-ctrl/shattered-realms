@@ -21,6 +21,12 @@
       "label": "Scout 4 strategic locations",
       "type": "discover_count",
       "target": 4
+    },
+    {
+      "id": "breach_vault",
+      "label": "Breach the Sundered Vault",
+      "type": "dungeon_clear",
+      "target": "sundered_vault"
     }
   ],
   "poi_rules": {
