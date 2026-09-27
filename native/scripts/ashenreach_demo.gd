@@ -111,13 +111,13 @@ const HEX_WORLD_LIMIT := 17.3
 const HEX_GRID_OFFSET := Vector2(0.0, 0.0)
 const HEX_SAMPLE_RADIUS := 0.16
 const HEX_MAX_LOCAL_VARIANCE := 0.58
-const HEX_MAX_STEP := 0.82
+const HEX_MAX_STEP := 0.94
 const HEX_MIN_UP_DOT := 0.52
-const HEX_HIGH_OUTLIER := 0.62
+const HEX_HIGH_OUTLIER := 0.46
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 5
+const HEX_GRID_VERSION := 6
 const HEX_DEPRESSION_RADIUS := 3
-const HEX_DEPRESSION_DEPTH := 0.72
+const HEX_DEPRESSION_DEPTH := 0.86
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -768,12 +768,6 @@ func _classify_hex_cells() -> void:
         if not bool(cell.get("has_surface", false)):
             walkable = false
             reason = "void"
-        elif float(cell.get("up_dot", -1.0)) < HEX_MIN_UP_DOT:
-            walkable = false
-            reason = "slope"
-        elif float(cell["height"]) < HEX_MIN_PLAYABLE_HEIGHT:
-            walkable = false
-            reason = "low_hazard"
 
         cell["walkable"] = walkable
         cell["blocked_reason"] = reason
@@ -1004,9 +998,10 @@ func _show_reachable_hexes() -> void:
         if bool(cell.get("walkable", false)):
             walkable_count += 1
 
-    status_label.text = "Grid %d • Open %d • Reachable %d • AP %d" % [
+    status_label.text = "Grid %d • Open %d • Blocked %d • Reachable %d • AP %d" % [
         hex_cells.size(),
         walkable_count,
+        maxi(0, hex_cells.size() - walkable_count),
         maxi(0, reachable.size() - 1),
         moves_remaining
     ]
