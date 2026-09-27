@@ -123,7 +123,7 @@ const HEX_MAX_STEP := 0.94
 const HEX_MIN_UP_DOT := 0.52
 const HEX_HIGH_OUTLIER := 0.46
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 8
+const HEX_GRID_VERSION := 9
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.86
 const FOG_CELL_SIZE := 4.0
@@ -608,8 +608,9 @@ func _select_unit(_unit: Area3D) -> void:
     if movement_title:
         movement_title.text = "MOVE %s" % hero_short
     var neighbor_count: int = _hex_neighbors(current_hex_key).size()
-    movement_stats.text = "%s selected. Action points remaining: %d\nAdjacent open hexes: %d / 6. Each hex costs 1 AP." % [
-        hero_name, moves_remaining, neighbor_count
+    var raw_neighbor_count: int = _hex_raw_neighbor_count(current_hex_key)
+    movement_stats.text = "%s selected. Action points remaining: %d\nAdjacent open hexes: %d / %d. Each hex costs 1 AP." % [
+        hero_name, moves_remaining, neighbor_count, raw_neighbor_count
     ]
     status_label.text = "%s — choose a destination" % hero_name
     _focus_on_poi(hero_unit.global_position)
@@ -680,7 +681,7 @@ func _build_hex_board() -> void:
             var has_surface: bool = bool(sample.get("has_surface", false))
             var sampled_position: Vector3 = sample.get(
                 "position",
-                Vector3(center2.x, HEX_MIN_PLAYABLE_HEIGHT, center2.y)
+                Vector3(center2.x, CAMPAIGN_START_POSITION.y, center2.y)
             ) as Vector3
 
             var area := Area3D.new()
@@ -696,7 +697,7 @@ func _build_hex_board() -> void:
             shape.height = 0.20
             collision.shape = shape
             collision.position.y = 0.08
-            collision.disabled = not has_surface
+            collision.disabled = false
             area.add_child(collision)
 
             var visual := MeshInstance3D.new()
@@ -710,7 +711,7 @@ func _build_hex_board() -> void:
             visual.position.y = 0.045
             visual.rotation_degrees.y = 30.0
             visual.material_override = hex_material_idle
-            visual.visible = has_surface
+            visual.visible = true
             area.add_child(visual)
 
             hex_root.add_child(area)
@@ -722,8 +723,10 @@ func _build_hex_board() -> void:
                 "height": float(area.position.y),
                 "has_surface": has_surface,
                 "up_dot": float(sample.get("up_dot", -1.0)),
-                "walkable": has_surface,
-                "blocked_reason": "" if has_surface else "void"
+                "walkable": true,
+                "auto_walkable": true,
+                "blocked_reason": "",
+                "nav_source": "auto"
             }
 
     _normalize_hex_surface_heights()
@@ -783,15 +786,16 @@ func _normalize_hex_surface_heights() -> void:
             area.position = pos
 
 func _classify_hex_cells() -> void:
-    # Navigation baseline: every surfaced hex is open. Gameplay obstacles are
-    # authored in the nav mask; the detailed art mesh does not get final say.
+    # The gameplay grid is independent from the detailed art mesh.
+    # Every logical cell inside the board bounds starts open. Only the authored
+    # navigation mask or temporary NAV EDIT overrides may block movement.
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
-        var has_surface: bool = bool(cell.get("has_surface", false))
-        cell["walkable"] = has_surface
-        cell["auto_walkable"] = has_surface
-        cell["blocked_reason"] = "" if has_surface else "void"
+        cell["walkable"] = true
+        cell["auto_walkable"] = true
+        cell["blocked_reason"] = ""
+        cell["nav_source"] = "auto"
         hex_cells[key] = cell
 
     _apply_nav_mask_overrides()
@@ -806,12 +810,11 @@ func _apply_hex_classification_visuals() -> void:
             continue
 
         var walkable: bool = bool(cell.get("walkable", false))
-        var has_surface: bool = bool(cell.get("has_surface", false))
         var visual := area.get_node_or_null("Visual") as MeshInstance3D
         var pick_shape := area.get_node_or_null("PickShape") as CollisionShape3D
 
         if visual:
-            visual.visible = has_surface
+            visual.visible = true
             var source: String = str(cell.get("nav_source", "auto"))
             if source == "debug_open" or source == "mask_open":
                 visual.material_override = hex_material_forced_open
@@ -819,9 +822,9 @@ func _apply_hex_classification_visuals() -> void:
                 visual.material_override = hex_material_forced_blocked
             else:
                 visual.material_override = hex_material_idle if walkable else hex_material_blocked
+
         if pick_shape:
-            # Surfaced blocked tiles remain queryable so NAV EDIT can reopen them.
-            pick_shape.disabled = not has_surface
+            pick_shape.disabled = false
 
 func _build_hex_grid_overlay() -> void:
     if hex_grid_overlay and is_instance_valid(hex_grid_overlay):
@@ -845,8 +848,6 @@ func _build_hex_grid_overlay() -> void:
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var overlay_cell: Dictionary = hex_cells[key]
-        if not bool(overlay_cell.get("has_surface", false)):
-            continue
         var center: Vector3 = overlay_cell["position"] + Vector3(0.0, 0.065, 0.0)
         for i in range(6):
             var a_angle := deg_to_rad(60.0 * float(i))
@@ -895,6 +896,22 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
         "position": center_position,
         "up_dot": up_dot
     }
+
+func _hex_raw_neighbor_count(key: String) -> int:
+    if not hex_cells.has(key):
+        return 0
+    var cell: Dictionary = hex_cells[key]
+    var q: int = int(cell["q"])
+    var r: int = int(cell["r"])
+    var directions := [
+        Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
+        Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
+    ]
+    var count := 0
+    for d in directions:
+        if hex_cells.has(_hex_key(q + d.x, r + d.y)):
+            count += 1
+    return count
 
 func _hex_neighbors(key: String) -> Array[String]:
     if not _is_hex_walkable(key):
@@ -2131,7 +2148,7 @@ func _apply_nav_mask_overrides() -> void:
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
-        cell["walkable"] = bool(cell.get("auto_walkable", cell.get("walkable", false)))
+        cell["walkable"] = bool(cell.get("auto_walkable", true))
         cell["nav_source"] = "auto"
         hex_cells[key] = cell
 
@@ -2156,8 +2173,6 @@ func _set_hex_mask_state(key: String, walkable: bool, source: String) -> void:
     if not hex_cells.has(key):
         return
     var cell: Dictionary = hex_cells[key]
-    if walkable and not bool(cell.get("has_surface", false)):
-        return
     cell["walkable"] = walkable
     cell["nav_source"] = source
     cell["blocked_reason"] = "" if walkable else source
