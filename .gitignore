@@ -12,3 +12,6 @@ native/assets/3d/heroes/generated/
 Thumbs.db
 *.tmp
 *.log
+
+# Build-time generated Ashenreach navigation surface
+native/assets/3d/game-ready/ashenreach-hex-board/generated/
