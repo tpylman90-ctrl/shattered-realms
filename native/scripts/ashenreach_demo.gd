@@ -96,8 +96,11 @@ var hex_material_current: StandardMaterial3D
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
-const PAN_SPEED := 0.012
+const PAN_SPEED := 0.016
 const PAN_LIMIT := 15.5
+const CAMERA_MIN_PITCH_DEG := -84.0
+const CAMERA_MAX_PITCH_DEG := -18.0
+const TOP_DOWN_SNAP_START_DEG := -76.0
 const HERO_GROUND_CLEARANCE := 0.025
 const HEX_SIZE := 1.05
 const HEX_WORLD_LIMIT := 17.3
@@ -308,25 +311,43 @@ func _unhandled_input(event: InputEvent) -> void:
                 camera.position.z = zoom_distance
             previous_pinch_distance = current_distance
 
-            var current_center := _touch_center()
+            var current_center: Vector2 = _touch_center()
             if previous_two_finger_center != Vector2.ZERO:
-                var center_delta := current_center - previous_two_finger_center
-                yaw.rotation.y -= center_delta.x * ROTATE_SPEED * 1.25
-                pitch.rotation.x = clamp(
-                    pitch.rotation.x - center_delta.y * ROTATE_SPEED * 0.85,
-                    deg_to_rad(-72.0),
-                    deg_to_rad(-18.0)
+                var center_delta: Vector2 = current_center - previous_two_finger_center
+                var top_down_factor: float = _top_down_factor()
+                var orbit_scale: float = lerpf(1.0, 0.48, top_down_factor)
+                var tilt_scale: float = lerpf(1.0, 0.42, top_down_factor)
+
+                yaw.rotation.y -= center_delta.x * ROTATE_SPEED * 1.25 * orbit_scale
+
+                var target_pitch: float = pitch.rotation.x - center_delta.y * ROTATE_SPEED * 0.85 * tilt_scale
+                target_pitch = clampf(
+                    target_pitch,
+                    deg_to_rad(CAMERA_MIN_PITCH_DEG),
+                    deg_to_rad(CAMERA_MAX_PITCH_DEG)
                 )
+
+                if rad_to_deg(target_pitch) <= TOP_DOWN_SNAP_START_DEG:
+                    target_pitch = lerpf(target_pitch, deg_to_rad(CAMERA_MIN_PITCH_DEG), 0.34)
+
+                pitch.rotation.x = target_pitch
             previous_two_finger_center = current_center
 
     elif event is InputEventMouseMotion:
         if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-            yaw.rotation.y -= event.relative.x * ROTATE_SPEED
-            pitch.rotation.x = clamp(
-                pitch.rotation.x - event.relative.y * ROTATE_SPEED,
-                deg_to_rad(-72.0),
-                deg_to_rad(-18.0)
+            var top_down_factor: float = _top_down_factor()
+            var orbit_scale: float = lerpf(1.0, 0.48, top_down_factor)
+            var tilt_scale: float = lerpf(1.0, 0.42, top_down_factor)
+            yaw.rotation.y -= event.relative.x * ROTATE_SPEED * orbit_scale
+            var target_pitch: float = pitch.rotation.x - event.relative.y * ROTATE_SPEED * tilt_scale
+            target_pitch = clampf(
+                target_pitch,
+                deg_to_rad(CAMERA_MIN_PITCH_DEG),
+                deg_to_rad(CAMERA_MAX_PITCH_DEG)
             )
+            if rad_to_deg(target_pitch) <= TOP_DOWN_SNAP_START_DEG:
+                target_pitch = lerpf(target_pitch, deg_to_rad(CAMERA_MIN_PITCH_DEG), 0.34)
+            pitch.rotation.x = target_pitch
         elif Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
             _pan_camera(event.relative)
 
@@ -348,8 +369,13 @@ func _touch_center() -> Vector2:
         sum += point_variant as Vector2
     return sum / float(touches.size())
 
+func _top_down_factor() -> float:
+    var pitch_degrees: float = absf(rad_to_deg(pitch.rotation.x))
+    return clampf((pitch_degrees - 50.0) / 34.0, 0.0, 1.0)
+
 func _pan_camera(screen_delta: Vector2) -> void:
     var zoom_scale: float = clampf(zoom_distance / 30.0, 0.65, 1.55)
+    var top_down_boost: float = lerpf(1.0, 1.75, _top_down_factor())
 
     var right: Vector3 = yaw.global_transform.basis.x
     right.y = 0.0
@@ -359,7 +385,7 @@ func _pan_camera(screen_delta: Vector2) -> void:
     forward.y = 0.0
     forward = forward.normalized()
 
-    var world_delta: Vector3 = (-right * screen_delta.x + forward * screen_delta.y) * PAN_SPEED * zoom_scale
+    var world_delta: Vector3 = (-right * screen_delta.x + forward * screen_delta.y) * PAN_SPEED * zoom_scale * top_down_boost
     yaw.position += world_delta
     yaw.position.x = clamp(yaw.position.x, -PAN_LIMIT, PAN_LIMIT)
     yaw.position.z = clamp(yaw.position.z, -PAN_LIMIT, PAN_LIMIT)
