@@ -92,6 +92,7 @@ var hex_material_idle: StandardMaterial3D
 var hex_material_reachable: StandardMaterial3D
 var hex_material_target: StandardMaterial3D
 var hex_material_current: StandardMaterial3D
+var hex_grid_overlay: MeshInstance3D
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -107,10 +108,10 @@ const HERO_GROUND_CLEARANCE := 0.025
 const HEX_SIZE := 0.55
 const HEX_WORLD_LIMIT := 17.3
 const HEX_GRID_OFFSET := Vector2(0.0, 0.0)
-const HEX_SAMPLE_RADIUS := 0.26
-const HEX_MAX_LOCAL_VARIANCE := 0.42
-const HEX_MAX_STEP := 0.68
-const HEX_MIN_UP_DOT := 0.76
+const HEX_SAMPLE_RADIUS := 0.16
+const HEX_MAX_LOCAL_VARIANCE := 0.58
+const HEX_MAX_STEP := 0.78
+const HEX_MIN_UP_DOT := 0.66
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -590,6 +591,8 @@ func _select_unit(_unit: Area3D) -> void:
     movement_stats.text = "%s selected. Action points remaining: %d\nMove across highlighted hexes. Each hex costs 1 AP." % [hero_name, moves_remaining]
     status_label.text = "%s — choose a destination" % hero_name
     _focus_on_poi(hero_unit.global_position)
+    if hex_grid_overlay:
+        hex_grid_overlay.visible = true
     _show_reachable_hexes()
 
 func _confirm_unit_move() -> void:
@@ -677,7 +680,42 @@ func _build_hex_board() -> void:
             }
 
     _prune_unconnected_hexes()
+    _build_hex_grid_overlay()
     _clear_hex_highlights()
+
+func _build_hex_grid_overlay() -> void:
+    if hex_grid_overlay and is_instance_valid(hex_grid_overlay):
+        hex_grid_overlay.queue_free()
+
+    hex_grid_overlay = MeshInstance3D.new()
+    hex_grid_overlay.name = "HexGridOverlay"
+    hex_grid_overlay.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    hex_root.add_child(hex_grid_overlay)
+
+    var mesh := ImmediateMesh.new()
+    var material := StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.albedo_color = Color(0.18, 0.78, 0.72, 0.34)
+    material.emission_enabled = true
+    material.emission = Color(0.10, 0.62, 0.58, 1.0)
+    material.emission_energy_multiplier = 0.55
+
+    mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var center: Vector3 = hex_cells[key]["position"] + Vector3(0.0, 0.065, 0.0)
+        for i in range(6):
+            var a_angle := deg_to_rad(60.0 * float(i))
+            var b_angle := deg_to_rad(60.0 * float((i + 1) % 6))
+            var a := center + Vector3(cos(a_angle) * HEX_SIZE * 0.93, 0.0, sin(a_angle) * HEX_SIZE * 0.93)
+            var b := center + Vector3(cos(b_angle) * HEX_SIZE * 0.93, 0.0, sin(b_angle) * HEX_SIZE * 0.93)
+            mesh.surface_add_vertex(a)
+            mesh.surface_add_vertex(b)
+    mesh.surface_end()
+
+    hex_grid_overlay.mesh = mesh
+    hex_grid_overlay.visible = false
 
 func _hex_to_world_2d(q: int, r: int) -> Vector2:
     # Flat-top axial coordinates aligned to the hex pattern baked into Ashenreach.
@@ -689,14 +727,16 @@ func _hex_key(q: int, r: int) -> String:
     return "%d,%d" % [q, r]
 
 func _sample_hex_surface(x: float, z: float) -> Dictionary:
+    # Sample the floor near the cell center. Small props should not invalidate
+    # an otherwise playable tile, so only three short radial probes are used.
     var sample_offsets: Array[Vector2] = [Vector2.ZERO]
-    for i in range(6):
-        var angle := deg_to_rad(60.0 * float(i))
+    for i in range(3):
+        var angle := deg_to_rad(120.0 * float(i))
         sample_offsets.append(Vector2(cos(angle), sin(angle)) * HEX_SAMPLE_RADIUS)
 
     var heights: Array[float] = []
+    var up_dots: Array[float] = []
     var center_position := Vector3.ZERO
-    var minimum_up_dot := 1.0
 
     for i in range(sample_offsets.size()):
         var offset: Vector2 = sample_offsets[i]
@@ -708,32 +748,41 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
         query.collision_mask = 8
         var hit := get_world_3d().direct_space_state.intersect_ray(query)
         if hit.is_empty():
-            return {"valid": false}
+            if i == 0:
+                return {"valid": false}
+            continue
 
         var pos := hit["position"] as Vector3
         var normal := hit.get("normal", Vector3.UP) as Vector3
         heights.append(pos.y)
-        minimum_up_dot = minf(minimum_up_dot, normal.dot(Vector3.UP))
+        up_dots.append(normal.dot(Vector3.UP))
         if i == 0:
             center_position = pos
 
-    var min_height := heights[0]
-    var max_height := heights[0]
+    if heights.size() < 2:
+        return {"valid": false}
+
+    var min_height: float = heights[0]
+    var max_height: float = heights[0]
     for h in heights:
         min_height = minf(min_height, h)
         max_height = maxf(max_height, h)
 
+    var acceptable_normals := 0
+    for up_dot in up_dots:
+        if up_dot >= HEX_MIN_UP_DOT:
+            acceptable_normals += 1
+
     if max_height - min_height > HEX_MAX_LOCAL_VARIANCE:
         return {"valid": false}
-    if minimum_up_dot < HEX_MIN_UP_DOT:
+    if acceptable_normals < maxi(1, int(ceil(float(up_dots.size()) * 0.5))):
         return {"valid": false}
 
     center_position.y += HERO_GROUND_CLEARANCE
     return {
         "valid": true,
         "position": center_position,
-        "variance": max_height - min_height,
-        "up_dot": minimum_up_dot
+        "variance": max_height - min_height
     }
 
 func _hex_neighbors(key: String) -> Array[String]:
@@ -982,6 +1031,8 @@ func _confirm_hex_move() -> void:
     unit_selected = false
     hero_label.visible = false
     movement_panel.visible = false
+    if hex_grid_overlay:
+        hex_grid_overlay.visible = false
 
     _refresh_fog_reveal()
     _reveal_nearby_pois()
@@ -1024,6 +1075,8 @@ func _cancel_unit_move() -> void:
     unit_selected = false
     movement_panel.visible = false
     hero_label.visible = false
+    if hex_grid_overlay:
+        hex_grid_overlay.visible = false
 
 func _build_game_hud() -> void:
     game_hud = PanelContainer.new()
