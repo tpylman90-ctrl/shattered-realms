@@ -123,7 +123,7 @@ const HEX_MAX_STEP := 0.94
 const HEX_MIN_UP_DOT := 0.52
 const HEX_HIGH_OUTLIER := 0.46
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 9
+const HEX_GRID_VERSION := 10
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.86
 const FOG_CELL_SIZE := 4.0
@@ -218,7 +218,7 @@ const POI_DATA := {
 
 func _ready() -> void:
     _tune_imported_terrain_materials($TerrainRoot)
-    _build_terrain_collision($TerrainRoot)
+    _build_terrain_collision($NavSurfaceRoot)
     await get_tree().physics_frame
     await get_tree().physics_frame
     _load_nav_mask_data()
@@ -697,7 +697,7 @@ func _build_hex_board() -> void:
             shape.height = 0.20
             collision.shape = shape
             collision.position.y = 0.08
-            collision.disabled = false
+            collision.disabled = not has_surface
             area.add_child(collision)
 
             var visual := MeshInstance3D.new()
@@ -711,7 +711,7 @@ func _build_hex_board() -> void:
             visual.position.y = 0.045
             visual.rotation_degrees.y = 30.0
             visual.material_override = hex_material_idle
-            visual.visible = true
+            visual.visible = has_surface
             area.add_child(visual)
 
             hex_root.add_child(area)
@@ -723,9 +723,9 @@ func _build_hex_board() -> void:
                 "height": float(area.position.y),
                 "has_surface": has_surface,
                 "up_dot": float(sample.get("up_dot", -1.0)),
-                "walkable": true,
-                "auto_walkable": true,
-                "blocked_reason": "",
+                "walkable": has_surface,
+                "auto_walkable": has_surface,
+                "blocked_reason": "" if has_surface else "void",
                 "nav_source": "auto"
             }
 
@@ -786,15 +786,16 @@ func _normalize_hex_surface_heights() -> void:
             area.position = pos
 
 func _classify_hex_cells() -> void:
-    # The gameplay grid is independent from the detailed art mesh.
-    # Every logical cell inside the board bounds starts open. Only the authored
-    # navigation mask or temporary NAV EDIT overrides may block movement.
+    # The generated navigation surface is the clean board footprint/grounding
+    # source. Detailed visual geometry no longer participates in gameplay
+    # collision. Authored mask data remains the final authority for obstacles.
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
-        cell["walkable"] = true
-        cell["auto_walkable"] = true
-        cell["blocked_reason"] = ""
+        var has_surface: bool = bool(cell.get("has_surface", false))
+        cell["walkable"] = has_surface
+        cell["auto_walkable"] = has_surface
+        cell["blocked_reason"] = "" if has_surface else "void"
         cell["nav_source"] = "auto"
         hex_cells[key] = cell
 
@@ -810,11 +811,12 @@ func _apply_hex_classification_visuals() -> void:
             continue
 
         var walkable: bool = bool(cell.get("walkable", false))
+        var has_surface: bool = bool(cell.get("has_surface", false))
         var visual := area.get_node_or_null("Visual") as MeshInstance3D
         var pick_shape := area.get_node_or_null("PickShape") as CollisionShape3D
 
         if visual:
-            visual.visible = true
+            visual.visible = has_surface
             var source: String = str(cell.get("nav_source", "auto"))
             if source == "debug_open" or source == "mask_open":
                 visual.material_override = hex_material_forced_open
@@ -824,7 +826,7 @@ func _apply_hex_classification_visuals() -> void:
                 visual.material_override = hex_material_idle if walkable else hex_material_blocked
 
         if pick_shape:
-            pick_shape.disabled = false
+            pick_shape.disabled = not has_surface
 
 func _build_hex_grid_overlay() -> void:
     if hex_grid_overlay and is_instance_valid(hex_grid_overlay):
@@ -848,6 +850,8 @@ func _build_hex_grid_overlay() -> void:
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var overlay_cell: Dictionary = hex_cells[key]
+        if not bool(overlay_cell.get("has_surface", false)):
+            continue
         var center: Vector3 = overlay_cell["position"] + Vector3(0.0, 0.065, 0.0)
         for i in range(6):
             var a_angle := deg_to_rad(60.0 * float(i))
@@ -2148,7 +2152,7 @@ func _apply_nav_mask_overrides() -> void:
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
-        cell["walkable"] = bool(cell.get("auto_walkable", true))
+        cell["walkable"] = bool(cell.get("auto_walkable", false))
         cell["nav_source"] = "auto"
         hex_cells[key] = cell
 
@@ -2173,6 +2177,8 @@ func _set_hex_mask_state(key: String, walkable: bool, source: String) -> void:
     if not hex_cells.has(key):
         return
     var cell: Dictionary = hex_cells[key]
+    if walkable and not bool(cell.get("has_surface", false)):
+        return
     cell["walkable"] = walkable
     cell["nav_source"] = source
     cell["blocked_reason"] = "" if walkable else source
