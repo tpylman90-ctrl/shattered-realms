@@ -25,6 +25,7 @@ from trimesh.ray.ray_triangle import RayMeshIntersector
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "assets/3d/game-ready/ashenreach-hex-board/ashenreach_hex_board.glb"
 OUTPUT = ROOT / "assets/3d/game-ready/ashenreach-hex-board/generated/ashenreach_nav_surface.glb"
+GRID_OUTPUT = ROOT / "data/generated/ashenreach_nav_grid.json"
 
 TERRAIN_SCALE = 38.0
 HEX_SIZE_WORLD = 0.55
@@ -239,6 +240,34 @@ def export_glb(mesh: trimesh.Trimesh, output: Path):
     data = scene.export(file_type="glb")
     output.write_bytes(data)
 
+def export_grid_json(
+    keys: list[str],
+    centers: np.ndarray,
+    selected: list[float | None],
+    output: Path,
+):
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    tiles = {}
+    for i, key in enumerate(keys):
+        y_local = selected[i]
+        if y_local is None:
+            continue
+        tiles[key] = {
+            "x": round(float(centers[i, 0]) * TERRAIN_SCALE, 5),
+            "y": round(float(y_local) * TERRAIN_SCALE, 5),
+            "z": round(float(centers[i, 2]) * TERRAIN_SCALE, 5),
+        }
+
+    payload = {
+        "version": 1,
+        "terrain_scale": TERRAIN_SCALE,
+        "hex_size": HEX_SIZE_WORLD,
+        "tile_count": len(tiles),
+        "tiles": tiles,
+    }
+    output.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+
 
 def main():
     if not SOURCE.exists():
@@ -267,11 +296,16 @@ def main():
 
     nav_mesh = build_nav_mesh(keys, centers, selected)
     export_glb(nav_mesh, OUTPUT)
+    export_grid_json(keys, centers, selected, GRID_OUTPUT)
 
     print(
         f"[nav] wrote {OUTPUT} "
         f"({OUTPUT.stat().st_size / 1024.0:.1f} KiB, "
         f"{len(nav_mesh.faces):,} triangles)"
+    )
+    print(
+        f"[nav] wrote {GRID_OUTPUT} "
+        f"({GRID_OUTPUT.stat().st_size / 1024.0:.1f} KiB)"
     )
 
 
