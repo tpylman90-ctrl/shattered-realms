@@ -73,6 +73,12 @@ var campaign_status_label: Label
 var ability_button: Button
 var enemy_root: Node3D
 var enemy_pieces: Dictionary = {}
+var enemy_hex_positions: Dictionary = {}
+var campaign_phase := "PLAYER"
+var last_enemy_phase_summary := ""
+const PHASE_PLAYER := "PLAYER"
+const PHASE_ENEMY := "ENEMY"
+const PHASE_WORLD := "WORLD"
 var route_preview: MeshInstance3D
 var victory_panel: PanelContainer
 var hud_expanded := false
@@ -370,6 +376,7 @@ func _ready() -> void:
     _load_board_data()
     _refresh_unlocked_heroes()
     _load_game_state()
+    _restore_hex_state()
     _apply_selected_hero()
     moves_remaining = clamp(moves_remaining, 0, hero_move_points)
     hero_label.visible = false
@@ -485,6 +492,8 @@ func _touch_distance() -> float:
     return (points[0] as Vector2).distance_to(points[1] as Vector2)
 
 func _try_select(screen_position: Vector2) -> void:
+    if campaign_phase != PHASE_PLAYER:
+        return
     var origin := camera.project_ray_origin(screen_position)
     var end := origin + camera.project_ray_normal(screen_position) * 200.0
     var query := PhysicsRayQueryParameters3D.create(origin, end)
@@ -659,6 +668,8 @@ func _lowest_mesh_y_in_parent(node: Node, parent_space: Node3D, current_lowest: 
     return lowest
 
 func _select_unit(_unit: Area3D) -> void:
+    if campaign_phase != PHASE_PLAYER or moves_remaining <= 0:
+        return
     _close_poi_panel()
     unit_selected = true
     hero_label.visible = true
@@ -671,7 +682,7 @@ func _select_unit(_unit: Area3D) -> void:
     var hero_short: String = hero_name.split(",")[0].to_upper()
     if movement_title:
         movement_title.text = "MOVE %s" % hero_short
-    movement_stats.text = "%s selected. Movement points: %d\nTap a highlighted destination." % [hero_name, hero_move_points]
+    movement_stats.text = "%s selected. Action points remaining: %d\nMove across highlighted hexes. Each hex costs 1 AP." % [hero_name, moves_remaining]
     status_label.text = "%s — choose a destination" % hero_name
     _focus_on_poi(hero_unit.global_position)
     if hex_mode:
@@ -1015,6 +1026,8 @@ func _clear_hex_highlights() -> void:
             visual.material_override = hex_material_idle
 
 func _select_hex_destination(area: Area3D) -> void:
+    if campaign_phase != PHASE_PLAYER or moves_remaining <= 0:
+        return
     var key: String = str(area.get_meta("hex_key", ""))
     if key == "" or key == current_hex_key:
         return
@@ -1088,7 +1101,7 @@ func _show_hex_route_preview(path: Array[String]) -> void:
     route_preview.visible = true
 
 func _confirm_hex_move() -> void:
-    if pending_hex_path.size() < 2:
+    if campaign_phase != PHASE_PLAYER or pending_hex_path.size() < 2:
         return
 
     movement_confirm.disabled = true
@@ -1102,7 +1115,7 @@ func _confirm_hex_move() -> void:
         var tween := create_tween()
         tween.set_trans(Tween.TRANS_SINE)
         tween.set_ease(Tween.EASE_IN_OUT)
-        tween.tween_property(hero_unit, "global_position", target, 0.26)
+        tween.tween_property(hero_unit, "global_position", target, 0.22)
         await tween.finished
 
     moves_remaining = maxi(0, moves_remaining - pending_move_cost)
@@ -1118,6 +1131,7 @@ func _confirm_hex_move() -> void:
     _reveal_nearby_pois()
     _refresh_poi_visibility()
     _refresh_enemy_visibility()
+    _resolve_hex_contact()
     _refresh_game_hud()
     _save_game_state()
 
@@ -1566,7 +1580,8 @@ func _refresh_game_hud() -> void:
     if not game_hud:
         return
     var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
-    turn_label.text = "TURN %d  •  MOVE %d/%d" % [turn_number, moves_remaining, hero_move_points]
+    var phase_text := campaign_phase.capitalize()
+    turn_label.text = "TURN %d  •  %s PHASE  •  AP %d/%d" % [turn_number, phase_text, moves_remaining, hero_move_points]
     var level: int = 1 + int(hero_xp / 100)
     hero_stats_label.text = "%s\nLevel %d  •  Health %d/100  •  XP %d" % [hero_name, level, hero_health, hero_xp]
     objective_label.text = _objective_text()
@@ -1587,7 +1602,7 @@ func _refresh_game_hud() -> void:
     if ability_button:
         var ability_name: String = str(hero_catalog.get(selected_hero_id, {}).get("signature_ability", "Signature Ability"))
         ability_button.text = ("%s READY" % ability_name) if not signature_ability_used else ("%s USED" % ability_name)
-        ability_button.disabled = signature_ability_used
+        ability_button.disabled = signature_ability_used or campaign_phase != PHASE_PLAYER
     var bonuses: Array[String] = []
     if claimed_pois.has("CapitalRuins"):
         bonuses.append("Capital: recovery")
@@ -1600,7 +1615,12 @@ func _refresh_game_hud() -> void:
     if not bonuses.is_empty():
         campaign_status_label.text += "\n" + " • ".join(bonuses)
     if end_turn_button:
-        if moves_remaining <= 0:
+        end_turn_button.disabled = campaign_phase != PHASE_PLAYER
+        if campaign_phase == PHASE_ENEMY:
+            end_turn_button.text = "Enemy Phase"
+        elif campaign_phase == PHASE_WORLD:
+            end_turn_button.text = "World Phase"
+        elif moves_remaining <= 0:
             end_turn_button.text = "End Turn • Ready"
         else:
             end_turn_button.text = "End Turn"
@@ -1650,7 +1670,7 @@ func _threat_stage() -> String:
     return "Dormant"
 
 func _prime_signature_ability() -> void:
-    if signature_ability_used:
+    if campaign_phase != PHASE_PLAYER or signature_ability_used:
         return
     signature_ability_used = true
     signature_ability_primed = true
@@ -1660,24 +1680,39 @@ func _prime_signature_ability() -> void:
     _save_game_state()
 
 func _end_turn() -> void:
+    if campaign_phase != PHASE_PLAYER:
+        return
     if encounter_panel and encounter_panel.visible:
         return
+    _cancel_unit_move()
+    campaign_phase = PHASE_ENEMY
+    last_enemy_phase_summary = ""
+    _refresh_game_hud()
+    await _run_enemy_phase()
+
+    campaign_phase = PHASE_WORLD
+    _refresh_game_hud()
+    await get_tree().create_timer(0.35).timeout
+    _resolve_world_phase()
+
+    if hero_health <= 0:
+        _handle_hero_defeat()
+        return
+
     turn_number += 1
     moves_remaining = hero_move_points
     signature_ability_used = false
     signature_ability_primed = false
-    if claimed_pois.has("CapitalRuins") and current_move_node in ["CapitalSouth", "CapitalNorth"]:
-        hero_health = min(100, hero_health + 10)
-    var threat: Dictionary = board_data.get("legendary_threat", {})
-    var escalation: int = int(threat.get("escalation_per_turn", 5))
-    if claimed_pois.has("RitualTotems"):
-        escalation = maxi(1, escalation - 2)
-    vulgrim_heat = mini(int(threat.get("max_heat", 100)), vulgrim_heat + escalation)
-    if vulgrim_heat >= 100:
-        vulgrim_available = true
-        event_log_label.text = "Inferno-Lord Vulgrim has awakened. The apex threat can now be confronted."
+    campaign_phase = PHASE_PLAYER
+
+    if claimed_pois.has("CapitalRuins") and _hero_near_named_poi("CapitalRuins", 4.0):
+        hero_health = mini(100, hero_health + 10)
+
+    if last_enemy_phase_summary != "":
+        event_log_label.text = "Turn %d • %s" % [turn_number, last_enemy_phase_summary]
     else:
-        event_log_label.text = "Turn %d begins. The Ashen Wastes grow more unstable." % turn_number
+        event_log_label.text = "Turn %d begins. Choose how to spend your %d action points." % [turn_number, hero_move_points]
+
     _refresh_enemy_visibility()
     _refresh_game_hud()
     _save_game_state()
@@ -1961,6 +1996,13 @@ func _refresh_enemy_board() -> void:
 
         await get_tree().process_frame
         _snap_visual_children_to_ground(piece, 0.0)
+        if hex_mode and not hex_cells.is_empty():
+            var enemy_hex := str(enemy_hex_positions.get(node_name, ""))
+            if enemy_hex == "" or not hex_cells.has(enemy_hex):
+                enemy_hex = _nearest_hex_key(piece.global_position)
+            if enemy_hex != "" and hex_cells.has(enemy_hex):
+                enemy_hex_positions[node_name] = enemy_hex
+                piece.global_position = hex_cells[enemy_hex]["position"]
         enemy_pieces[node_name] = piece
 
     _refresh_enemy_visibility()
@@ -2197,12 +2239,145 @@ func _restart_campaign() -> void:
     _save_game_state()
     reset_camera()
 
+func _restore_hex_state() -> void:
+    if not hex_mode or hex_cells.is_empty():
+        return
+    if current_hex_key == "" or not hex_cells.has(current_hex_key):
+        current_hex_key = _nearest_hex_key(hero_unit.global_position)
+    if current_hex_key != "" and hex_cells.has(current_hex_key):
+        hero_unit.global_position = hex_cells[current_hex_key]["position"]
+
+func _hero_near_named_poi(poi_name: String, radius: float) -> bool:
+    var poi := $POIs.get_node_or_null(poi_name) as Node3D
+    if not poi:
+        return false
+    var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+    var poi_flat := Vector2(poi.global_position.x, poi.global_position.z)
+    return hero_flat.distance_to(poi_flat) <= radius
+
+func _resolve_hex_contact() -> void:
+    if current_hex_key == "":
+        return
+    for encounter_variant in enemy_hex_positions.keys():
+        var encounter_id := str(encounter_variant)
+        if completed_encounters.has(encounter_id):
+            continue
+        if str(enemy_hex_positions.get(encounter_id, "")) == current_hex_key:
+            _trigger_node_encounter(encounter_id)
+            return
+
+func _run_enemy_phase() -> void:
+    if enemy_pieces.is_empty() or current_hex_key == "":
+        last_enemy_phase_summary = "No enemy forces acted."
+        await get_tree().create_timer(0.25).timeout
+        return
+
+    var attacks := 0
+    var total_damage := 0
+    var occupied: Dictionary = {}
+    for id_variant in enemy_hex_positions.keys():
+        var id := str(id_variant)
+        if not completed_encounters.has(id):
+            occupied[str(enemy_hex_positions[id])] = id
+
+    var enemy_ids: Array[String] = []
+    for id_variant in enemy_pieces.keys():
+        enemy_ids.append(str(id_variant))
+    enemy_ids.sort()
+
+    for enemy_id in enemy_ids:
+        if completed_encounters.has(enemy_id):
+            continue
+        var piece := enemy_pieces.get(enemy_id) as Node3D
+        if not piece or not is_instance_valid(piece):
+            continue
+        var enemy_hex := str(enemy_hex_positions.get(enemy_id, ""))
+        if enemy_hex == "" or not hex_cells.has(enemy_hex):
+            enemy_hex = _nearest_hex_key(piece.global_position)
+        if enemy_hex == "":
+            continue
+
+        if current_hex_key in _hex_neighbors(enemy_hex) or enemy_hex == current_hex_key:
+            var damage := _enemy_campaign_damage(enemy_id)
+            hero_health = maxi(0, hero_health - damage)
+            attacks += 1
+            total_damage += damage
+            await _enemy_attack_bump(piece)
+            if hero_health <= 0:
+                break
+            continue
+
+        var path := _shortest_hex_path(enemy_hex, current_hex_key)
+        if path.size() >= 2:
+            var next_hex := path[1]
+            if not occupied.has(next_hex) and next_hex != current_hex_key:
+                occupied.erase(enemy_hex)
+                occupied[next_hex] = enemy_id
+                enemy_hex_positions[enemy_id] = next_hex
+                var tween := create_tween()
+                tween.set_trans(Tween.TRANS_SINE)
+                tween.set_ease(Tween.EASE_IN_OUT)
+                tween.tween_property(piece, "global_position", hex_cells[next_hex]["position"], 0.24)
+                await tween.finished
+                enemy_hex = next_hex
+
+        if current_hex_key in _hex_neighbors(enemy_hex):
+            var damage_after_move := _enemy_campaign_damage(enemy_id)
+            hero_health = maxi(0, hero_health - damage_after_move)
+            attacks += 1
+            total_damage += damage_after_move
+            await _enemy_attack_bump(piece)
+            if hero_health <= 0:
+                break
+
+    if attacks > 0:
+        last_enemy_phase_summary = "Enemy phase: %d attack%s dealt %d damage." % [attacks, "" if attacks == 1 else "s", total_damage]
+    else:
+        last_enemy_phase_summary = "Enemy forces repositioned across Ashenreach."
+    _refresh_enemy_visibility()
+    _refresh_game_hud()
+
+func _enemy_campaign_damage(enemy_id: String) -> int:
+    var encounters: Dictionary = board_data.get("encounters", {})
+    var data: Dictionary = encounters.get(enemy_id, {})
+    var danger := int(data.get("danger", 1))
+    var base_loss := int(data.get("health_loss", 10))
+    return clampi(int(round(float(base_loss) * 0.35)) + danger, 4, 14)
+
+func _enemy_attack_bump(piece: Node3D) -> void:
+    var start := piece.global_position
+    var direction := hero_unit.global_position - start
+    direction.y = 0.0
+    if direction.length() < 0.01:
+        direction = Vector3(0.0, 0.0, -1.0)
+    direction = direction.normalized()
+    var tween := create_tween()
+    tween.tween_property(piece, "global_position", start + direction * 0.35, 0.10)
+    tween.tween_property(piece, "global_position", start, 0.12)
+    await tween.finished
+
+func _resolve_world_phase() -> void:
+    var threat: Dictionary = board_data.get("legendary_threat", {})
+    var escalation: int = int(threat.get("escalation_per_turn", 5))
+    if claimed_pois.has("RitualTotems"):
+        escalation = maxi(1, escalation - 2)
+    vulgrim_heat = mini(int(threat.get("max_heat", 100)), vulgrim_heat + escalation)
+    if vulgrim_heat >= 100:
+        vulgrim_available = true
+        last_enemy_phase_summary += " Vulgrim has awakened."
+    elif vulgrim_heat >= 75:
+        last_enemy_phase_summary += " Vulgrim's eruption pressure is critical."
+    elif vulgrim_heat >= 50:
+        last_enemy_phase_summary += " The wastes become increasingly unstable."
+
 func _save_game_state() -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("board", "turn", turn_number)
     cfg.set_value("board", "moves_remaining", moves_remaining)
     cfg.set_value("board", "current_move_node", current_move_node)
     cfg.set_value("board", "current_hex_key", current_hex_key)
+    cfg.set_value("board", "campaign_phase", campaign_phase)
+    cfg.set_value("board", "enemy_hex_positions", enemy_hex_positions)
     cfg.set_value("board", "selected_hero_id", selected_hero_id)
     cfg.set_value("board", "hero_health", hero_health)
     cfg.set_value("board", "hero_xp", hero_xp)
@@ -2229,6 +2404,12 @@ func _load_game_state() -> void:
     moves_remaining = int(cfg.get_value("board", "moves_remaining", hero_move_points))
     current_move_node = str(cfg.get_value("board", "current_move_node", "BasaltCenter"))
     current_hex_key = str(cfg.get_value("board", "current_hex_key", ""))
+    campaign_phase = str(cfg.get_value("board", "campaign_phase", PHASE_PLAYER))
+    if campaign_phase != PHASE_PLAYER:
+        campaign_phase = PHASE_PLAYER
+    var saved_enemy_positions = cfg.get_value("board", "enemy_hex_positions", {})
+    if saved_enemy_positions is Dictionary:
+        enemy_hex_positions = saved_enemy_positions.duplicate(true)
     selected_hero_id = str(cfg.get_value("board", "selected_hero_id", selected_hero_id))
     hero_health = int(cfg.get_value("board", "hero_health", 100))
     hero_xp = int(cfg.get_value("board", "hero_xp", 0))
@@ -2300,11 +2481,18 @@ func _on_poi_action() -> void:
 
     var rule := _poi_rule(selected_poi)
     if bool(rule.get("claimable", false)) and not claimed_pois.has(selected_poi):
+        if campaign_phase != PHASE_PLAYER:
+            poi_body.text += "\n\nWait for your player phase."
+            return
+        if moves_remaining <= 0:
+            poi_body.text += "\n\nYou need 1 action point to secure this location."
+            return
         var poi_node := $POIs.get_node_or_null(selected_poi) as Node3D
         if not poi_node or not _hero_near_poi(poi_node):
             poi_body.text += "\n\nMove the hero onto this location before claiming it."
             return
         claimed_pois[selected_poi] = true
+        moves_remaining = maxi(0, moves_remaining - 1)
         _refresh_claimed_poi_style()
         _refresh_fog_reveal()
         _refresh_enemy_visibility()
