@@ -83,6 +83,15 @@ var fog_root: Node3D
 var fog_tiles: Dictionary = {}
 var revealed_fog_cells: Dictionary = {}
 var scanned_road_paths: Dictionary = {}
+var hex_mode := true
+var hex_root: Node3D
+var hex_cells: Dictionary = {}
+var current_hex_key := ""
+var pending_hex_key := ""
+var pending_hex_path: Array[String] = []
+var hex_material_idle: StandardMaterial3D
+var hex_material_reachable: StandardMaterial3D
+var hex_material_target: StandardMaterial3D
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -96,6 +105,11 @@ const ROAD_SCAN_SPACING := 0.18
 const ROAD_SCAN_LATERAL := 0.34
 const ROAD_SCAN_MAX_RISE := 0.75
 const ROAD_SCAN_MAX_DROP := 1.25
+const HEX_SIZE := 1.05
+const HEX_WORLD_LIMIT := 17.3
+const HEX_SAMPLE_RADIUS := 0.54
+const HEX_MAX_LOCAL_VARIANCE := 0.72
+const HEX_MAX_STEP := 0.95
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -340,6 +354,8 @@ func _ready() -> void:
     _scan_all_road_paths()
     _ground_move_nodes_from_scans()
     _ground_hero_to_surface()
+    _build_hex_board()
+    _snap_hero_to_nearest_hex()
     reset_camera()
     poi_panel.visible = false
     poi_action.pressed.connect(_on_poi_action)
@@ -482,7 +498,9 @@ func _try_select(screen_position: Vector2) -> void:
         return
     if collider.is_in_group("board_piece"):
         _select_unit(collider)
-    elif collider.is_in_group("move_node") and unit_selected:
+    elif collider.is_in_group("hex_cell") and unit_selected and hex_mode:
+        _select_hex_destination(collider)
+    elif collider.is_in_group("move_node") and unit_selected and not hex_mode:
         _select_move_destination(collider)
     elif collider.is_in_group("poi") and not unit_selected:
         _select_poi(collider)
@@ -656,7 +674,10 @@ func _select_unit(_unit: Area3D) -> void:
     movement_stats.text = "%s selected. Movement points: %d\nTap a highlighted destination." % [hero_name, hero_move_points]
     status_label.text = "%s — choose a destination" % hero_name
     _focus_on_poi(hero_unit.global_position)
-    _show_reachable_move_nodes()
+    if hex_mode:
+        _show_reachable_hexes()
+    else:
+        _show_reachable_move_nodes()
 
 func _show_reachable_move_nodes() -> void:
     var reachable := _reachable_nodes(current_move_node, moves_remaining)
@@ -738,6 +759,9 @@ func _select_move_destination(node: Area3D) -> void:
         target_marker.visible = true
 
 func _confirm_unit_move() -> void:
+    if hex_mode and pending_hex_key != "":
+        await _confirm_hex_move()
+        return
     if pending_move_node == "" or pending_path.size() < 2:
         return
     movement_confirm.disabled = true
@@ -760,6 +784,340 @@ func _confirm_unit_move() -> void:
     _reveal_nearby_pois()
     _refresh_poi_visibility()
     _trigger_node_encounter(current_move_node)
+    _refresh_game_hud()
+    _save_game_state()
+
+func _build_hex_board() -> void:
+    hex_root = Node3D.new()
+    hex_root.name = "HexBoard"
+    add_child(hex_root)
+
+    hex_material_idle = StandardMaterial3D.new()
+    hex_material_idle.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    hex_material_idle.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    hex_material_idle.albedo_color = Color(0.10, 0.16, 0.15, 0.10)
+    hex_material_idle.emission_enabled = true
+    hex_material_idle.emission = Color(0.08, 0.32, 0.28, 1.0)
+    hex_material_idle.emission_energy_multiplier = 0.25
+
+    hex_material_reachable = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_reachable.albedo_color = Color(0.10, 0.78, 0.66, 0.22)
+    hex_material_reachable.emission = Color(0.08, 0.92, 0.74, 1.0)
+    hex_material_reachable.emission_energy_multiplier = 0.9
+
+    hex_material_target = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_target.albedo_color = Color(0.95, 0.58, 0.12, 0.38)
+    hex_material_target.emission = Color(1.0, 0.42, 0.05, 1.0)
+    hex_material_target.emission_energy_multiplier = 1.2
+
+    var q_min := -14
+    var q_max := 14
+    var r_min := -14
+    var r_max := 14
+
+    for r in range(r_min, r_max + 1):
+        for q in range(q_min, q_max + 1):
+            var center2 := _hex_to_world_2d(q, r)
+            if absf(center2.x) > HEX_WORLD_LIMIT or absf(center2.y) > HEX_WORLD_LIMIT:
+                continue
+
+            var sample := _sample_hex_surface(center2.x, center2.y)
+            if not bool(sample.get("valid", false)):
+                continue
+
+            var key := _hex_key(q, r)
+            var area := Area3D.new()
+            area.name = "Hex_%s" % key
+            area.add_to_group("hex_cell")
+            area.set_meta("hex_key", key)
+            area.position = sample["position"]
+
+            var collision := CollisionShape3D.new()
+            var shape := CylinderShape3D.new()
+            shape.radius = HEX_SIZE * 0.82
+            shape.height = 0.20
+            collision.shape = shape
+            collision.position.y = 0.08
+            area.add_child(collision)
+
+            var visual := MeshInstance3D.new()
+            visual.name = "Visual"
+            var mesh := CylinderMesh.new()
+            mesh.top_radius = HEX_SIZE * 0.88
+            mesh.bottom_radius = HEX_SIZE * 0.88
+            mesh.height = 0.025
+            mesh.radial_segments = 6
+            visual.mesh = mesh
+            visual.position.y = 0.035
+            visual.material_override = hex_material_idle
+            area.add_child(visual)
+
+            hex_root.add_child(area)
+            hex_cells[key] = {
+                "q": q,
+                "r": r,
+                "position": area.position,
+                "area": area,
+                "height": float(area.position.y)
+            }
+
+    _prune_unconnected_hexes()
+    _clear_hex_highlights()
+
+func _hex_to_world_2d(q: int, r: int) -> Vector2:
+    var x := HEX_SIZE * sqrt(3.0) * (float(q) + float(r) * 0.5)
+    var z := HEX_SIZE * 1.5 * float(r)
+    return Vector2(x, z)
+
+func _hex_key(q: int, r: int) -> String:
+    return "%d,%d" % [q, r]
+
+func _sample_hex_surface(x: float, z: float) -> Dictionary:
+    var sample_offsets: Array[Vector2] = [Vector2.ZERO]
+    for i in range(6):
+        var angle := deg_to_rad(60.0 * float(i))
+        sample_offsets.append(Vector2(cos(angle), sin(angle)) * HEX_SAMPLE_RADIUS)
+
+    var heights: Array[float] = []
+    var center_position := Vector3.ZERO
+
+    for i in range(sample_offsets.size()):
+        var offset: Vector2 = sample_offsets[i]
+        var from := Vector3(x + offset.x, 14.0, z + offset.y)
+        var to := Vector3(x + offset.x, -2.0, z + offset.y)
+        var query := PhysicsRayQueryParameters3D.create(from, to)
+        query.collide_with_areas = false
+        query.collide_with_bodies = true
+        query.collision_mask = 8
+        var hit := get_world_3d().direct_space_state.intersect_ray(query)
+        if hit.is_empty():
+            return {"valid": false}
+
+        var pos := hit["position"] as Vector3
+        heights.append(pos.y)
+        if i == 0:
+            center_position = pos
+
+    var min_height := heights[0]
+    var max_height := heights[0]
+    for h in heights:
+        min_height = minf(min_height, h)
+        max_height = maxf(max_height, h)
+
+    if max_height - min_height > HEX_MAX_LOCAL_VARIANCE:
+        return {"valid": false}
+
+    center_position.y += HERO_GROUND_CLEARANCE
+    return {
+        "valid": true,
+        "position": center_position,
+        "variance": max_height - min_height
+    }
+
+func _hex_neighbors(key: String) -> Array[String]:
+    if not hex_cells.has(key):
+        return []
+    var cell: Dictionary = hex_cells[key]
+    var q: int = int(cell["q"])
+    var r: int = int(cell["r"])
+    var directions := [
+        Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
+        Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
+    ]
+    var result: Array[String] = []
+    for d in directions:
+        var neighbor_key := _hex_key(q + d.x, r + d.y)
+        if not hex_cells.has(neighbor_key):
+            continue
+        var neighbor: Dictionary = hex_cells[neighbor_key]
+        var step_height: float = absf(float(neighbor["height"]) - float(cell["height"]))
+        if step_height <= HEX_MAX_STEP:
+            result.append(neighbor_key)
+    return result
+
+func _prune_unconnected_hexes() -> void:
+    var remove_keys: Array[String] = []
+    for key_variant in hex_cells.keys():
+        var key: String = str(key_variant)
+        if _hex_neighbors(key).is_empty():
+            remove_keys.append(key)
+
+    for key in remove_keys:
+        var cell: Dictionary = hex_cells[key]
+        var area := cell["area"] as Area3D
+        if area:
+            area.queue_free()
+        hex_cells.erase(key)
+
+func _nearest_hex_key(world_position: Vector3) -> String:
+    var best_key := ""
+    var best_distance := INF
+    var p := Vector2(world_position.x, world_position.z)
+    for key_variant in hex_cells.keys():
+        var key: String = str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        var pos: Vector3 = cell["position"]
+        var distance := p.distance_to(Vector2(pos.x, pos.z))
+        if distance < best_distance:
+            best_distance = distance
+            best_key = key
+    return best_key
+
+func _snap_hero_to_nearest_hex() -> void:
+    if hex_cells.is_empty():
+        return
+    if current_hex_key == "" or not hex_cells.has(current_hex_key):
+        current_hex_key = _nearest_hex_key(hero_unit.global_position)
+    if current_hex_key == "":
+        return
+    var cell: Dictionary = hex_cells[current_hex_key]
+    hero_unit.global_position = cell["position"]
+
+func _hex_reachable(start_key: String, max_steps: int) -> Dictionary:
+    var reached := {start_key: 0}
+    var frontier: Array[String] = [start_key]
+
+    while not frontier.is_empty():
+        var current: String = frontier.pop_front()
+        var depth: int = int(reached[current])
+        if depth >= max_steps:
+            continue
+        for neighbor in _hex_neighbors(current):
+            if reached.has(neighbor):
+                continue
+            reached[neighbor] = depth + 1
+            frontier.append(neighbor)
+    return reached
+
+func _show_reachable_hexes() -> void:
+    _clear_hex_highlights()
+    if current_hex_key == "":
+        current_hex_key = _nearest_hex_key(hero_unit.global_position)
+    var reachable := _hex_reachable(current_hex_key, moves_remaining)
+    for key_variant in reachable.keys():
+        var key: String = str(key_variant)
+        if key == current_hex_key or not hex_cells.has(key):
+            continue
+        var cell: Dictionary = hex_cells[key]
+        var area := cell["area"] as Area3D
+        var visual := area.get_node_or_null("Visual") as MeshInstance3D
+        if visual:
+            visual.material_override = hex_material_reachable
+
+func _clear_hex_highlights() -> void:
+    for key_variant in hex_cells.keys():
+        var cell: Dictionary = hex_cells[str(key_variant)]
+        var area := cell["area"] as Area3D
+        if not area:
+            continue
+        var visual := area.get_node_or_null("Visual") as MeshInstance3D
+        if visual:
+            visual.material_override = hex_material_idle
+
+func _select_hex_destination(area: Area3D) -> void:
+    var key: String = str(area.get_meta("hex_key", ""))
+    if key == "" or key == current_hex_key:
+        return
+    var reachable := _hex_reachable(current_hex_key, moves_remaining)
+    if not reachable.has(key):
+        return
+
+    pending_hex_path = _shortest_hex_path(current_hex_key, key)
+    if pending_hex_path.size() < 2:
+        return
+
+    pending_hex_key = key
+    pending_move_cost = pending_hex_path.size() - 1
+    movement_stats.text = "Destination hex: %s\nMovement cost: %d / %d remaining" % [
+        key, pending_move_cost, moves_remaining
+    ]
+    movement_confirm.disabled = false
+    _show_hex_route_preview(pending_hex_path)
+
+    var target_cell: Dictionary = hex_cells[key]
+    var target_area := target_cell["area"] as Area3D
+    var target_visual := target_area.get_node_or_null("Visual") as MeshInstance3D
+    if target_visual:
+        target_visual.material_override = hex_material_target
+
+func _shortest_hex_path(start_key: String, goal_key: String) -> Array[String]:
+    var frontier: Array[String] = [start_key]
+    var came_from := {start_key: ""}
+
+    while not frontier.is_empty():
+        var current: String = frontier.pop_front()
+        if current == goal_key:
+            break
+        for neighbor in _hex_neighbors(current):
+            if came_from.has(neighbor):
+                continue
+            came_from[neighbor] = current
+            frontier.append(neighbor)
+
+    if not came_from.has(goal_key):
+        return []
+
+    var path: Array[String] = [goal_key]
+    var cursor: String = str(came_from[goal_key])
+    while cursor != "":
+        path.push_front(cursor)
+        cursor = str(came_from[cursor])
+    return path
+
+func _show_hex_route_preview(path: Array[String]) -> void:
+    if not route_preview or path.size() < 2:
+        return
+    var mesh := ImmediateMesh.new()
+    var material := StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.albedo_color = Color(0.10, 0.78, 0.68, 0.62)
+    material.emission_enabled = true
+    material.emission = Color(0.06, 0.88, 0.72, 1.0)
+    material.emission_energy_multiplier = 0.8
+    mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+
+    for i in range(path.size() - 1):
+        var a: Vector3 = hex_cells[path[i]]["position"] + Vector3(0.0, 0.08, 0.0)
+        var b: Vector3 = hex_cells[path[i + 1]]["position"] + Vector3(0.0, 0.08, 0.0)
+        mesh.surface_add_vertex(a)
+        mesh.surface_add_vertex(b)
+
+    mesh.surface_end()
+    route_preview.mesh = mesh
+    route_preview.visible = true
+
+func _confirm_hex_move() -> void:
+    if pending_hex_path.size() < 2:
+        return
+
+    movement_confirm.disabled = true
+    movement_stats.text = "Moving..."
+    _clear_hex_highlights()
+    _hide_route_preview()
+
+    for i in range(1, pending_hex_path.size()):
+        var key: String = pending_hex_path[i]
+        var target: Vector3 = hex_cells[key]["position"]
+        var tween := create_tween()
+        tween.set_trans(Tween.TRANS_SINE)
+        tween.set_ease(Tween.EASE_IN_OUT)
+        tween.tween_property(hero_unit, "global_position", target, 0.26)
+        await tween.finished
+
+    moves_remaining = maxi(0, moves_remaining - pending_move_cost)
+    current_hex_key = pending_hex_key
+    pending_hex_key = ""
+    pending_hex_path.clear()
+    pending_move_cost = 0
+    unit_selected = false
+    hero_label.visible = false
+    movement_panel.visible = false
+
+    _refresh_fog_reveal()
+    _reveal_nearby_pois()
+    _refresh_poi_visibility()
+    _refresh_enemy_visibility()
     _refresh_game_hud()
     _save_game_state()
 
@@ -1034,6 +1392,9 @@ func _ground_hero_to_surface() -> void:
 
 func _cancel_unit_move() -> void:
     _hide_route_preview()
+    _clear_hex_highlights()
+    pending_hex_key = ""
+    pending_hex_path.clear()
     unit_selected = false
     hero_label.visible = false
     pending_move_node = ""
@@ -1841,6 +2202,7 @@ func _save_game_state() -> void:
     cfg.set_value("board", "turn", turn_number)
     cfg.set_value("board", "moves_remaining", moves_remaining)
     cfg.set_value("board", "current_move_node", current_move_node)
+    cfg.set_value("board", "current_hex_key", current_hex_key)
     cfg.set_value("board", "selected_hero_id", selected_hero_id)
     cfg.set_value("board", "hero_health", hero_health)
     cfg.set_value("board", "hero_xp", hero_xp)
@@ -1866,6 +2228,7 @@ func _load_game_state() -> void:
     turn_number = int(cfg.get_value("board", "turn", 1))
     moves_remaining = int(cfg.get_value("board", "moves_remaining", hero_move_points))
     current_move_node = str(cfg.get_value("board", "current_move_node", "BasaltCenter"))
+    current_hex_key = str(cfg.get_value("board", "current_hex_key", ""))
     selected_hero_id = str(cfg.get_value("board", "selected_hero_id", selected_hero_id))
     hero_health = int(cfg.get_value("board", "hero_health", 100))
     hero_xp = int(cfg.get_value("board", "hero_xp", 0))
