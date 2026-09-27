@@ -105,6 +105,7 @@ var nav_grid_tiles: Dictionary = {}
 var nav_blocked_edges: Dictionary = {}
 var nav_debug_forced_open: Dictionary = {}
 var nav_debug_forced_blocked: Dictionary = {}
+var nav_debug_bridge_overrides: Dictionary = {}
 var nav_debug_mode := false
 var nav_debug_button: Button
 var nav_edit_panel: PanelContainer
@@ -846,7 +847,9 @@ func _apply_hex_classification_visuals() -> void:
 
         var walkable: bool = bool(cell.get("walkable", false))
         var has_surface: bool = bool(cell.get("has_surface", false))
-        var bridge_candidate: bool = nav_debug_mode and (not has_surface) and _is_bridge_repair_candidate(key)
+        var bridge_candidate: bool = nav_debug_mode and (not has_surface) and (
+            _is_bridge_repair_candidate(key) or _is_force_bridge_candidate(key)
+        )
         var visual := area.get_node_or_null("Visual") as MeshInstance3D
         var pick_shape := area.get_node_or_null("PickShape") as CollisionShape3D
 
@@ -2224,6 +2227,7 @@ func _rebuild_nav_edge_cache() -> void:
 func _load_nav_debug_overrides() -> void:
     nav_debug_forced_open.clear()
     nav_debug_forced_blocked.clear()
+    nav_debug_bridge_overrides.clear()
 
     var cfg := ConfigFile.new()
     if cfg.load("user://ashenreach_nav_debug.cfg") != OK:
@@ -2237,12 +2241,15 @@ func _load_nav_debug_overrides() -> void:
         nav_debug_forced_open[str(key_variant)] = true
     for key_variant in cfg.get_value("nav", "forced_blocked", []):
         nav_debug_forced_blocked[str(key_variant)] = true
+    for key_variant in cfg.get_value("nav", "bridge_overrides", []):
+        nav_debug_bridge_overrides[str(key_variant)] = true
 
 func _save_nav_debug_overrides() -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("nav", "hex_grid_version", HEX_GRID_VERSION)
     cfg.set_value("nav", "forced_open", nav_debug_forced_open.keys())
     cfg.set_value("nav", "forced_blocked", nav_debug_forced_blocked.keys())
+    cfg.set_value("nav", "bridge_overrides", nav_debug_bridge_overrides.keys())
     cfg.save("user://ashenreach_nav_debug.cfg")
 
 func _apply_nav_mask_overrides() -> void:
@@ -2278,6 +2285,9 @@ func _apply_nav_mask_overrides() -> void:
     for raw_region in nav_mask_data.get("forced_open_regions", []):
         if raw_region is Dictionary:
             _apply_nav_circle_region(raw_region, true, "mask_open")
+
+    for key_variant in nav_debug_bridge_overrides.keys():
+        _prepare_forced_bridge_override(str(key_variant))
 
     for key_variant in nav_debug_forced_blocked.keys():
         _set_hex_mask_state(str(key_variant), false, "debug_blocked")
@@ -2379,6 +2389,16 @@ func _build_nav_edit_panel() -> void:
     bridge_button.pressed.connect(_nav_repair_selected_bridge)
     actions.add_child(bridge_button)
 
+    var utilities := HBoxContainer.new()
+    utilities.add_theme_constant_override("separation", 6)
+    box.add_child(utilities)
+
+    var copy_mask_button := Button.new()
+    copy_mask_button.text = "COPY MASK"
+    copy_mask_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    copy_mask_button.pressed.connect(_copy_nav_mask_to_clipboard)
+    utilities.add_child(copy_mask_button)
+
 func _try_select_nav_hex(screen_position: Vector2) -> void:
     var origin: Vector3 = camera.project_ray_origin(screen_position)
     var ray_end: Vector3 = origin + camera.project_ray_normal(screen_position) * 200.0
@@ -2406,6 +2426,72 @@ func _nav_select_hex(area: Area3D) -> void:
     nav_selected_hex = key
     _apply_hex_classification_visuals()
     _refresh_nav_edit_panel()
+
+func _adjacent_surface_heights(key: String) -> Array[float]:
+    var heights: Array[float] = []
+    if not hex_cells.has(key):
+        return heights
+
+    var cell: Dictionary = hex_cells[key]
+    var q: int = int(cell["q"])
+    var r: int = int(cell["r"])
+    var directions := [
+        Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
+        Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
+    ]
+
+    for d in directions:
+        var neighbor_key := _hex_key(q + d.x, r + d.y)
+        if not hex_cells.has(neighbor_key):
+            continue
+        var neighbor: Dictionary = hex_cells[neighbor_key]
+        if bool(neighbor.get("has_surface", false)):
+            heights.append(float(neighbor["height"]))
+
+    return heights
+
+func _is_force_bridge_candidate(key: String) -> bool:
+    if not hex_cells.has(key):
+        return false
+    var cell: Dictionary = hex_cells[key]
+    if bool(cell.get("has_surface", false)):
+        return false
+    return _adjacent_surface_heights(key).size() >= 2
+
+func _estimate_forced_bridge_height(key: String) -> float:
+    var heights := _adjacent_surface_heights(key)
+    if heights.size() < 2:
+        return -INF
+    heights.sort()
+    return heights[int(heights.size() / 2)]
+
+func _prepare_forced_bridge_override(key: String) -> bool:
+    if not _is_force_bridge_candidate(key):
+        return false
+
+    var bridge_height := _estimate_forced_bridge_height(key)
+    if bridge_height <= -INF:
+        return false
+
+    var cell: Dictionary = hex_cells[key]
+    var pos: Vector3 = cell["position"]
+    pos.y = bridge_height
+
+    cell["has_surface"] = true
+    cell["walkable"] = true
+    cell["position"] = pos
+    cell["height"] = bridge_height
+    cell["bridge_override"] = true
+    cell["inferred_bridge"] = true
+    cell["blocked_reason"] = ""
+    cell["nav_source"] = "debug_open"
+    hex_cells[key] = cell
+
+    var area := cell["area"] as Area3D
+    if area:
+        area.position = pos
+
+    return true
 
 func _is_bridge_repair_candidate(key: String) -> bool:
     if not hex_cells.has(key):
@@ -2512,17 +2598,55 @@ func _nav_repair_selected_bridge() -> void:
     if nav_selected_hex == "" or not hex_cells.has(nav_selected_hex):
         return
 
-    if not _prepare_bridge_override(nav_selected_hex):
-        status_label.text = "BRIDGE: selected gap does not have matching supported tiles on opposite sides."
+    var repaired := _prepare_bridge_override(nav_selected_hex)
+    if not repaired:
+        repaired = _prepare_forced_bridge_override(nav_selected_hex)
+
+    if not repaired:
+        status_label.text = "BRIDGE: select a missing purple gap with at least two supported neighboring tiles."
         return
 
     nav_debug_forced_blocked.erase(nav_selected_hex)
     nav_debug_forced_open[nav_selected_hex] = true
+    nav_debug_bridge_overrides[nav_selected_hex] = true
 
     _apply_nav_mask_overrides()
     _apply_hex_classification_visuals()
     _save_nav_debug_overrides()
     _refresh_nav_edit_panel()
+
+func _copy_nav_mask_to_clipboard() -> void:
+    var blocked: Array[String] = []
+    var forced_open: Array[String] = []
+    var bridges: Array[String] = []
+
+    for key_variant in nav_debug_forced_blocked.keys():
+        blocked.append(str(key_variant))
+    for key_variant in nav_debug_forced_open.keys():
+        forced_open.append(str(key_variant))
+    for key_variant in nav_debug_bridge_overrides.keys():
+        bridges.append(str(key_variant))
+
+    blocked.sort()
+    forced_open.sort()
+    bridges.sort()
+
+    var payload := {
+        "grid_version": HEX_GRID_VERSION,
+        "blocked_hexes": blocked,
+        "forced_open_hexes": forced_open,
+        "bridge_overrides": bridges
+    }
+    var json_text := JSON.stringify(payload)
+    DisplayServer.clipboard_set(json_text)
+
+    status_label.text = "NAV MASK COPIED • %d blocked • %d open • %d bridge" % [
+        blocked.size(),
+        forced_open.size(),
+        bridges.size()
+    ]
+    if nav_edit_info:
+        nav_edit_info.text = "Navigation mask copied to clipboard. Paste it into ChatGPT so it can be baked into the game."
 
 func _nav_set_selected_state(state: String) -> void:
     if nav_selected_hex == "" or not hex_cells.has(nav_selected_hex):
@@ -2530,6 +2654,7 @@ func _nav_set_selected_state(state: String) -> void:
 
     nav_debug_forced_open.erase(nav_selected_hex)
     nav_debug_forced_blocked.erase(nav_selected_hex)
+    nav_debug_bridge_overrides.erase(nav_selected_hex)
 
     if state == "open":
         nav_debug_forced_open[nav_selected_hex] = true
@@ -2560,10 +2685,12 @@ func _refresh_nav_edit_panel() -> void:
         state = "MASK OPEN"
     elif str(cell.get("nav_source", "auto")) == "mask_blocked":
         state = "MASK BLOCKED"
+    elif nav_debug_bridge_overrides.has(nav_selected_hex):
+        state = "BRIDGE OVERRIDE"
     elif bool(cell.get("auto_blocked", false)):
         state = "AUTO HAZARD"
 
-    var repair_candidate: bool = _is_bridge_repair_candidate(nav_selected_hex)
+    var repair_candidate: bool = _is_bridge_repair_candidate(nav_selected_hex) or _is_force_bridge_candidate(nav_selected_hex)
     nav_edit_info.text = "Hex %s  •  %s  •  Y %.2f\nBridge: %s  •  Surface: %s" % [
         nav_selected_hex,
         state,
