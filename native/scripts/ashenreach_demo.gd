@@ -95,6 +95,8 @@ var hex_material_current: StandardMaterial3D
 var hex_material_blocked: StandardMaterial3D
 var hex_material_forced_open: StandardMaterial3D
 var hex_material_forced_blocked: StandardMaterial3D
+var hex_material_nav_edit: StandardMaterial3D
+var hex_material_nav_selected: StandardMaterial3D
 var hex_grid_overlay: MeshInstance3D
 var nav_mask_data: Dictionary = {}
 var nav_grid_data: Dictionary = {}
@@ -599,6 +601,8 @@ func _lowest_mesh_y_in_parent(node: Node, parent_space: Node3D, current_lowest: 
     return lowest
 
 func _select_unit(_unit: Area3D) -> void:
+    if nav_debug_mode:
+        return
     if campaign_phase != PHASE_PLAYER or moves_remaining <= 0:
         return
     _close_poi_panel()
@@ -668,6 +672,16 @@ func _build_hex_board() -> void:
     hex_material_forced_blocked.albedo_color = Color(0.78, 0.08, 0.04, 0.34)
     hex_material_forced_blocked.emission = Color(1.0, 0.12, 0.04, 1.0)
     hex_material_forced_blocked.emission_energy_multiplier = 0.85
+
+    hex_material_nav_edit = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_nav_edit.albedo_color = Color(0.06, 0.62, 0.72, 0.40)
+    hex_material_nav_edit.emission = Color(0.04, 0.72, 0.86, 1.0)
+    hex_material_nav_edit.emission_energy_multiplier = 0.75
+
+    hex_material_nav_selected = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_nav_selected.albedo_color = Color(0.98, 0.72, 0.10, 0.62)
+    hex_material_nav_selected.emission = Color(1.0, 0.58, 0.04, 1.0)
+    hex_material_nav_selected.emission_energy_multiplier = 1.35
 
     var q_min := -23
     var q_max := 23
@@ -829,10 +843,17 @@ func _apply_hex_classification_visuals() -> void:
         if visual:
             visual.visible = has_surface
             var source: String = str(cell.get("nav_source", "auto"))
-            if source == "debug_open" or source == "mask_open":
+
+            if nav_debug_mode and key == nav_selected_hex:
+                visual.material_override = hex_material_nav_selected
+            elif source == "debug_open" or source == "mask_open":
                 visual.material_override = hex_material_forced_open
             elif source == "debug_blocked" or source == "mask_blocked":
                 visual.material_override = hex_material_forced_blocked
+            elif nav_debug_mode and bool(cell.get("auto_blocked", false)):
+                visual.material_override = hex_material_blocked
+            elif nav_debug_mode:
+                visual.material_override = hex_material_nav_edit
             else:
                 visual.material_override = hex_material_idle if walkable else hex_material_blocked
 
@@ -2335,6 +2356,7 @@ func _nav_select_hex(area: Area3D) -> void:
     if key == "" or not hex_cells.has(key):
         return
     nav_selected_hex = key
+    _apply_hex_classification_visuals()
     _refresh_nav_edit_panel()
 
 func _nav_set_selected_state(state: String) -> void:
@@ -2389,6 +2411,10 @@ func _toggle_nav_debug() -> void:
     nav_debug_mode = not nav_debug_mode
     _cancel_unit_move()
 
+    hero_unit.visible = not nav_debug_mode
+    movement_panel.visible = false
+    hero_label.visible = false
+
     if hex_grid_overlay:
         hex_grid_overlay.visible = nav_debug_mode
     if nav_debug_button:
@@ -2398,8 +2424,9 @@ func _toggle_nav_debug() -> void:
         nav_selected_hex = ""
         status_label.text = "Navigation edit closed."
     else:
-        status_label.text = "NAV EDIT: tap a hex, then choose AUTO / OPEN / BLOCK."
+        status_label.text = "NAV EDIT: all cyan tiles are editable. Tap one, then choose AUTO / OPEN / BLOCK."
 
+    _apply_hex_classification_visuals()
     _refresh_nav_edit_panel()
 
 func _nav_debug_cycle_hex(area: Area3D) -> void:
