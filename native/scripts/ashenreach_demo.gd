@@ -11,10 +11,7 @@ extends Node3D
 @onready var selected_label: Label3D = $SelectedLabel
 @onready var selected_ring: MeshInstance3D = $SelectedPOIRing
 @onready var status_label: Label = $UI/TopBar/Status
-@onready var vault_glow: MeshInstance3D = $VaultMistGlow
-@onready var vault_light: OmniLight3D = $VaultMistLight
 @onready var hero_unit: Area3D = $MovementBoard/HeroUnit
-@onready var move_nodes_root: Node3D = $MovementBoard/MoveNodes
 @onready var movement_panel: PanelContainer = $UI/MovementPanel
 @onready var movement_stats: Label = $UI/MovementPanel/Margin/VBox/Stats
 @onready var movement_title: Label = $UI/MovementPanel/Margin/VBox/Title
@@ -32,9 +29,6 @@ var zoom_distance := 30.0
 var selected_poi := ""
 var glow_time := 0.0
 var unit_selected := false
-var current_move_node := "BasaltCenter"
-var pending_move_node := ""
-var pending_path: Array[String] = []
 var selected_hero_id := "ignis"
 var owned_collectibles: Array[String] = ["vesper_chestplate", "magma_heart_cuirass"]
 var unlocked_heroes: Array[String] = []
@@ -88,8 +82,6 @@ var end_turn_button: Button
 var fog_root: Node3D
 var fog_tiles: Dictionary = {}
 var revealed_fog_cells: Dictionary = {}
-var scanned_road_paths: Dictionary = {}
-var hex_mode := true
 var hex_root: Node3D
 var hex_cells: Dictionary = {}
 var current_hex_key := ""
@@ -103,14 +95,6 @@ const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
 const HERO_GROUND_CLEARANCE := 0.025
-const ROAD_SAMPLE_SPACING := 0.22
-const ROAD_HEIGHT_TOLERANCE := 0.55
-const LOCAL_FLOOR_PROBE_ABOVE := 0.45
-const LOCAL_FLOOR_PROBE_BELOW := 2.4
-const ROAD_SCAN_SPACING := 0.18
-const ROAD_SCAN_LATERAL := 0.34
-const ROAD_SCAN_MAX_RISE := 0.75
-const ROAD_SCAN_MAX_DROP := 1.25
 const HEX_SIZE := 1.05
 const HEX_WORLD_LIMIT := 17.3
 const HEX_SAMPLE_RADIUS := 0.54
@@ -119,163 +103,17 @@ const HEX_MAX_STEP := 0.95
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
-const MOVE_GRAPH := {
-    "BasaltCenter": ["Rattal", "CapitalSouth", "VaultRoad", "RitualTotemsNode", "SunkenRemnantsNode"],
-    "Rattal": ["BasaltCenter", "CapitalSouth", "EastBridge", "AmbushPassNode"],
-    "CapitalSouth": ["BasaltCenter", "Rattal", "CapitalNorth"],
-    "CapitalNorth": ["CapitalSouth", "HighlandRidgesNode", "AshenPlainsNode"],
-    "EastBridge": ["Rattal", "ElevatedOutpostNode"],
-    "VaultRoad": ["BasaltCenter", "VaultGate", "DeadForestNode", "SunkenRemnantsNode"],
-    "VaultGate": ["VaultRoad"],
-    "AmbushPassNode": ["Rattal", "ElevatedOutpostNode"],
-    "ElevatedOutpostNode": ["AmbushPassNode", "EastBridge", "OverlookNode", "HighlandRidgesNode"],
-    "OverlookNode": ["ElevatedOutpostNode", "RitualTotemsNode"],
-    "HighlandRidgesNode": ["ElevatedOutpostNode", "CapitalNorth", "AshenPlainsNode"],
-    "AshenPlainsNode": ["CapitalNorth", "HighlandRidgesNode", "DeadForestNode"],
-    "DeadForestNode": ["VaultRoad", "AshenPlainsNode", "SunkenRemnantsNode"],
-    "RitualTotemsNode": ["BasaltCenter", "OverlookNode", "SunkenRemnantsNode"],
-    "SunkenRemnantsNode": ["BasaltCenter", "VaultRoad", "DeadForestNode", "RitualTotemsNode"]
+const ENCOUNTER_START_POSITIONS := {
+    "Rattal": Vector3(7.0, 5.15, 3.0),
+    "CapitalSouth": Vector3(2.0, 5.55, 1.0),
+    "EastBridge": Vector3(10.0, 5.0, 5.2),
+    "VaultRoad": Vector3(-6.8, 4.65, 7.4),
+    "AmbushPassNode": Vector3(12.5, 4.8, 0.0),
+    "ElevatedOutpostNode": Vector3(15.0, 5.6, 5.0),
+    "DeadForestNode": Vector3(-12.0, 3.8, 12.0),
+    "AshenPlainsNode": Vector3(-12.0, 5.2, -8.0)
 }
-
-# Ordered road-center waypoints. These force pieces to follow the board's
-# visible roads, bridges and passes instead of interpolating straight across terrain.
-const ROAD_PATHS := {
-    "BasaltCenter|Rattal": [
-        Vector3(0.0, 4.75, 7.5),
-        Vector3(0.7, 4.77, 7.25),
-        Vector3(1.35, 4.80, 6.95),
-        Vector3(2.05, 4.84, 6.62),
-        Vector3(2.75, 4.88, 6.20),
-        Vector3(3.45, 4.92, 5.72),
-        Vector3(4.05, 4.96, 5.25),
-        Vector3(4.65, 5.00, 4.78),
-        Vector3(5.25, 5.04, 4.30),
-        Vector3(5.85, 5.08, 3.82),
-        Vector3(6.45, 5.12, 3.38),
-        Vector3(7.0, 5.15, 3.0)
-    ],
-    "BasaltCenter|CapitalSouth": [
-        Vector3(0.0, 4.75, 7.5),
-        Vector3(0.10, 4.78, 6.95),
-        Vector3(-0.12, 4.82, 6.35),
-        Vector3(-0.28, 4.88, 5.72),
-        Vector3(-0.05, 4.94, 5.15),
-        Vector3(0.28, 5.00, 4.60),
-        Vector3(0.58, 5.08, 4.02),
-        Vector3(0.82, 5.16, 3.45),
-        Vector3(1.05, 5.26, 2.92),
-        Vector3(1.28, 5.36, 2.40),
-        Vector3(1.52, 5.44, 1.90),
-        Vector3(1.76, 5.50, 1.42),
-        Vector3(2.0, 5.55, 1.0)
-    ],
-    "BasaltCenter|VaultRoad": [
-        Vector3(0.0, 4.75, 7.5),
-        Vector3(-0.65, 4.74, 7.52),
-        Vector3(-1.25, 4.72, 7.50),
-        Vector3(-1.90, 4.70, 7.46),
-        Vector3(-2.55, 4.69, 7.38),
-        Vector3(-3.15, 4.68, 7.30),
-        Vector3(-3.75, 4.67, 7.28),
-        Vector3(-4.35, 4.66, 7.30),
-        Vector3(-4.95, 4.65, 7.34),
-        Vector3(-5.55, 4.65, 7.38),
-        Vector3(-6.15, 4.65, 7.40),
-        Vector3(-6.8, 4.65, 7.4)
-    ],
-    "Rattal|CapitalSouth": [
-        Vector3(7.0, 5.15, 3.0),
-        Vector3(6.45, 5.16, 3.02),
-        Vector3(5.90, 5.18, 2.90),
-        Vector3(5.35, 5.21, 2.72),
-        Vector3(4.80, 5.25, 2.48),
-        Vector3(4.28, 5.29, 2.25),
-        Vector3(3.78, 5.34, 2.00),
-        Vector3(3.28, 5.40, 1.72),
-        Vector3(2.82, 5.45, 1.48),
-        Vector3(2.38, 5.50, 1.23),
-        Vector3(2.0, 5.55, 1.0)
-    ],
-    "Rattal|EastBridge": [
-        Vector3(7.0, 5.15, 3.0),
-        Vector3(7.42, 5.13, 3.22),
-        Vector3(7.82, 5.11, 3.50),
-        Vector3(8.18, 5.08, 3.82),
-        Vector3(8.58, 5.06, 4.08),
-        Vector3(8.95, 5.04, 4.38),
-        Vector3(9.30, 5.02, 4.65),
-        Vector3(9.66, 5.01, 4.92),
-        Vector3(10.0, 5.0, 5.2)
-    ],
-    "CapitalSouth|CapitalNorth": [
-        Vector3(2.0, 5.55, 1.0),
-        Vector3(2.04, 5.62, 0.65),
-        Vector3(2.00, 5.70, 0.30),
-        Vector3(1.92, 5.78, -0.05),
-        Vector3(1.84, 5.86, -0.42),
-        Vector3(1.76, 5.94, -0.78),
-        Vector3(1.69, 6.02, -1.10),
-        Vector3(1.62, 6.10, -1.42),
-        Vector3(1.56, 6.18, -1.72),
-        Vector3(1.5, 6.25, -2.0)
-    ],
-    "VaultRoad|VaultGate": [
-        Vector3(-6.8, 4.65, 7.4),
-        Vector3(-7.9, 4.70, 7.35),
-        Vector3(-9.0, 4.78, 7.25),
-        Vector3(-10.0, 4.88, 7.12),
-        Vector3(-11.0, 5.0, 7.0)
-    ]
-,
-    "Rattal|AmbushPassNode": [
-        Vector3(7.0, 5.15, 3.0), Vector3(8.8, 5.0, 2.2), Vector3(10.6, 4.9, 1.0), Vector3(12.5, 4.8, 0.0)
-    ],
-    "AmbushPassNode|ElevatedOutpostNode": [
-        Vector3(12.5, 4.8, 0.0), Vector3(13.2, 5.0, 1.8), Vector3(14.0, 5.3, 3.4), Vector3(15.0, 5.6, 5.0)
-    ],
-    "EastBridge|ElevatedOutpostNode": [
-        Vector3(10.0, 5.0, 5.2), Vector3(11.8, 5.2, 5.1), Vector3(13.4, 5.4, 5.0), Vector3(15.0, 5.6, 5.0)
-    ],
-    "ElevatedOutpostNode|OverlookNode": [
-        Vector3(15.0, 5.6, 5.0), Vector3(14.8, 5.7, 6.6), Vector3(14.4, 5.7, 7.8), Vector3(14.0, 5.6, 9.0)
-    ],
-    "ElevatedOutpostNode|HighlandRidgesNode": [
-        Vector3(15.0, 5.6, 5.0), Vector3(14.2, 5.8, 1.8), Vector3(13.0, 6.0, -1.8), Vector3(11.5, 6.1, -5.0), Vector3(10.0, 6.0, -8.0)
-    ],
-    "CapitalNorth|HighlandRidgesNode": [
-        Vector3(1.5, 6.25, -2.0), Vector3(3.8, 6.2, -3.0), Vector3(6.0, 6.1, -4.5), Vector3(8.0, 6.0, -6.2), Vector3(10.0, 6.0, -8.0)
-    ],
-    "CapitalNorth|AshenPlainsNode": [
-        Vector3(1.5, 6.25, -2.0), Vector3(-1.8, 6.0, -3.2), Vector3(-5.2, 5.7, -4.7), Vector3(-8.8, 5.4, -6.2), Vector3(-12.0, 5.2, -8.0)
-    ],
-    "HighlandRidgesNode|AshenPlainsNode": [
-        Vector3(10.0, 6.0, -8.0), Vector3(5.0, 5.9, -8.5), Vector3(0.0, 5.7, -8.8), Vector3(-6.0, 5.5, -8.5), Vector3(-12.0, 5.2, -8.0)
-    ],
-    "VaultRoad|DeadForestNode": [
-        Vector3(-6.8, 4.65, 7.4), Vector3(-8.2, 4.4, 8.4), Vector3(-9.5, 4.1, 9.7), Vector3(-10.8, 3.9, 10.9), Vector3(-12.0, 3.8, 12.0)
-    ],
-    "AshenPlainsNode|DeadForestNode": [
-        Vector3(-12.0, 5.2, -8.0), Vector3(-12.2, 4.9, -3.0), Vector3(-12.1, 4.5, 2.0), Vector3(-12.0, 4.1, 7.0), Vector3(-12.0, 3.8, 12.0)
-    ],
-    "BasaltCenter|RitualTotemsNode": [
-        Vector3(0.0, 4.75, 7.5), Vector3(1.3, 4.5, 9.0), Vector3(2.6, 4.2, 10.5), Vector3(4.5, 4.0, 12.5)
-    ],
-    "OverlookNode|RitualTotemsNode": [
-        Vector3(14.0, 5.6, 9.0), Vector3(11.3, 5.2, 10.0), Vector3(8.5, 4.7, 11.0), Vector3(4.5, 4.0, 12.5)
-    ],
-    "BasaltCenter|SunkenRemnantsNode": [
-        Vector3(0.0, 4.75, 7.5), Vector3(-0.5, 4.4, 9.3), Vector3(-1.2, 4.1, 11.0), Vector3(-2.5, 3.8, 13.5)
-    ],
-    "VaultRoad|SunkenRemnantsNode": [
-        Vector3(-6.8, 4.65, 7.4), Vector3(-5.8, 4.3, 9.2), Vector3(-4.5, 4.0, 11.2), Vector3(-2.5, 3.8, 13.5)
-    ],
-    "DeadForestNode|SunkenRemnantsNode": [
-        Vector3(-12.0, 3.8, 12.0), Vector3(-9.0, 3.8, 12.5), Vector3(-6.0, 3.8, 13.0), Vector3(-2.5, 3.8, 13.5)
-    ],
-    "RitualTotemsNode|SunkenRemnantsNode": [
-        Vector3(4.5, 4.0, 12.5), Vector3(2.2, 3.9, 13.0), Vector3(0.0, 3.9, 13.3), Vector3(-2.5, 3.8, 13.5)
-    ]
-}
+const CAMPAIGN_START_POSITION := Vector3(0.0, 4.75, 7.5)
 
 const POI_DATA := {
     "SunderedVault": {
@@ -357,9 +195,6 @@ func _ready() -> void:
     _build_terrain_collision($TerrainRoot)
     await get_tree().physics_frame
     await get_tree().physics_frame
-    _scan_all_road_paths()
-    _ground_move_nodes_from_scans()
-    _ground_hero_to_surface()
     _build_hex_board()
     _snap_hero_to_nearest_hex()
     reset_camera()
@@ -507,10 +342,8 @@ func _try_select(screen_position: Vector2) -> void:
         return
     if collider.is_in_group("board_piece"):
         _select_unit(collider)
-    elif collider.is_in_group("hex_cell") and unit_selected and hex_mode:
+    elif collider.is_in_group("hex_cell") and unit_selected:
         _select_hex_destination(collider)
-    elif collider.is_in_group("move_node") and unit_selected and not hex_mode:
-        _select_move_destination(collider)
     elif collider.is_in_group("poi") and not unit_selected:
         _select_poi(collider)
 
@@ -673,9 +506,7 @@ func _select_unit(_unit: Area3D) -> void:
     _close_poi_panel()
     unit_selected = true
     hero_label.visible = true
-    pending_move_node = ""
     pending_move_cost = 0
-    pending_path.clear()
     movement_panel.visible = true
     movement_confirm.disabled = true
     var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
@@ -685,118 +516,11 @@ func _select_unit(_unit: Area3D) -> void:
     movement_stats.text = "%s selected. Action points remaining: %d\nMove across highlighted hexes. Each hex costs 1 AP." % [hero_name, moves_remaining]
     status_label.text = "%s — choose a destination" % hero_name
     _focus_on_poi(hero_unit.global_position)
-    if hex_mode:
-        _show_reachable_hexes()
-    else:
-        _show_reachable_move_nodes()
-
-func _show_reachable_move_nodes() -> void:
-    var reachable := _reachable_nodes(current_move_node, moves_remaining)
-    for child in move_nodes_root.get_children():
-        var marker := child.get_node_or_null("Marker") as MeshInstance3D
-        if marker:
-            marker.visible = child.name in reachable and child.name != current_move_node
-
-func _reachable_nodes(start: String, max_steps: int) -> Array[String]:
-    var result: Array[String] = []
-    var frontier: Array = [[start, 0]]
-    var visited := {start: 0}
-    while not frontier.is_empty():
-        var item = frontier.pop_front()
-        var node_name: String = item[0]
-        var depth: int = item[1]
-        if node_name != start:
-            result.append(node_name)
-        if depth >= max_steps:
-            continue
-        for neighbor in MOVE_GRAPH.get(node_name, []):
-            if not visited.has(neighbor) or visited[neighbor] > depth + 1:
-                visited[neighbor] = depth + 1
-                frontier.append([neighbor, depth + 1])
-    return result
-
-func _shortest_move_path(start: String, goal: String) -> Array[String]:
-    if start == goal:
-        return [start]
-    var frontier: Array[String] = [start]
-    var came_from := {start: ""}
-    while not frontier.is_empty():
-        var current: String = frontier.pop_front()
-        for neighbor in MOVE_GRAPH.get(current, []):
-            if came_from.has(neighbor):
-                continue
-            came_from[neighbor] = current
-            if neighbor == goal:
-                var path: Array[String] = [goal]
-                var cursor: String = current
-                while cursor != "":
-                    path.push_front(cursor)
-                    cursor = came_from[cursor]
-                return path
-            frontier.append(neighbor)
-    return []
-
-func _select_move_destination(node: Area3D) -> void:
-    var destination := String(node.name)
-    var reachable := _reachable_nodes(current_move_node, moves_remaining)
-    if destination not in reachable:
-        return
-    pending_path = _shortest_move_path(current_move_node, destination)
-    if pending_path.is_empty():
-        return
-    pending_move_node = destination
-    var cost := pending_path.size() - 1
-    if cost > moves_remaining:
-        pending_path.clear()
-        pending_move_node = ""
-        movement_confirm.disabled = true
-        movement_stats.text = "That route costs %d movement points. %d remain this turn." % [cost, moves_remaining]
-        return
-    pending_move_cost = cost
-    movement_stats.text = "Destination: %s\nMovement cost: %d / %d remaining\nRoute: %s" % [
-        destination,
-        cost,
-        moves_remaining,
-        " → ".join(pending_path)
-    ]
-    movement_confirm.disabled = false
-    _show_route_preview(pending_path)
-    for child in move_nodes_root.get_children():
-        var marker := child.get_node_or_null("Marker") as MeshInstance3D
-        if marker:
-            marker.visible = child.name in reachable and child.name != current_move_node
-    var target_marker := node.get_node_or_null("Marker") as MeshInstance3D
-    if target_marker:
-        target_marker.visible = true
+    _show_reachable_hexes()
 
 func _confirm_unit_move() -> void:
-    if hex_mode and pending_hex_key != "":
+    if pending_hex_key != "":
         await _confirm_hex_move()
-        return
-    if pending_move_node == "" or pending_path.size() < 2:
-        return
-    movement_confirm.disabled = true
-    movement_stats.text = "Moving..."
-    moves_remaining = max(0, moves_remaining - pending_move_cost)
-    _hide_move_nodes()
-    await _animate_unit_path(pending_path)
-    current_move_node = pending_move_node
-    var landed_node := move_nodes_root.get_node(current_move_node) as Area3D
-    if landed_node:
-        hero_unit.global_position = landed_node.global_position
-    pending_move_node = ""
-    pending_path.clear()
-    unit_selected = false
-    hero_label.visible = false
-    movement_panel.visible = false
-    pending_move_cost = 0
-    var moved_hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
-    status_label.text = "%s moved to %s" % [moved_hero_name, current_move_node]
-    _reveal_nearby_pois()
-    _refresh_poi_visibility()
-    _trigger_node_encounter(current_move_node)
-    _refresh_game_hud()
-    _save_game_state()
 
 func _build_hex_board() -> void:
     hex_root = Node3D.new()
@@ -1135,180 +859,6 @@ func _confirm_hex_move() -> void:
     _refresh_game_hud()
     _save_game_state()
 
-func _road_key(a: String, b: String) -> String:
-    if ROAD_PATHS.has("%s|%s" % [a, b]):
-        return "%s|%s" % [a, b]
-    return "%s|%s" % [b, a]
-
-func _road_points(a: String, b: String) -> Array:
-    var key := _road_key(a, b)
-
-    if scanned_road_paths.has(key):
-        var cached: Array = scanned_road_paths[key].duplicate()
-        if key != "%s|%s" % [a, b]:
-            cached.reverse()
-        return cached
-
-    var control_points: Array = []
-    if not ROAD_PATHS.has(key):
-        var fallback_node := move_nodes_root.get_node(b) as Area3D
-        control_points = [hero_unit.global_position, fallback_node.global_position]
-    else:
-        control_points = ROAD_PATHS[key].duplicate()
-        if key != "%s|%s" % [a, b]:
-            control_points.reverse()
-
-    return _scan_road_corridor(control_points)
-
-func _scan_all_road_paths() -> void:
-    scanned_road_paths.clear()
-
-    for key_variant in ROAD_PATHS.keys():
-        var key: String = str(key_variant)
-        var control_points: Array = ROAD_PATHS[key]
-        var scanned: Array = _scan_road_corridor(control_points)
-        if scanned.size() >= 2:
-            scanned_road_paths[key] = scanned
-
-func _scan_road_corridor(control_points: Array) -> Array:
-    var result: Array = []
-    if control_points.size() < 2:
-        return result
-
-    var previous_y: float = float((control_points[0] as Vector3).y)
-    var first: Vector3 = _scan_floor_candidate(control_points[0] as Vector3, Vector3.FORWARD, previous_y)
-    result.append(first)
-    previous_y = first.y
-
-    for i in range(control_points.size() - 1):
-        var a: Vector3 = control_points[i]
-        var b: Vector3 = control_points[i + 1]
-        var flat_delta := Vector2(b.x - a.x, b.z - a.z)
-        var flat_distance: float = flat_delta.length()
-        if flat_distance <= 0.001:
-            continue
-
-        var tangent2 := flat_delta.normalized()
-        var tangent := Vector3(tangent2.x, 0.0, tangent2.y)
-        var steps: int = maxi(1, int(ceil(flat_distance / ROAD_SCAN_SPACING)))
-
-        for step in range(1, steps + 1):
-            var t: float = float(step) / float(steps)
-            var expected: Vector3 = a.lerp(b, t)
-            var sampled: Vector3 = _scan_floor_candidate(expected, tangent, previous_y)
-            result.append(sampled)
-            previous_y = sampled.y
-
-    return result
-
-func _scan_floor_candidate(expected: Vector3, tangent: Vector3, previous_y: float) -> Vector3:
-    var perpendicular := Vector3(-tangent.z, 0.0, tangent.x)
-    if perpendicular.length_squared() < 0.0001:
-        perpendicular = Vector3.RIGHT
-    else:
-        perpendicular = perpendicular.normalized()
-
-    var offsets: Array[float] = [0.0, ROAD_SCAN_LATERAL, -ROAD_SCAN_LATERAL, ROAD_SCAN_LATERAL * 2.0, -ROAD_SCAN_LATERAL * 2.0]
-    var best_point := Vector3(expected.x, expected.y + HERO_GROUND_CLEARANCE, expected.z)
-    var best_score := INF
-    var found := false
-
-    for lateral in offsets:
-        var probe_xz := expected + perpendicular * lateral
-        var from := Vector3(probe_xz.x, expected.y + 2.0, probe_xz.z)
-        var to := Vector3(probe_xz.x, expected.y - 3.0, probe_xz.z)
-        var query := PhysicsRayQueryParameters3D.create(from, to)
-        query.collide_with_areas = false
-        query.collide_with_bodies = true
-        query.collision_mask = 8
-
-        var hit := get_world_3d().direct_space_state.intersect_ray(query)
-        if hit.is_empty():
-            continue
-
-        var hit_position := hit["position"] as Vector3
-        var rise: float = hit_position.y - expected.y
-        var delta_from_previous: float = hit_position.y - previous_y
-
-        if rise > ROAD_SCAN_MAX_RISE:
-            continue
-        if rise < -ROAD_SCAN_MAX_DROP:
-            continue
-        if absf(delta_from_previous) > 0.9:
-            continue
-
-        var score: float = absf(rise) * 1.25 + absf(delta_from_previous) * 1.75 + absf(lateral) * 0.18
-        if score < best_score:
-            best_score = score
-            best_point = hit_position + Vector3(0.0, HERO_GROUND_CLEARANCE, 0.0)
-            found = true
-
-    if found:
-        return best_point
-
-    # Last-resort local probe at the authored centerline.
-    return _local_floor_point(expected)
-
-func _densify_and_ground_path(control_points: Array) -> Array:
-    var result: Array = []
-    if control_points.is_empty():
-        return result
-
-    var first_expected: Vector3 = control_points[0]
-    var first_grounded: Vector3 = _road_floor_point(first_expected)
-    result.append(first_grounded)
-
-    for i in range(control_points.size() - 1):
-        var a: Vector3 = control_points[i]
-        var b: Vector3 = control_points[i + 1]
-        var flat_distance: float = Vector2(a.x, a.z).distance_to(Vector2(b.x, b.z))
-        var steps: int = maxi(1, int(ceil(flat_distance / ROAD_SAMPLE_SPACING)))
-
-        for step in range(1, steps + 1):
-            var t: float = float(step) / float(steps)
-            var expected: Vector3 = a.lerp(b, t)
-            var p: Vector3 = _road_floor_point(expected)
-            result.append(p)
-
-    return result
-
-func _road_floor_point(expected: Vector3) -> Vector3:
-    var grounded: Vector3 = _local_floor_point(expected)
-
-    if absf(grounded.y - expected.y) <= ROAD_HEIGHT_TOLERANCE:
-        return grounded
-
-    # Never jump upward to the top of scenery when a road sample is ambiguous.
-    return Vector3(expected.x, expected.y + HERO_GROUND_CLEARANCE, expected.z)
-
-func _animate_unit_path(path: Array[String]) -> String:
-    var reached_node: String = path[0]
-    for edge_index in range(path.size() - 1):
-        var from_node: String = path[edge_index]
-        var to_node: String = path[edge_index + 1]
-        var road_points: Array = _road_points(from_node, to_node)
-
-        for point_index in range(1, road_points.size()):
-            var target: Vector3 = road_points[point_index]
-            var segment_distance: float = hero_unit.global_position.distance_to(target)
-            var duration: float = clampf(segment_distance * 0.16, 0.14, 0.42)
-            var tween := create_tween()
-            tween.set_trans(Tween.TRANS_SINE)
-            tween.set_ease(Tween.EASE_IN_OUT)
-            tween.tween_property(hero_unit, "global_position", target, duration)
-            await tween.finished
-
-        reached_node = to_node
-        moves_remaining = maxi(0, moves_remaining - 1)
-
-        if _node_has_active_encounter(to_node):
-            return reached_node
-
-        if moves_remaining <= 0:
-            return reached_node
-
-    return reached_node
-
 func _build_terrain_collision(node: Node) -> void:
     if node is MeshInstance3D:
         var mesh_instance := node as MeshInstance3D
@@ -1329,104 +879,14 @@ func _build_terrain_collision(node: Node) -> void:
         if child.name != "RuntimeTerrainCollision":
             _build_terrain_collision(child)
 
-func _ground_point(point: Vector3) -> Vector3:
-    var from := Vector3(point.x, 30.0, point.z)
-    var to := Vector3(point.x, -10.0, point.z)
-    var query := PhysicsRayQueryParameters3D.create(from, to)
-    query.collide_with_areas = false
-    query.collide_with_bodies = true
-    query.collision_mask = 8
-
-    var hit := get_world_3d().direct_space_state.intersect_ray(query)
-    if not hit.is_empty():
-        point.y = (hit["position"] as Vector3).y + HERO_GROUND_CLEARANCE
-    return point
-
-func _local_floor_point(point: Vector3) -> Vector3:
-    var reference_y: float = point.y
-    var from := Vector3(point.x, reference_y + LOCAL_FLOOR_PROBE_ABOVE, point.z)
-    var to := Vector3(point.x, reference_y - LOCAL_FLOOR_PROBE_BELOW, point.z)
-    var query := PhysicsRayQueryParameters3D.create(from, to)
-    query.collide_with_areas = false
-    query.collide_with_bodies = true
-    query.collision_mask = 8
-
-    var hit := get_world_3d().direct_space_state.intersect_ray(query)
-    if not hit.is_empty():
-        var hit_position := hit["position"] as Vector3
-        point.y = hit_position.y + HERO_GROUND_CLEARANCE
-    return point
-
-func _ground_move_nodes_from_scans() -> void:
-    var endpoint_samples: Dictionary = {}
-
-    for key_variant in scanned_road_paths.keys():
-        var key: String = str(key_variant)
-        var pieces := key.split("|")
-        if pieces.size() != 2:
-            continue
-        var samples: Array = scanned_road_paths[key]
-        if samples.is_empty():
-            continue
-
-        if not endpoint_samples.has(pieces[0]):
-            endpoint_samples[pieces[0]] = []
-        if not endpoint_samples.has(pieces[1]):
-            endpoint_samples[pieces[1]] = []
-
-        endpoint_samples[pieces[0]].append(samples[0])
-        endpoint_samples[pieces[1]].append(samples[samples.size() - 1])
-
-    for child in move_nodes_root.get_children():
-        if not child is Area3D:
-            continue
-        var node := child as Area3D
-        if endpoint_samples.has(node.name):
-            var samples: Array = endpoint_samples[node.name]
-            var total := Vector3.ZERO
-            for sample_variant in samples:
-                total += sample_variant as Vector3
-            node.global_position = total / float(samples.size())
-        else:
-            node.global_position = _local_floor_point(node.global_position)
-
-func _ground_move_nodes() -> void:
-    for child in move_nodes_root.get_children():
-        if child is Area3D:
-            var node := child as Area3D
-            node.global_position = _local_floor_point(node.global_position)
-
-func _ground_hero_to_surface() -> void:
-    if move_nodes_root.has_node(current_move_node):
-        var start_node := move_nodes_root.get_node(current_move_node) as Area3D
-        if start_node:
-            hero_unit.global_position = start_node.global_position
-            return
-    hero_unit.global_position = _local_floor_point(hero_unit.global_position)
-
 func _cancel_unit_move() -> void:
     _hide_route_preview()
     _clear_hex_highlights()
     pending_hex_key = ""
     pending_hex_path.clear()
     unit_selected = false
+    movement_panel.visible = false
     hero_label.visible = false
-    pending_move_node = ""
-    pending_path.clear()
-    if movement_panel:
-        movement_panel.visible = false
-    if movement_confirm:
-        movement_confirm.disabled = true
-    _hide_move_nodes()
-
-func _hide_move_nodes() -> void:
-    if not move_nodes_root:
-        return
-    for child in move_nodes_root.get_children():
-        var marker := child.get_node_or_null("Marker") as MeshInstance3D
-        if marker:
-            marker.visible = false
-
 
 func _build_game_hud() -> void:
     game_hud = PanelContainer.new()
@@ -1924,18 +1384,14 @@ func _refresh_enemy_board() -> void:
         var node_name: String = str(node_name_variant)
         if completed_encounters.has(node_name):
             continue
-        if not move_nodes_root.has_node(node_name):
-            continue
-
-        var move_node := move_nodes_root.get_node(node_name) as Area3D
-        if not move_node:
+        if not ENCOUNTER_START_POSITIONS.has(node_name):
             continue
 
         var data: Dictionary = encounters[node_name]
         var piece := Node3D.new()
         piece.name = "Enemy_%s" % node_name
         enemy_root.add_child(piece)
-        piece.global_position = move_node.global_position
+        piece.global_position = ENCOUNTER_START_POSITIONS[node_name]
 
         var material := StandardMaterial3D.new()
         material.albedo_color = Color(0.17, 0.055, 0.035, 1.0)
@@ -1996,7 +1452,7 @@ func _refresh_enemy_board() -> void:
 
         await get_tree().process_frame
         _snap_visual_children_to_ground(piece, 0.0)
-        if hex_mode and not hex_cells.is_empty():
+        if not hex_cells.is_empty():
             var enemy_hex := str(enemy_hex_positions.get(node_name, ""))
             if enemy_hex == "" or not hex_cells.has(enemy_hex):
                 enemy_hex = _nearest_hex_key(piece.global_position)
@@ -2040,7 +1496,7 @@ func _refresh_enemy_visibility() -> void:
         var visibility_radius: float = 9.0
         if claimed_pois.has("ElevatedOutpost"):
             visibility_radius = 18.0
-        piece.visible = hero_flat.distance_to(enemy_flat) <= visibility_radius or node_name == current_move_node
+        piece.visible = hero_flat.distance_to(enemy_flat) <= visibility_radius or str(enemy_hex_positions.get(node_name, "")) == current_hex_key
 
 func _node_has_active_encounter(node_name: String) -> bool:
     var encounters: Dictionary = board_data.get("encounters", {})
@@ -2189,11 +1645,9 @@ func _handle_hero_defeat() -> void:
     signature_ability_used = false
     signature_ability_primed = false
     vulgrim_heat = min(100, vulgrim_heat + 10)
-    current_move_node = "BasaltCenter"
-    if move_nodes_root.has_node(current_move_node):
-        var retreat_node := move_nodes_root.get_node(current_move_node) as Area3D
-        if retreat_node:
-            hero_unit.global_position = retreat_node.global_position
+    current_hex_key = _nearest_hex_key(CAMPAIGN_START_POSITION)
+    if current_hex_key != "" and hex_cells.has(current_hex_key):
+        hero_unit.global_position = hex_cells[current_hex_key]["position"]
     event_log_label.text = "The hero was defeated and forced to retreat. Returned with 50 health; Vulgrim's threat increased."
     encounter_panel.visible = false
     current_encounter_node = ""
@@ -2212,10 +1666,7 @@ func _restart_campaign() -> void:
     signature_ability_primed = false
     sundered_vault_cleared = false
     moves_remaining = hero_move_points
-    current_move_node = "BasaltCenter"
-    pending_move_node = ""
     pending_move_cost = 0
-    pending_path.clear()
     _hide_route_preview()
     discovered_pois.clear()
     claimed_pois.clear()
@@ -2224,10 +1675,9 @@ func _restart_campaign() -> void:
     if FileAccess.file_exists("user://sundered_vault_save.cfg"):
         DirAccess.remove_absolute(ProjectSettings.globalize_path("user://sundered_vault_save.cfg"))
 
-    if move_nodes_root.has_node(current_move_node):
-        var start_node := move_nodes_root.get_node(current_move_node) as Area3D
-        if start_node:
-            hero_unit.global_position = start_node.global_position
+    current_hex_key = _nearest_hex_key(CAMPAIGN_START_POSITION)
+    if current_hex_key != "" and hex_cells.has(current_hex_key):
+        hero_unit.global_position = hex_cells[current_hex_key]["position"]
 
     _refresh_enemy_board()
     _refresh_fog_reveal()
@@ -2240,7 +1690,7 @@ func _restart_campaign() -> void:
     reset_camera()
 
 func _restore_hex_state() -> void:
-    if not hex_mode or hex_cells.is_empty():
+    if hex_cells.is_empty():
         return
     if current_hex_key == "" or not hex_cells.has(current_hex_key):
         current_hex_key = _nearest_hex_key(hero_unit.global_position)
@@ -2374,7 +1824,6 @@ func _save_game_state() -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("board", "turn", turn_number)
     cfg.set_value("board", "moves_remaining", moves_remaining)
-    cfg.set_value("board", "current_move_node", current_move_node)
     cfg.set_value("board", "current_hex_key", current_hex_key)
     cfg.set_value("board", "campaign_phase", campaign_phase)
     cfg.set_value("board", "enemy_hex_positions", enemy_hex_positions)
@@ -2402,7 +1851,6 @@ func _load_game_state() -> void:
 
     turn_number = int(cfg.get_value("board", "turn", 1))
     moves_remaining = int(cfg.get_value("board", "moves_remaining", hero_move_points))
-    current_move_node = str(cfg.get_value("board", "current_move_node", "BasaltCenter"))
     current_hex_key = str(cfg.get_value("board", "current_hex_key", ""))
     campaign_phase = str(cfg.get_value("board", "campaign_phase", PHASE_PLAYER))
     if campaign_phase != PHASE_PLAYER:
@@ -2437,10 +1885,6 @@ func _load_game_state() -> void:
     for key in cfg.get_value("board", "revealed_fog_cells", []):
         revealed_fog_cells[str(key)] = true
 
-    if move_nodes_root.has_node(current_move_node):
-        var node := move_nodes_root.get_node(current_move_node) as Area3D
-        if node:
-            hero_unit.global_position = node.global_position
 
 func _select_poi(node: Node3D) -> void:
     if not POI_DATA.has(node.name) or not discovered_pois.has(node.name):
@@ -2511,14 +1955,8 @@ func _on_poi_action() -> void:
         return
 
     if selected_poi == "SunderedVault":
-        var vault_gate := move_nodes_root.get_node_or_null("VaultGate") as Area3D
-        if not vault_gate:
-            poi_body.text = "The Sundered Vault entrance is unavailable in this build."
-            return
-        var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
-        var gate_flat := Vector2(vault_gate.global_position.x, vault_gate.global_position.z)
-        if hero_flat.distance_to(gate_flat) > 1.5:
-            poi_body.text = "The Sundered Vault has been discovered. Move your hero to the Vault Gate before entering."
+        if not _hero_near_named_poi("SunderedVault", 2.8):
+            poi_body.text = "The Sundered Vault has been discovered. Move your hero onto the vault entrance before entering."
             return
         _save_game_state()
         get_tree().change_scene_to_file("res://scenes/SunderedVault.tscn")
