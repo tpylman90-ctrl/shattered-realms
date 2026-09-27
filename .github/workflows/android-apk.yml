@@ -60,7 +60,9 @@ jobs:
           python3 -m pip install --quiet numpy trimesh rtree
           python3 native/tools/generate_ashenreach_nav_surface.py
           test -f native/assets/3d/game-ready/ashenreach-hex-board/generated/ashenreach_nav_surface.glb
+          test -f native/data/generated/ashenreach_nav_grid.json
           ls -lh native/assets/3d/game-ready/ashenreach-hex-board/generated/ashenreach_nav_surface.glb
+          ls -lh native/data/generated/ashenreach_nav_grid.json
 
       - name: Validate Godot project scripts
         shell: bash
