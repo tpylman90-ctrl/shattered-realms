@@ -1,7 +1,7 @@
 [gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/ashenreach_demo.gd" id="1_script"]
-[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ashenreach_terrain_high.glb" id="2_terrain"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ashenreach-hex-board/ashenreach_hex_board.glb" id="2_terrain"]
 [ext_resource type="PackedScene" path="res://assets/3d/game-ready/ashenreach_gate_game.glb" id="3_gate"]
 
 [sub_resource type="Environment" id="Environment_main"]
@@ -159,17 +159,19 @@ omni_range = 15.0
 shadow_enabled = false
 
 [node name="BedrockUnderlay" type="MeshInstance3D" parent="."]
+visible = false
 position = Vector3(0, -0.18, 0)
 mesh = SubResource("PlaneMesh_bedrock")
 material_override = SubResource("Material_bedrock")
 cast_shadow = 1
 
 [node name="TerrainRoot" type="Node3D" parent="."]
-scale = Vector3(40, 40, 40)
+scale = Vector3(38, 38, 38)
 
 [node name="Terrain" parent="TerrainRoot" instance=ExtResource("2_terrain")]
 
 [node name="GateRoot" type="Node3D" parent="."]
+visible = false
 position = Vector3(-11.5, 2.1, 7.0)
 rotation_degrees = Vector3(0, 128, 0)
 scale = Vector3(8.0, 8.0, 8.0)
@@ -177,11 +179,13 @@ scale = Vector3(8.0, 8.0, 8.0)
 [node name="Gate" parent="GateRoot" instance=ExtResource("3_gate")]
 
 [node name="VaultMistGlow" type="MeshInstance3D" parent="."]
+visible = false
 position = Vector3(-11.5, 4.5, 7.0)
 mesh = SubResource("SphereMesh_vault_glow")
 material_override = SubResource("Material_vault_glow")
 
 [node name="VaultMistLight" type="OmniLight3D" parent="."]
+visible = false
 position = Vector3(-11.5, 4.7, 7.0)
 light_color = Color(0.08, 0.9, 0.78, 1)
 light_energy = 5.2
