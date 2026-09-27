@@ -216,6 +216,9 @@ func _ready() -> void:
     $UI/HeroSelectPanel/Margin/VBox/CloseButton.pressed.connect(_close_hero_select)
     _load_hero_catalog()
     _load_board_data()
+    _configure_query_only_areas($POIs)
+    hero_unit.monitoring = false
+    hero_unit.monitorable = true
     _refresh_unlocked_heroes()
     _load_game_state()
     _restore_hex_state()
@@ -237,6 +240,14 @@ func _ready() -> void:
         event_log_label.text = "Sundered Vault cleared. Ember Seal recovered."
     if vulgrim_defeated and victory_panel:
         victory_panel.visible = true
+
+func _configure_query_only_areas(root: Node) -> void:
+    for child in root.get_children():
+        if child is Area3D:
+            var area := child as Area3D
+            area.monitoring = false
+            area.monitorable = true
+        _configure_query_only_areas(child)
 
 func _process(delta: float) -> void:
     glow_time += delta
@@ -558,6 +569,10 @@ func _build_hex_board() -> void:
     hex_reachable_batch = _make_hex_batch("HexReachableBatch", hex_material_reachable)
     hex_target_batch = _make_hex_batch("HexTargetBatch", hex_material_target)
 
+    var hex_pick_shape := CylinderShape3D.new()
+    hex_pick_shape.radius = HEX_SIZE * 0.82
+    hex_pick_shape.height = 0.20
+
     var q_min := -14
     var q_max := 14
     var r_min := -14
@@ -581,12 +596,11 @@ func _build_hex_board() -> void:
             area.position = sample["position"]
             area.collision_layer = 2
             area.collision_mask = 0
+            area.monitoring = false
+            area.monitorable = true
 
             var collision := CollisionShape3D.new()
-            var shape := CylinderShape3D.new()
-            shape.radius = HEX_SIZE * 0.82
-            shape.height = 0.20
-            collision.shape = shape
+            collision.shape = hex_pick_shape
             collision.position.y = 0.08
             area.add_child(collision)
 
@@ -1299,9 +1313,8 @@ void fragment() {
     vec2 p = UV - vec2(0.5);
     float d = length(p);
     float soft_edge = 1.0 - smoothstep(0.33, 0.72, d);
-    float wave_a = sin((UV.x * 17.0) + (UV.y * 11.0));
-    float wave_b = sin((UV.x * 7.0) - (UV.y * 19.0));
-    float center_texture = 0.88 + 0.08 * wave_a + 0.04 * wave_b;
+    float wave_a = sin((UV.x * 12.0) + (UV.y * 9.0));
+    float center_texture = 0.92 + 0.08 * wave_a;
     ALBEDO = vec3(0.01, 0.014, 0.018);
     ALPHA = soft_edge * 0.48 * center_texture;
 }
@@ -1309,7 +1322,7 @@ void fragment() {
     fog_material.shader = fog_shader
 
     var plane := PlaneMesh.new()
-    plane.size = Vector2(FOG_CELL_SIZE * 1.9, FOG_CELL_SIZE * 1.9)
+    plane.size = Vector2(FOG_CELL_SIZE * 1.55, FOG_CELL_SIZE * 1.55)
 
     fog_batch = MultiMeshInstance3D.new()
     fog_batch.name = "FogBatch"
@@ -3348,6 +3361,7 @@ func _tune_imported_terrain_materials(node: Node) -> void:
                     tuned.metallic_texture = null
                     tuned.roughness = 0.88
                     tuned.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+                    tuned.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
                     mesh_instance.set_surface_override_material(surface_index, tuned)
     for child in node.get_children():
         _tune_imported_terrain_materials(child)
