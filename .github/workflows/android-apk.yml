@@ -45,8 +45,7 @@ jobs:
 
       - name: Verify required game assets exist
         run: |
-          test -f native/assets/3d/game-ready/ashenreach_terrain_high.glb
-          test -f native/assets/3d/game-ready/ashenreach_gate_game.glb
+          test -f native/assets/3d/game-ready/ashenreach-hex-board/ashenreach_hex_board.glb
 
       - name: Generate playable hero meshes
         shell: bash
