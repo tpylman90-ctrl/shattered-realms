@@ -54,6 +54,14 @@ jobs:
           test -f native/assets/3d/heroes/generated/vesper_single.glb
           test -f native/assets/3d/heroes/generated/ignis_single.glb
 
+      - name: Generate Ashenreach navigation surface
+        shell: bash
+        run: |
+          python3 -m pip install --quiet numpy trimesh rtree
+          python3 native/tools/generate_ashenreach_nav_surface.py
+          test -f native/assets/3d/game-ready/ashenreach-hex-board/generated/ashenreach_nav_surface.glb
+          ls -lh native/assets/3d/game-ready/ashenreach-hex-board/generated/ashenreach_nav_surface.glb
+
       - name: Validate Godot project scripts
         shell: bash
         run: |
