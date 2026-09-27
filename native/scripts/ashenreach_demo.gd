@@ -97,6 +97,7 @@ var hex_material_forced_open: StandardMaterial3D
 var hex_material_forced_blocked: StandardMaterial3D
 var hex_grid_overlay: MeshInstance3D
 var nav_mask_data: Dictionary = {}
+var nav_blocked_edges: Dictionary = {}
 var nav_debug_forced_open: Dictionary = {}
 var nav_debug_forced_blocked: Dictionary = {}
 var nav_debug_mode := false
@@ -122,7 +123,7 @@ const HEX_MAX_STEP := 0.94
 const HEX_MIN_UP_DOT := 0.52
 const HEX_HIGH_OUTLIER := 0.46
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 6
+const HEX_GRID_VERSION := 7
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.86
 const FOG_CELL_SIZE := 4.0
@@ -606,7 +607,10 @@ func _select_unit(_unit: Area3D) -> void:
     var hero_short: String = hero_name.split(",")[0].to_upper()
     if movement_title:
         movement_title.text = "MOVE %s" % hero_short
-    movement_stats.text = "%s selected. Action points remaining: %d\nMove across highlighted hexes. Each hex costs 1 AP." % [hero_name, moves_remaining]
+    var neighbor_count: int = _hex_neighbors(current_hex_key).size()
+    movement_stats.text = "%s selected. Action points remaining: %d\nAdjacent open hexes: %d. Each hex costs 1 AP." % [
+        hero_name, moves_remaining, neighbor_count
+    ]
     status_label.text = "%s — choose a destination" % hero_name
     _focus_on_poi(hero_unit.global_position)
     if hex_grid_overlay:
@@ -940,13 +944,10 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
     }
 
 func _hex_neighbors(key: String) -> Array[String]:
-    if not hex_cells.has(key):
+    if not _is_hex_walkable(key):
         return []
 
     var cell: Dictionary = hex_cells[key]
-    if not bool(cell.get("walkable", false)):
-        return []
-
     var q: int = int(cell["q"])
     var r: int = int(cell["r"])
     var directions := [
@@ -957,18 +958,27 @@ func _hex_neighbors(key: String) -> Array[String]:
 
     for d in directions:
         var neighbor_key := _hex_key(q + d.x, r + d.y)
-        if not hex_cells.has(neighbor_key):
+        if not _is_hex_walkable(neighbor_key):
             continue
-
-        var neighbor: Dictionary = hex_cells[neighbor_key]
-        if not bool(neighbor.get("walkable", false)):
+        if _is_nav_edge_blocked(key, neighbor_key):
             continue
-
-        var step_height: float = absf(float(neighbor["height"]) - float(cell["height"]))
-        if step_height <= HEX_MAX_STEP:
-            result.append(neighbor_key)
+        result.append(neighbor_key)
 
     return result
+
+func _is_hex_walkable(key: String) -> bool:
+    if key == "" or not hex_cells.has(key):
+        return false
+    var cell: Dictionary = hex_cells[key]
+    return bool(cell.get("walkable", false))
+
+func _canonical_edge_key(a: String, b: String) -> String:
+    if a < b:
+        return "%s|%s" % [a, b]
+    return "%s|%s" % [b, a]
+
+func _is_nav_edge_blocked(a: String, b: String) -> bool:
+    return nav_blocked_edges.has(_canonical_edge_key(a, b))
 
 func _nearest_hex_key(world_position: Vector3) -> String:
     var best_key := ""
@@ -989,9 +999,9 @@ func _nearest_hex_key(world_position: Vector3) -> String:
 func _snap_hero_to_nearest_hex() -> void:
     if hex_cells.is_empty():
         return
-    if current_hex_key == "" or not hex_cells.has(current_hex_key):
+    if not _is_hex_walkable(current_hex_key):
         current_hex_key = _nearest_hex_key(hero_unit.global_position)
-    if current_hex_key == "":
+    if not _is_hex_walkable(current_hex_key):
         return
     var cell: Dictionary = hex_cells[current_hex_key]
     hero_unit.global_position = cell["position"]
@@ -1983,9 +1993,9 @@ func _restart_campaign() -> void:
 func _restore_hex_state() -> void:
     if hex_cells.is_empty():
         return
-    if current_hex_key == "" or not hex_cells.has(current_hex_key):
+    if not _is_hex_walkable(current_hex_key):
         current_hex_key = _nearest_hex_key(hero_unit.global_position)
-    if current_hex_key != "" and hex_cells.has(current_hex_key):
+    if _is_hex_walkable(current_hex_key):
         hero_unit.global_position = hex_cells[current_hex_key]["position"]
 
 func _hero_near_named_poi(poi_name: String, radius: float) -> bool:
@@ -2116,7 +2126,8 @@ func _load_nav_mask_data() -> void:
         "blocked_hexes": [],
         "forced_open_hexes": [],
         "blocked_regions": [],
-        "forced_open_regions": []
+        "forced_open_regions": [],
+        "blocked_edges": []
     }
     if not FileAccess.file_exists("res://data/ashenreach_nav_mask.json"):
         return
@@ -2124,6 +2135,20 @@ func _load_nav_mask_data() -> void:
     var parsed = JSON.parse_string(file.get_as_text())
     if parsed is Dictionary:
         nav_mask_data = parsed
+    _rebuild_nav_edge_cache()
+
+func _rebuild_nav_edge_cache() -> void:
+    nav_blocked_edges.clear()
+    for raw_edge in nav_mask_data.get("blocked_edges", []):
+        if raw_edge is Array and raw_edge.size() >= 2:
+            var a := str(raw_edge[0])
+            var b := str(raw_edge[1])
+            nav_blocked_edges[_canonical_edge_key(a, b)] = true
+        elif raw_edge is String:
+            var edge_text := str(raw_edge)
+            var parts := edge_text.split("|", false, 1)
+            if parts.size() == 2:
+                nav_blocked_edges[_canonical_edge_key(parts[0], parts[1])] = true
 
 func _load_nav_debug_overrides() -> void:
     nav_debug_forced_open.clear()
