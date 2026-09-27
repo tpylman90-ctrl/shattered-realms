@@ -110,9 +110,11 @@ const HEX_WORLD_LIMIT := 17.3
 const HEX_GRID_OFFSET := Vector2(0.0, 0.0)
 const HEX_SAMPLE_RADIUS := 0.16
 const HEX_MAX_LOCAL_VARIANCE := 0.58
-const HEX_MAX_STEP := 0.78
-const HEX_MIN_UP_DOT := 0.66
-const HEX_GRID_VERSION := 3
+const HEX_MAX_STEP := 0.82
+const HEX_MIN_UP_DOT := 0.52
+const HEX_HIGH_OUTLIER := 0.62
+const HEX_MIN_PLAYABLE_HEIGHT := 3.25
+const HEX_GRID_VERSION := 4
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.72
 const FOG_CELL_SIZE := 4.0
@@ -682,11 +684,58 @@ func _build_hex_board() -> void:
                 "height": float(area.position.y)
             }
 
-    _prune_unconnected_hexes()
+    _normalize_hex_surface_heights()
     _prune_deep_depression_hexes()
     _prune_unconnected_hexes()
     _build_hex_grid_overlay()
     _clear_hex_highlights()
+
+func _normalize_hex_surface_heights() -> void:
+    # Center rays can land on the flat top of a small prop. When a cell is a
+    # clear high outlier relative to several immediate neighbors, use the
+    # neighborhood floor height instead. This repairs random holes/steps in
+    # open ground while leaving low hazards for the depression pass.
+    var corrections: Dictionary = {}
+
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        var q: int = int(cell["q"])
+        var r: int = int(cell["r"])
+        var neighbor_heights: Array[float] = []
+        var directions := [
+            Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
+            Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
+        ]
+
+        for d in directions:
+            var neighbor_key := _hex_key(q + d.x, r + d.y)
+            if hex_cells.has(neighbor_key):
+                neighbor_heights.append(float(hex_cells[neighbor_key]["height"]))
+
+        if neighbor_heights.size() < 3:
+            continue
+
+        neighbor_heights.sort()
+        var median_height: float = neighbor_heights[int(neighbor_heights.size() / 2)]
+        var cell_height: float = float(cell["height"])
+        if cell_height - median_height >= HEX_HIGH_OUTLIER:
+            corrections[key] = median_height
+
+    for key_variant in corrections.keys():
+        var key := str(key_variant)
+        if not hex_cells.has(key):
+            continue
+        var corrected_height: float = float(corrections[key])
+        var cell: Dictionary = hex_cells[key]
+        var area := cell["area"] as Area3D
+        var pos: Vector3 = cell["position"]
+        pos.y = corrected_height
+        cell["height"] = corrected_height
+        cell["position"] = pos
+        hex_cells[key] = cell
+        if area:
+            area.position = pos
 
 func _prune_deep_depression_hexes() -> void:
     # The board model includes flat lava floors. Geometry alone can therefore
@@ -701,6 +750,10 @@ func _prune_deep_depression_hexes() -> void:
         var q: int = int(cell["q"])
         var r: int = int(cell["r"])
         var cell_height: float = float(cell["height"])
+        if cell_height < HEX_MIN_PLAYABLE_HEIGHT:
+            remove_keys.append(key)
+            continue
+
         var nearby_heights: Array[float] = []
 
         for dq in range(-HEX_DEPRESSION_RADIUS, HEX_DEPRESSION_RADIUS + 1):
@@ -775,62 +828,32 @@ func _hex_key(q: int, r: int) -> String:
     return "%d,%d" % [q, r]
 
 func _sample_hex_surface(x: float, z: float) -> Dictionary:
-    # Sample the floor near the cell center. Small props should not invalidate
-    # an otherwise playable tile, so only three short radial probes are used.
-    var sample_offsets: Array[Vector2] = [Vector2.ZERO]
-    for i in range(3):
-        var angle := deg_to_rad(120.0 * float(i))
-        sample_offsets.append(Vector2(cos(angle), sin(angle)) * HEX_SAMPLE_RADIUS)
+    # Gameplay cells are anchored from the center floor sample. Decorative
+    # rocks and pillars should not punch holes through otherwise walkable land.
+    # High outliers are corrected against neighboring cells in a second pass.
+    var from := Vector3(x, 14.0, z)
+    var to := Vector3(x, -2.0, z)
+    var query := PhysicsRayQueryParameters3D.create(from, to)
+    query.collide_with_areas = false
+    query.collide_with_bodies = true
+    query.collision_mask = 8
 
-    var heights: Array[float] = []
-    var up_dots: Array[float] = []
-    var center_position := Vector3.ZERO
-
-    for i in range(sample_offsets.size()):
-        var offset: Vector2 = sample_offsets[i]
-        var from := Vector3(x + offset.x, 14.0, z + offset.y)
-        var to := Vector3(x + offset.x, -2.0, z + offset.y)
-        var query := PhysicsRayQueryParameters3D.create(from, to)
-        query.collide_with_areas = false
-        query.collide_with_bodies = true
-        query.collision_mask = 8
-        var hit := get_world_3d().direct_space_state.intersect_ray(query)
-        if hit.is_empty():
-            if i == 0:
-                return {"valid": false}
-            continue
-
-        var pos := hit["position"] as Vector3
-        var normal := hit.get("normal", Vector3.UP) as Vector3
-        heights.append(pos.y)
-        up_dots.append(normal.dot(Vector3.UP))
-        if i == 0:
-            center_position = pos
-
-    if heights.size() < 2:
+    var hit := get_world_3d().direct_space_state.intersect_ray(query)
+    if hit.is_empty():
         return {"valid": false}
 
-    var min_height: float = heights[0]
-    var max_height: float = heights[0]
-    for h in heights:
-        min_height = minf(min_height, h)
-        max_height = maxf(max_height, h)
+    var center_position := hit["position"] as Vector3
+    var normal := hit.get("normal", Vector3.UP) as Vector3
+    var up_dot: float = normal.dot(Vector3.UP)
 
-    var acceptable_normals := 0
-    for up_dot in up_dots:
-        if up_dot >= HEX_MIN_UP_DOT:
-            acceptable_normals += 1
-
-    if max_height - min_height > HEX_MAX_LOCAL_VARIANCE:
-        return {"valid": false}
-    if acceptable_normals < maxi(1, int(ceil(float(up_dots.size()) * 0.5))):
+    if up_dot < HEX_MIN_UP_DOT:
         return {"valid": false}
 
     center_position.y += HERO_GROUND_CLEARANCE
     return {
         "valid": true,
         "position": center_position,
-        "variance": max_height - min_height
+        "up_dot": up_dot
     }
 
 func _hex_neighbors(key: String) -> Array[String]:
