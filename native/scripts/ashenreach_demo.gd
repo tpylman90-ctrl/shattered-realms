@@ -92,6 +92,7 @@ var hex_material_idle: StandardMaterial3D
 var hex_material_reachable: StandardMaterial3D
 var hex_material_target: StandardMaterial3D
 var hex_material_current: StandardMaterial3D
+var hex_material_blocked: StandardMaterial3D
 var hex_grid_overlay: MeshInstance3D
 
 const MIN_ZOOM := 16.0
@@ -114,7 +115,7 @@ const HEX_MAX_STEP := 0.82
 const HEX_MIN_UP_DOT := 0.52
 const HEX_HIGH_OUTLIER := 0.62
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 4
+const HEX_GRID_VERSION := 5
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.72
 const FOG_CELL_SIZE := 4.0
@@ -632,6 +633,11 @@ func _build_hex_board() -> void:
     hex_material_current.emission = Color(0.12, 0.52, 1.0, 1.0)
     hex_material_current.emission_energy_multiplier = 1.1
 
+    hex_material_blocked = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_blocked.albedo_color = Color(0.34, 0.06, 0.035, 0.16)
+    hex_material_blocked.emission = Color(0.42, 0.05, 0.02, 1.0)
+    hex_material_blocked.emission_energy_multiplier = 0.22
+
     var q_min := -23
     var q_max := 23
     var r_min := -30
@@ -643,23 +649,28 @@ func _build_hex_board() -> void:
             if absf(center2.x) > HEX_WORLD_LIMIT or absf(center2.y) > HEX_WORLD_LIMIT:
                 continue
 
-            var sample := _sample_hex_surface(center2.x, center2.y)
-            if not bool(sample.get("valid", false)):
-                continue
-
+            var sample: Dictionary = _sample_hex_surface(center2.x, center2.y)
             var key := _hex_key(q, r)
+            var has_surface: bool = bool(sample.get("has_surface", false))
+            var sampled_position: Vector3 = sample.get(
+                "position",
+                Vector3(center2.x, HEX_MIN_PLAYABLE_HEIGHT, center2.y)
+            ) as Vector3
+
             var area := Area3D.new()
             area.name = "Hex_%s" % key
             area.add_to_group("hex_cell")
             area.set_meta("hex_key", key)
-            area.position = sample["position"]
+            area.position = sampled_position
 
             var collision := CollisionShape3D.new()
+            collision.name = "PickShape"
             var shape := CylinderShape3D.new()
             shape.radius = HEX_SIZE * 0.82
             shape.height = 0.20
             collision.shape = shape
             collision.position.y = 0.08
+            collision.disabled = not has_surface
             area.add_child(collision)
 
             var visual := MeshInstance3D.new()
@@ -673,6 +684,7 @@ func _build_hex_board() -> void:
             visual.position.y = 0.045
             visual.rotation_degrees.y = 30.0
             visual.material_override = hex_material_idle
+            visual.visible = has_surface
             area.add_child(visual)
 
             hex_root.add_child(area)
@@ -681,37 +693,44 @@ func _build_hex_board() -> void:
                 "r": r,
                 "position": area.position,
                 "area": area,
-                "height": float(area.position.y)
+                "height": float(area.position.y),
+                "has_surface": has_surface,
+                "up_dot": float(sample.get("up_dot", -1.0)),
+                "walkable": has_surface,
+                "blocked_reason": "" if has_surface else "void"
             }
 
     _normalize_hex_surface_heights()
-    _prune_deep_depression_hexes()
-    _prune_unconnected_hexes()
+    _classify_hex_cells()
     _build_hex_grid_overlay()
     _clear_hex_highlights()
 
 func _normalize_hex_surface_heights() -> void:
-    # Center rays can land on the flat top of a small prop. When a cell is a
-    # clear high outlier relative to several immediate neighbors, use the
-    # neighborhood floor height instead. This repairs random holes/steps in
-    # open ground while leaving low hazards for the depression pass.
+    # Correct obvious prop-top outliers against the complete neighboring lattice.
+    # Nothing is deleted here.
     var corrections: Dictionary = {}
+    var directions := [
+        Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
+        Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
+    ]
 
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
+        if not bool(cell.get("has_surface", false)):
+            continue
+
         var q: int = int(cell["q"])
         var r: int = int(cell["r"])
         var neighbor_heights: Array[float] = []
-        var directions := [
-            Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
-            Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
-        ]
 
         for d in directions:
             var neighbor_key := _hex_key(q + d.x, r + d.y)
-            if hex_cells.has(neighbor_key):
-                neighbor_heights.append(float(hex_cells[neighbor_key]["height"]))
+            if not hex_cells.has(neighbor_key):
+                continue
+            var neighbor: Dictionary = hex_cells[neighbor_key]
+            if bool(neighbor.get("has_surface", false)):
+                neighbor_heights.append(float(neighbor["height"]))
 
         if neighbor_heights.size() < 3:
             continue
@@ -737,23 +756,40 @@ func _normalize_hex_surface_heights() -> void:
         if area:
             area.position = pos
 
-func _prune_deep_depression_hexes() -> void:
-    # The board model includes flat lava floors. Geometry alone can therefore
-    # look walkable. Reject cells that sit significantly below the surrounding
-    # local terrain, which catches cracks and pits without treating every prop
-    # as an obstacle.
-    var remove_keys: Array[String] = []
-
+func _classify_hex_cells() -> void:
+    # Full-grid-first model: every axial coordinate remains present. We only
+    # toggle walkability and picking after the lattice is populated.
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
+        var walkable := true
+        var reason := ""
+
+        if not bool(cell.get("has_surface", false)):
+            walkable = false
+            reason = "void"
+        elif float(cell.get("up_dot", -1.0)) < HEX_MIN_UP_DOT:
+            walkable = false
+            reason = "slope"
+        elif float(cell["height"]) < HEX_MIN_PLAYABLE_HEIGHT:
+            walkable = false
+            reason = "low_hazard"
+
+        cell["walkable"] = walkable
+        cell["blocked_reason"] = reason
+        hex_cells[key] = cell
+
+    # Second pass: recessed cells are hazards relative to the complete local
+    # neighborhood. Keeping blocked cells in the lattice prevents random holes.
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        if not bool(cell.get("walkable", false)):
+            continue
+
         var q: int = int(cell["q"])
         var r: int = int(cell["r"])
         var cell_height: float = float(cell["height"])
-        if cell_height < HEX_MIN_PLAYABLE_HEIGHT:
-            remove_keys.append(key)
-            continue
-
         var nearby_heights: Array[float] = []
 
         for dq in range(-HEX_DEPRESSION_RADIUS, HEX_DEPRESSION_RADIUS + 1):
@@ -762,27 +798,43 @@ func _prune_deep_depression_hexes() -> void:
                 var distance: int = maxi(abs(dq), maxi(abs(dr), abs(ds)))
                 if distance == 0 or distance > HEX_DEPRESSION_RADIUS:
                     continue
+
                 var nearby_key := _hex_key(q + dq, r + dr)
                 if not hex_cells.has(nearby_key):
                     continue
-                nearby_heights.append(float(hex_cells[nearby_key]["height"]))
 
-        if nearby_heights.size() < 5:
-            continue
+                var nearby: Dictionary = hex_cells[nearby_key]
+                if bool(nearby.get("has_surface", false)):
+                    nearby_heights.append(float(nearby["height"]))
 
-        nearby_heights.sort()
-        var median_height: float = nearby_heights[int(nearby_heights.size() / 2)]
-        if median_height - cell_height >= HEX_DEPRESSION_DEPTH:
-            remove_keys.append(key)
+        if nearby_heights.size() >= 5:
+            nearby_heights.sort()
+            var median_height: float = nearby_heights[int(nearby_heights.size() / 2)]
+            if median_height - cell_height >= HEX_DEPRESSION_DEPTH:
+                cell["walkable"] = false
+                cell["blocked_reason"] = "depression"
+                hex_cells[key] = cell
 
-    for key in remove_keys:
-        if not hex_cells.has(key):
-            continue
+    _apply_hex_classification_visuals()
+
+func _apply_hex_classification_visuals() -> void:
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
         var area := cell["area"] as Area3D
-        if area:
-            area.queue_free()
-        hex_cells.erase(key)
+        if not area:
+            continue
+
+        var walkable: bool = bool(cell.get("walkable", false))
+        var has_surface: bool = bool(cell.get("has_surface", false))
+        var visual := area.get_node_or_null("Visual") as MeshInstance3D
+        var pick_shape := area.get_node_or_null("PickShape") as CollisionShape3D
+
+        if visual:
+            visual.visible = has_surface
+            visual.material_override = hex_material_idle if walkable else hex_material_blocked
+        if pick_shape:
+            pick_shape.disabled = not walkable
 
 func _build_hex_grid_overlay() -> void:
     if hex_grid_overlay and is_instance_valid(hex_grid_overlay):
@@ -828,9 +880,8 @@ func _hex_key(q: int, r: int) -> String:
     return "%d,%d" % [q, r]
 
 func _sample_hex_surface(x: float, z: float) -> Dictionary:
-    # Gameplay cells are anchored from the center floor sample. Decorative
-    # rocks and pillars should not punch holes through otherwise walkable land.
-    # High outliers are corrected against neighboring cells in a second pass.
+    # Sampling never decides whether the cell exists. It only records the
+    # surface under the complete logical lattice; classification happens later.
     var from := Vector3(x, 14.0, z)
     var to := Vector3(x, -2.0, z)
     var query := PhysicsRayQueryParameters3D.create(from, to)
@@ -840,18 +891,17 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
 
     var hit := get_world_3d().direct_space_state.intersect_ray(query)
     if hit.is_empty():
-        return {"valid": false}
+        return {
+            "has_surface": false
+        }
 
-    var center_position := hit["position"] as Vector3
-    var normal := hit.get("normal", Vector3.UP) as Vector3
+    var center_position: Vector3 = hit["position"] as Vector3
+    var normal: Vector3 = hit.get("normal", Vector3.UP) as Vector3
     var up_dot: float = normal.dot(Vector3.UP)
-
-    if up_dot < HEX_MIN_UP_DOT:
-        return {"valid": false}
-
     center_position.y += HERO_GROUND_CLEARANCE
+
     return {
-        "valid": true,
+        "has_surface": true,
         "position": center_position,
         "up_dot": up_dot
     }
@@ -859,7 +909,11 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
 func _hex_neighbors(key: String) -> Array[String]:
     if not hex_cells.has(key):
         return []
+
     var cell: Dictionary = hex_cells[key]
+    if not bool(cell.get("walkable", false)):
+        return []
+
     var q: int = int(cell["q"])
     var r: int = int(cell["r"])
     var directions := [
@@ -867,63 +921,21 @@ func _hex_neighbors(key: String) -> Array[String]:
         Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
     ]
     var result: Array[String] = []
+
     for d in directions:
         var neighbor_key := _hex_key(q + d.x, r + d.y)
         if not hex_cells.has(neighbor_key):
             continue
+
         var neighbor: Dictionary = hex_cells[neighbor_key]
+        if not bool(neighbor.get("walkable", false)):
+            continue
+
         var step_height: float = absf(float(neighbor["height"]) - float(cell["height"]))
         if step_height <= HEX_MAX_STEP:
             result.append(neighbor_key)
+
     return result
-
-func _prune_unconnected_hexes() -> void:
-    var remove_keys: Array[String] = []
-    for key_variant in hex_cells.keys():
-        var key: String = str(key_variant)
-        if _hex_neighbors(key).is_empty():
-            remove_keys.append(key)
-
-    for key in remove_keys:
-        var cell: Dictionary = hex_cells[key]
-        var area := cell["area"] as Area3D
-        if area:
-            area.queue_free()
-        hex_cells.erase(key)
-
-func _prune_to_playable_component() -> void:
-    if hex_cells.is_empty():
-        return
-
-    var seed_key := _nearest_hex_key(CAMPAIGN_START_POSITION)
-    if seed_key == "":
-        return
-
-    var keep: Dictionary = {seed_key: true}
-    var frontier: Array[String] = [seed_key]
-    var index := 0
-
-    while index < frontier.size():
-        var key: String = frontier[index]
-        index += 1
-        for neighbor in _hex_neighbors(key):
-            if keep.has(neighbor):
-                continue
-            keep[neighbor] = true
-            frontier.append(neighbor)
-
-    var remove_keys: Array[String] = []
-    for key_variant in hex_cells.keys():
-        var key := str(key_variant)
-        if not keep.has(key):
-            remove_keys.append(key)
-
-    for key in remove_keys:
-        var cell: Dictionary = hex_cells[key]
-        var area := cell["area"] as Area3D
-        if area:
-            area.queue_free()
-        hex_cells.erase(key)
 
 func _nearest_hex_key(world_position: Vector3) -> String:
     var best_key := ""
@@ -932,6 +944,8 @@ func _nearest_hex_key(world_position: Vector3) -> String:
     for key_variant in hex_cells.keys():
         var key: String = str(key_variant)
         var cell: Dictionary = hex_cells[key]
+        if not bool(cell.get("walkable", false)):
+            continue
         var pos: Vector3 = cell["position"]
         var distance := p.distance_to(Vector2(pos.x, pos.z))
         if distance < best_distance:
@@ -984,27 +998,41 @@ func _show_reachable_hexes() -> void:
         else:
             visual.material_override = hex_material_reachable
 
-    status_label.text = "Grid %d tiles • Reachable %d • AP %d" % [
+    var walkable_count := 0
+    for cell_variant in hex_cells.values():
+        var cell: Dictionary = cell_variant
+        if bool(cell.get("walkable", false)):
+            walkable_count += 1
+
+    status_label.text = "Grid %d • Open %d • Reachable %d • AP %d" % [
         hex_cells.size(),
+        walkable_count,
         maxi(0, reachable.size() - 1),
         moves_remaining
     ]
 
 func _clear_hex_highlights() -> void:
     for key_variant in hex_cells.keys():
-        var cell: Dictionary = hex_cells[str(key_variant)]
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
         var area := cell["area"] as Area3D
         if not area:
             continue
         var visual := area.get_node_or_null("Visual") as MeshInstance3D
-        if visual:
+        if not visual:
+            continue
+        if bool(cell.get("walkable", false)):
             visual.material_override = hex_material_idle
+        else:
+            visual.material_override = hex_material_blocked
 
 func _select_hex_destination(area: Area3D) -> void:
     if campaign_phase != PHASE_PLAYER or moves_remaining <= 0:
         return
     var key: String = str(area.get_meta("hex_key", ""))
     if key == "" or key == current_hex_key:
+        return
+    if not hex_cells.has(key) or not bool(hex_cells[key].get("walkable", false)):
         return
     var reachable := _hex_reachable(current_hex_key, moves_remaining)
     if not reachable.has(key):
