@@ -102,12 +102,15 @@ const CAMERA_MIN_PITCH_DEG := -84.0
 const CAMERA_MAX_PITCH_DEG := -18.0
 const TOP_DOWN_SNAP_START_DEG := -76.0
 const HERO_GROUND_CLEARANCE := 0.025
-const HEX_SIZE := 1.05
+# The baked Ashenreach board uses a dense flat-top lattice. The source-board
+# repeat is roughly half the spacing of the original prototype grid.
+const HEX_SIZE := 0.55
 const HEX_WORLD_LIMIT := 17.3
-const HEX_SAMPLE_RADIUS := 0.54
-const HEX_MAX_LOCAL_VARIANCE := 0.72
-const HEX_MAX_STEP := 0.95
-const HEX_MIN_UP_DOT := 0.72
+const HEX_GRID_OFFSET := Vector2(0.0, 0.0)
+const HEX_SAMPLE_RADIUS := 0.26
+const HEX_MAX_LOCAL_VARIANCE := 0.42
+const HEX_MAX_STEP := 0.68
+const HEX_MIN_UP_DOT := 0.76
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -601,13 +604,13 @@ func _build_hex_board() -> void:
     hex_material_idle = StandardMaterial3D.new()
     hex_material_idle.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     hex_material_idle.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    hex_material_idle.albedo_color = Color(0.08, 0.22, 0.19, 0.16)
+    hex_material_idle.albedo_color = Color(0.07, 0.30, 0.26, 0.22)
     hex_material_idle.emission_enabled = true
     hex_material_idle.emission = Color(0.08, 0.32, 0.28, 1.0)
-    hex_material_idle.emission_energy_multiplier = 0.34
+    hex_material_idle.emission_energy_multiplier = 0.48
 
     hex_material_reachable = hex_material_idle.duplicate() as StandardMaterial3D
-    hex_material_reachable.albedo_color = Color(0.10, 0.78, 0.66, 0.34)
+    hex_material_reachable.albedo_color = Color(0.10, 0.82, 0.68, 0.46)
     hex_material_reachable.emission = Color(0.08, 0.92, 0.74, 1.0)
     hex_material_reachable.emission_energy_multiplier = 0.9
 
@@ -621,10 +624,10 @@ func _build_hex_board() -> void:
     hex_material_current.emission = Color(0.12, 0.52, 1.0, 1.0)
     hex_material_current.emission_energy_multiplier = 1.1
 
-    var q_min := -14
-    var q_max := 14
-    var r_min := -14
-    var r_max := 14
+    var q_min := -23
+    var q_max := 23
+    var r_min := -30
+    var r_max := 30
 
     for r in range(r_min, r_max + 1):
         for q in range(q_min, q_max + 1):
@@ -654,12 +657,13 @@ func _build_hex_board() -> void:
             var visual := MeshInstance3D.new()
             visual.name = "Visual"
             var mesh := CylinderMesh.new()
-            mesh.top_radius = HEX_SIZE * 0.88
-            mesh.bottom_radius = HEX_SIZE * 0.88
-            mesh.height = 0.025
+            mesh.top_radius = HEX_SIZE * 0.93
+            mesh.bottom_radius = HEX_SIZE * 0.93
+            mesh.height = 0.018
             mesh.radial_segments = 6
             visual.mesh = mesh
-            visual.position.y = 0.035
+            visual.position.y = 0.045
+            visual.rotation_degrees.y = 30.0
             visual.material_override = hex_material_idle
             area.add_child(visual)
 
@@ -673,13 +677,13 @@ func _build_hex_board() -> void:
             }
 
     _prune_unconnected_hexes()
-    _prune_to_playable_component()
     _clear_hex_highlights()
 
 func _hex_to_world_2d(q: int, r: int) -> Vector2:
-    var x := HEX_SIZE * sqrt(3.0) * (float(q) + float(r) * 0.5)
-    var z := HEX_SIZE * 1.5 * float(r)
-    return Vector2(x, z)
+    # Flat-top axial coordinates aligned to the hex pattern baked into Ashenreach.
+    var x: float = HEX_SIZE * 1.5 * float(q)
+    var z: float = HEX_SIZE * sqrt(3.0) * (float(r) + float(q) * 0.5)
+    return Vector2(x, z) + HEX_GRID_OFFSET
 
 func _hex_key(q: int, r: int) -> String:
     return "%d,%d" % [q, r]
@@ -860,7 +864,11 @@ func _show_reachable_hexes() -> void:
         else:
             visual.material_override = hex_material_reachable
 
-    status_label.text = "Reachable tiles: %d • AP %d" % [maxi(0, reachable.size() - 1), moves_remaining]
+    status_label.text = "Grid %d tiles • Reachable %d • AP %d" % [
+        hex_cells.size(),
+        maxi(0, reachable.size() - 1),
+        moves_remaining
+    ]
 
 func _clear_hex_highlights() -> void:
     for key_variant in hex_cells.keys():
