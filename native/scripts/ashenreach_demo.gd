@@ -93,7 +93,14 @@ var hex_material_reachable: StandardMaterial3D
 var hex_material_target: StandardMaterial3D
 var hex_material_current: StandardMaterial3D
 var hex_material_blocked: StandardMaterial3D
+var hex_material_forced_open: StandardMaterial3D
+var hex_material_forced_blocked: StandardMaterial3D
 var hex_grid_overlay: MeshInstance3D
+var nav_mask_data: Dictionary = {}
+var nav_debug_forced_open: Dictionary = {}
+var nav_debug_forced_blocked: Dictionary = {}
+var nav_debug_mode := false
+var nav_debug_button: Button
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -213,6 +220,8 @@ func _ready() -> void:
     _build_terrain_collision($TerrainRoot)
     await get_tree().physics_frame
     await get_tree().physics_frame
+    _load_nav_mask_data()
+    _load_nav_debug_overrides()
     _build_hex_board()
     _snap_hero_to_nearest_hex()
     reset_camera()
@@ -420,6 +429,9 @@ func _try_select(screen_position: Vector2) -> void:
         return
     var collider = hit.get("collider")
     if not collider:
+        return
+    if nav_debug_mode and collider.is_in_group("hex_cell"):
+        _nav_debug_cycle_hex(collider)
         return
     if collider.is_in_group("board_piece"):
         _select_unit(collider)
@@ -638,6 +650,16 @@ func _build_hex_board() -> void:
     hex_material_blocked.emission = Color(0.42, 0.05, 0.02, 1.0)
     hex_material_blocked.emission_energy_multiplier = 0.22
 
+    hex_material_forced_open = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_forced_open.albedo_color = Color(0.08, 0.72, 0.30, 0.34)
+    hex_material_forced_open.emission = Color(0.05, 0.95, 0.30, 1.0)
+    hex_material_forced_open.emission_energy_multiplier = 0.9
+
+    hex_material_forced_blocked = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_forced_blocked.albedo_color = Color(0.78, 0.08, 0.04, 0.34)
+    hex_material_forced_blocked.emission = Color(1.0, 0.12, 0.04, 1.0)
+    hex_material_forced_blocked.emission_energy_multiplier = 0.85
+
     var q_min := -23
     var q_max := 23
     var r_min := -30
@@ -809,6 +831,13 @@ func _classify_hex_cells() -> void:
                 cell["blocked_reason"] = "depression"
                 hex_cells[key] = cell
 
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        cell["auto_walkable"] = bool(cell.get("walkable", false))
+        hex_cells[key] = cell
+
+    _apply_nav_mask_overrides()
     _apply_hex_classification_visuals()
 
 func _apply_hex_classification_visuals() -> void:
@@ -826,9 +855,16 @@ func _apply_hex_classification_visuals() -> void:
 
         if visual:
             visual.visible = has_surface
-            visual.material_override = hex_material_idle if walkable else hex_material_blocked
+            var source: String = str(cell.get("nav_source", "auto"))
+            if source == "debug_open" or source == "mask_open":
+                visual.material_override = hex_material_forced_open
+            elif source == "debug_blocked" or source == "mask_blocked":
+                visual.material_override = hex_material_forced_blocked
+            else:
+                visual.material_override = hex_material_idle if walkable else hex_material_blocked
         if pick_shape:
-            pick_shape.disabled = not walkable
+            # Surfaced blocked tiles remain queryable so NAV EDIT can reopen them.
+            pick_shape.disabled = not has_surface
 
 func _build_hex_grid_overlay() -> void:
     if hex_grid_overlay and is_instance_valid(hex_grid_overlay):
@@ -851,7 +887,10 @@ func _build_hex_grid_overlay() -> void:
     mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
-        var center: Vector3 = hex_cells[key]["position"] + Vector3(0.0, 0.065, 0.0)
+        var overlay_cell: Dictionary = hex_cells[key]
+        if not bool(overlay_cell.get("has_surface", false)):
+            continue
+        var center: Vector3 = overlay_cell["position"] + Vector3(0.0, 0.065, 0.0)
         for i in range(6):
             var a_angle := deg_to_rad(60.0 * float(i))
             var b_angle := deg_to_rad(60.0 * float((i + 1) % 6))
@@ -1007,19 +1046,7 @@ func _show_reachable_hexes() -> void:
     ]
 
 func _clear_hex_highlights() -> void:
-    for key_variant in hex_cells.keys():
-        var key := str(key_variant)
-        var cell: Dictionary = hex_cells[key]
-        var area := cell["area"] as Area3D
-        if not area:
-            continue
-        var visual := area.get_node_or_null("Visual") as MeshInstance3D
-        if not visual:
-            continue
-        if bool(cell.get("walkable", false)):
-            visual.material_override = hex_material_idle
-        else:
-            visual.material_override = hex_material_blocked
+    _apply_hex_classification_visuals()
 
 func _select_hex_destination(area: Area3D) -> void:
     if campaign_phase != PHASE_PLAYER or moves_remaining <= 0:
@@ -1248,6 +1275,13 @@ func _build_game_hud() -> void:
     restart_button.pressed.connect(_restart_campaign)
     box.add_child(restart_button)
 
+    nav_debug_button = Button.new()
+    nav_debug_button.text = "NAV EDIT: OFF"
+    nav_debug_button.custom_minimum_size = Vector2(0, 36)
+    nav_debug_button.visible = false
+    nav_debug_button.pressed.connect(_toggle_nav_debug)
+    box.add_child(nav_debug_button)
+
     event_log_label = Label.new()
     event_log_label.text = "Ashenreach expedition begun."
     event_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1265,6 +1299,8 @@ func _toggle_hud_details() -> void:
         event_log_label.visible = hud_expanded
     if restart_button:
         restart_button.visible = hud_expanded
+    if nav_debug_button:
+        nav_debug_button.visible = hud_expanded
     if hud_details_button:
         hud_details_button.text = "Hide" if hud_expanded else "Details"
     if game_hud:
@@ -2074,6 +2110,122 @@ func _resolve_world_phase() -> void:
         last_enemy_phase_summary += " Vulgrim's eruption pressure is critical."
     elif vulgrim_heat >= 50:
         last_enemy_phase_summary += " The wastes become increasingly unstable."
+
+func _load_nav_mask_data() -> void:
+    nav_mask_data = {
+        "blocked_hexes": [],
+        "forced_open_hexes": [],
+        "blocked_regions": [],
+        "forced_open_regions": []
+    }
+    if not FileAccess.file_exists("res://data/ashenreach_nav_mask.json"):
+        return
+    var file := FileAccess.open("res://data/ashenreach_nav_mask.json", FileAccess.READ)
+    var parsed = JSON.parse_string(file.get_as_text())
+    if parsed is Dictionary:
+        nav_mask_data = parsed
+
+func _load_nav_debug_overrides() -> void:
+    nav_debug_forced_open.clear()
+    nav_debug_forced_blocked.clear()
+    var cfg := ConfigFile.new()
+    if cfg.load("user://ashenreach_nav_debug.cfg") != OK:
+        return
+    for key_variant in cfg.get_value("nav", "forced_open", []):
+        nav_debug_forced_open[str(key_variant)] = true
+    for key_variant in cfg.get_value("nav", "forced_blocked", []):
+        nav_debug_forced_blocked[str(key_variant)] = true
+
+func _save_nav_debug_overrides() -> void:
+    var cfg := ConfigFile.new()
+    cfg.set_value("nav", "forced_open", nav_debug_forced_open.keys())
+    cfg.set_value("nav", "forced_blocked", nav_debug_forced_blocked.keys())
+    cfg.save("user://ashenreach_nav_debug.cfg")
+
+func _apply_nav_mask_overrides() -> void:
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        cell["walkable"] = bool(cell.get("auto_walkable", cell.get("walkable", false)))
+        cell["nav_source"] = "auto"
+        hex_cells[key] = cell
+
+    for key_variant in nav_mask_data.get("blocked_hexes", []):
+        _set_hex_mask_state(str(key_variant), false, "mask_blocked")
+    for key_variant in nav_mask_data.get("forced_open_hexes", []):
+        _set_hex_mask_state(str(key_variant), true, "mask_open")
+
+    for raw_region in nav_mask_data.get("blocked_regions", []):
+        if raw_region is Dictionary:
+            _apply_nav_circle_region(raw_region, false, "mask_blocked")
+    for raw_region in nav_mask_data.get("forced_open_regions", []):
+        if raw_region is Dictionary:
+            _apply_nav_circle_region(raw_region, true, "mask_open")
+
+    for key_variant in nav_debug_forced_blocked.keys():
+        _set_hex_mask_state(str(key_variant), false, "debug_blocked")
+    for key_variant in nav_debug_forced_open.keys():
+        _set_hex_mask_state(str(key_variant), true, "debug_open")
+
+func _set_hex_mask_state(key: String, walkable: bool, source: String) -> void:
+    if not hex_cells.has(key):
+        return
+    var cell: Dictionary = hex_cells[key]
+    if walkable and not bool(cell.get("has_surface", false)):
+        return
+    cell["walkable"] = walkable
+    cell["nav_source"] = source
+    cell["blocked_reason"] = "" if walkable else source
+    hex_cells[key] = cell
+
+func _apply_nav_circle_region(region: Dictionary, walkable: bool, source: String) -> void:
+    var center_raw = region.get("center", [])
+    if not (center_raw is Array) or center_raw.size() < 2:
+        return
+    var center := Vector2(float(center_raw[0]), float(center_raw[1]))
+    var radius: float = float(region.get("radius", 0.0))
+    if radius <= 0.0:
+        return
+
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        var pos: Vector3 = cell["position"]
+        if Vector2(pos.x, pos.z).distance_to(center) <= radius:
+            _set_hex_mask_state(key, walkable, source)
+
+func _toggle_nav_debug() -> void:
+    nav_debug_mode = not nav_debug_mode
+    _cancel_unit_move()
+    if hex_grid_overlay:
+        hex_grid_overlay.visible = nav_debug_mode
+    if nav_debug_button:
+        nav_debug_button.text = "NAV EDIT: ON" if nav_debug_mode else "NAV EDIT: OFF"
+    status_label.text = "NAV EDIT: tap a surfaced hex to cycle Auto → Blocked → Open." if nav_debug_mode else "Navigation edit closed."
+
+func _nav_debug_cycle_hex(area: Area3D) -> void:
+    var key := str(area.get_meta("hex_key", ""))
+    if key == "" or not hex_cells.has(key):
+        return
+
+    var state := ""
+    if nav_debug_forced_blocked.has(key):
+        nav_debug_forced_blocked.erase(key)
+        nav_debug_forced_open[key] = true
+        state = "FORCED OPEN"
+    elif nav_debug_forced_open.has(key):
+        nav_debug_forced_open.erase(key)
+        state = "AUTO"
+    else:
+        nav_debug_forced_blocked[key] = true
+        state = "BLOCKED"
+
+    _apply_nav_mask_overrides()
+    _apply_hex_classification_visuals()
+    _save_nav_debug_overrides()
+
+    var cell: Dictionary = hex_cells[key]
+    status_label.text = "NAV %s • %s • height %.2f" % [key, state, float(cell["height"])]
 
 func _save_game_state() -> void:
     var cfg := ConfigFile.new()
