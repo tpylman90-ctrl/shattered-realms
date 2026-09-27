@@ -90,6 +90,7 @@ var pending_hex_path: Array[String] = []
 var hex_material_idle: StandardMaterial3D
 var hex_material_reachable: StandardMaterial3D
 var hex_material_target: StandardMaterial3D
+var hex_material_current: StandardMaterial3D
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -100,6 +101,7 @@ const HEX_WORLD_LIMIT := 17.3
 const HEX_SAMPLE_RADIUS := 0.54
 const HEX_MAX_LOCAL_VARIANCE := 0.72
 const HEX_MAX_STEP := 0.95
+const HEX_MIN_UP_DOT := 0.72
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -526,13 +528,13 @@ func _build_hex_board() -> void:
     hex_material_idle = StandardMaterial3D.new()
     hex_material_idle.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     hex_material_idle.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    hex_material_idle.albedo_color = Color(0.10, 0.16, 0.15, 0.10)
+    hex_material_idle.albedo_color = Color(0.08, 0.22, 0.19, 0.16)
     hex_material_idle.emission_enabled = true
     hex_material_idle.emission = Color(0.08, 0.32, 0.28, 1.0)
-    hex_material_idle.emission_energy_multiplier = 0.25
+    hex_material_idle.emission_energy_multiplier = 0.34
 
     hex_material_reachable = hex_material_idle.duplicate() as StandardMaterial3D
-    hex_material_reachable.albedo_color = Color(0.10, 0.78, 0.66, 0.22)
+    hex_material_reachable.albedo_color = Color(0.10, 0.78, 0.66, 0.34)
     hex_material_reachable.emission = Color(0.08, 0.92, 0.74, 1.0)
     hex_material_reachable.emission_energy_multiplier = 0.9
 
@@ -540,6 +542,11 @@ func _build_hex_board() -> void:
     hex_material_target.albedo_color = Color(0.95, 0.58, 0.12, 0.38)
     hex_material_target.emission = Color(1.0, 0.42, 0.05, 1.0)
     hex_material_target.emission_energy_multiplier = 1.2
+
+    hex_material_current = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_current.albedo_color = Color(0.20, 0.62, 0.95, 0.34)
+    hex_material_current.emission = Color(0.12, 0.52, 1.0, 1.0)
+    hex_material_current.emission_energy_multiplier = 1.1
 
     var q_min := -14
     var q_max := 14
@@ -593,6 +600,7 @@ func _build_hex_board() -> void:
             }
 
     _prune_unconnected_hexes()
+    _prune_to_playable_component()
     _clear_hex_highlights()
 
 func _hex_to_world_2d(q: int, r: int) -> Vector2:
@@ -611,6 +619,7 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
 
     var heights: Array[float] = []
     var center_position := Vector3.ZERO
+    var minimum_up_dot := 1.0
 
     for i in range(sample_offsets.size()):
         var offset: Vector2 = sample_offsets[i]
@@ -625,7 +634,9 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
             return {"valid": false}
 
         var pos := hit["position"] as Vector3
+        var normal := hit.get("normal", Vector3.UP) as Vector3
         heights.append(pos.y)
+        minimum_up_dot = minf(minimum_up_dot, normal.dot(Vector3.UP))
         if i == 0:
             center_position = pos
 
@@ -637,12 +648,15 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
 
     if max_height - min_height > HEX_MAX_LOCAL_VARIANCE:
         return {"valid": false}
+    if minimum_up_dot < HEX_MIN_UP_DOT:
+        return {"valid": false}
 
     center_position.y += HERO_GROUND_CLEARANCE
     return {
         "valid": true,
         "position": center_position,
-        "variance": max_height - min_height
+        "variance": max_height - min_height,
+        "up_dot": minimum_up_dot
     }
 
 func _hex_neighbors(key: String) -> Array[String]:
@@ -671,6 +685,40 @@ func _prune_unconnected_hexes() -> void:
     for key_variant in hex_cells.keys():
         var key: String = str(key_variant)
         if _hex_neighbors(key).is_empty():
+            remove_keys.append(key)
+
+    for key in remove_keys:
+        var cell: Dictionary = hex_cells[key]
+        var area := cell["area"] as Area3D
+        if area:
+            area.queue_free()
+        hex_cells.erase(key)
+
+func _prune_to_playable_component() -> void:
+    if hex_cells.is_empty():
+        return
+
+    var seed_key := _nearest_hex_key(CAMPAIGN_START_POSITION)
+    if seed_key == "":
+        return
+
+    var keep: Dictionary = {seed_key: true}
+    var frontier: Array[String] = [seed_key]
+    var index := 0
+
+    while index < frontier.size():
+        var key: String = frontier[index]
+        index += 1
+        for neighbor in _hex_neighbors(key):
+            if keep.has(neighbor):
+                continue
+            keep[neighbor] = true
+            frontier.append(neighbor)
+
+    var remove_keys: Array[String] = []
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        if not keep.has(key):
             remove_keys.append(key)
 
     for key in remove_keys:
@@ -727,13 +775,19 @@ func _show_reachable_hexes() -> void:
     var reachable := _hex_reachable(current_hex_key, moves_remaining)
     for key_variant in reachable.keys():
         var key: String = str(key_variant)
-        if key == current_hex_key or not hex_cells.has(key):
+        if not hex_cells.has(key):
             continue
         var cell: Dictionary = hex_cells[key]
         var area := cell["area"] as Area3D
         var visual := area.get_node_or_null("Visual") as MeshInstance3D
-        if visual:
+        if not visual:
+            continue
+        if key == current_hex_key:
+            visual.material_override = hex_material_current
+        else:
             visual.material_override = hex_material_reachable
+
+    status_label.text = "Reachable tiles: %d • AP %d" % [maxi(0, reachable.size() - 1), moves_remaining]
 
 func _clear_hex_highlights() -> void:
     for key_variant in hex_cells.keys():
@@ -838,7 +892,8 @@ func _confirm_hex_move() -> void:
         tween.tween_property(hero_unit, "global_position", target, 0.22)
         await tween.finished
 
-    moves_remaining = maxi(0, moves_remaining - pending_move_cost)
+    var spent_ap := pending_move_cost
+    moves_remaining = maxi(0, moves_remaining - spent_ap)
     current_hex_key = pending_hex_key
     pending_hex_key = ""
     pending_hex_path.clear()
@@ -852,6 +907,11 @@ func _confirm_hex_move() -> void:
     _refresh_poi_visibility()
     _refresh_enemy_visibility()
     _resolve_hex_contact()
+    status_label.text = "Moved %d tile%s • %d AP remaining" % [
+        spent_ap,
+        "" if spent_ap == 1 else "s",
+        moves_remaining
+    ]
     _refresh_game_hud()
     _save_game_state()
 
