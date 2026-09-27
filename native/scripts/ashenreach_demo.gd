@@ -849,10 +849,10 @@ func _shortest_hex_path(start_key: String, goal_key: String) -> Array[String]:
         return []
 
     var path: Array[String] = [goal_key]
-    var cursor: String = str(came_from[goal_key])
-    while cursor != "":
-        path.push_front(cursor)
-        cursor = str(came_from[cursor])
+    var backtrack_key: String = str(came_from[goal_key])
+    while backtrack_key != "":
+        path.push_front(backtrack_key)
+        backtrack_key = str(came_from[backtrack_key])
     return path
 
 func _show_hex_route_preview(path: Array[String]) -> void:
