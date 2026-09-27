@@ -84,6 +84,7 @@ var fog_tiles: Dictionary = {}
 var revealed_fog_cells: Dictionary = {}
 var hex_root: Node3D
 var hex_cells: Dictionary = {}
+var hex_neighbor_cache: Dictionary = {}
 var current_hex_key := ""
 var pending_hex_key := ""
 var pending_hex_path: Array[String] = []
@@ -614,6 +615,7 @@ func _build_hex_board() -> void:
             }
 
     _prune_unconnected_hexes()
+    _build_hex_neighbor_cache()
     _rebuild_hex_batch(hex_idle_batch, hex_cells.keys(), 0.035)
     _clear_hex_highlights()
 
@@ -696,6 +698,11 @@ func _sample_hex_surface(x: float, z: float) -> Dictionary:
     }
 
 func _hex_neighbors(key: String) -> Array[String]:
+    if hex_neighbor_cache.has(key):
+        return hex_neighbor_cache[key]
+    return _compute_hex_neighbors(key)
+
+func _compute_hex_neighbors(key: String) -> Array[String]:
     if not hex_cells.has(key):
         return []
     var cell: Dictionary = hex_cells[key]
@@ -716,11 +723,17 @@ func _hex_neighbors(key: String) -> Array[String]:
             result.append(neighbor_key)
     return result
 
+func _build_hex_neighbor_cache() -> void:
+    hex_neighbor_cache.clear()
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        hex_neighbor_cache[key] = _compute_hex_neighbors(key)
+
 func _prune_unconnected_hexes() -> void:
     var remove_keys: Array[String] = []
     for key_variant in hex_cells.keys():
         var key: String = str(key_variant)
-        if _hex_neighbors(key).is_empty():
+        if _compute_hex_neighbors(key).is_empty():
             remove_keys.append(key)
 
     for key in remove_keys:
@@ -757,9 +770,11 @@ func _snap_hero_to_nearest_hex() -> void:
 func _hex_reachable(start_key: String, max_steps: int) -> Dictionary:
     var reached := {start_key: 0}
     var frontier: Array[String] = [start_key]
+    var cursor := 0
 
-    while not frontier.is_empty():
-        var current: String = frontier.pop_front()
+    while cursor < frontier.size():
+        var current: String = frontier[cursor]
+        cursor += 1
         var depth: int = int(reached[current])
         if depth >= max_steps:
             continue
@@ -817,9 +832,11 @@ func _select_hex_destination(area: Area3D) -> void:
 func _shortest_hex_path(start_key: String, goal_key: String) -> Array[String]:
     var frontier: Array[String] = [start_key]
     var came_from := {start_key: ""}
+    var cursor := 0
 
-    while not frontier.is_empty():
-        var current: String = frontier.pop_front()
+    while cursor < frontier.size():
+        var current: String = frontier[cursor]
+        cursor += 1
         if current == goal_key:
             break
         for neighbor in _hex_neighbors(current):
