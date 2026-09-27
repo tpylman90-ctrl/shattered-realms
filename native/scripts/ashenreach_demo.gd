@@ -1327,35 +1327,6 @@ func _build_route_preview() -> void:
     route_preview.visible = false
     add_child(route_preview)
 
-func _show_route_preview(path: Array[String]) -> void:
-    if not route_preview or path.size() < 2:
-        return
-
-    var mesh := ImmediateMesh.new()
-    var material := StandardMaterial3D.new()
-    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.albedo_color = Color(0.12, 0.72, 0.66, 0.62)
-    material.emission_enabled = true
-    material.emission = Color(0.08, 0.9, 0.78, 1.0)
-    material.emission_energy_multiplier = 0.85
-
-    mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
-
-    for edge_index in range(path.size() - 1):
-        var from_node: String = path[edge_index]
-        var to_node: String = path[edge_index + 1]
-        var points: Array = _road_points(from_node, to_node)
-        for i in range(points.size() - 1):
-            var a: Vector3 = points[i] + Vector3(0.0, 0.055, 0.0)
-            var b: Vector3 = points[i + 1] + Vector3(0.0, 0.055, 0.0)
-            mesh.surface_add_vertex(a)
-            mesh.surface_add_vertex(b)
-
-    mesh.surface_end()
-    route_preview.mesh = mesh
-    route_preview.visible = true
-
 func _hide_route_preview() -> void:
     if route_preview:
         route_preview.visible = false
