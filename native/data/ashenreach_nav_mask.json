@@ -1,8 +1,9 @@
 {
-  "version": 1,
-  "description": "Authored navigation overrides for the Ashenreach terrain-fused hex board.",
+  "version": 2,
+  "description": "Authored navigation overrides for the Ashenreach terrain-fused hex board. Tiles control occupancy; blocked_edges control cliffs, walls, and other forbidden transitions.",
   "blocked_hexes": [],
   "forced_open_hexes": [],
   "blocked_regions": [],
-  "forced_open_regions": []
+  "forced_open_regions": [],
+  "blocked_edges": []
 }
