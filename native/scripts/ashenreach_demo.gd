@@ -104,6 +104,9 @@ var nav_debug_forced_open: Dictionary = {}
 var nav_debug_forced_blocked: Dictionary = {}
 var nav_debug_mode := false
 var nav_debug_button: Button
+var nav_edit_panel: PanelContainer
+var nav_edit_info: Label
+var nav_selected_hex := ""
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -420,6 +423,10 @@ func _touch_distance() -> float:
 func _try_select(screen_position: Vector2) -> void:
     if campaign_phase != PHASE_PLAYER:
         return
+    if nav_debug_mode:
+        _try_select_nav_hex(screen_position)
+        return
+
     var origin := camera.project_ray_origin(screen_position)
     var end := origin + camera.project_ray_normal(screen_position) * 200.0
     var query := PhysicsRayQueryParameters3D.create(origin, end)
@@ -430,9 +437,6 @@ func _try_select(screen_position: Vector2) -> void:
         return
     var collider = hit.get("collider")
     if not collider:
-        return
-    if nav_debug_mode and collider.is_in_group("hex_cell"):
-        _nav_debug_cycle_hex(collider)
         return
     if collider.is_in_group("board_piece"):
         _select_unit(collider)
@@ -689,6 +693,8 @@ func _build_hex_board() -> void:
             area.add_to_group("hex_cell")
             area.set_meta("hex_key", key)
             area.position = sampled_position
+            area.collision_layer = 2
+            area.collision_mask = 0
 
             var collision := CollisionShape3D.new()
             collision.name = "PickShape"
@@ -1293,6 +1299,7 @@ func _build_game_hud() -> void:
     box.add_child(event_log_label)
 
     _build_encounter_panel()
+    _build_nav_edit_panel()
 
 func _toggle_hud_details() -> void:
     hud_expanded = not hud_expanded
@@ -2246,14 +2253,154 @@ func _apply_nav_circle_region(region: Dictionary, walkable: bool, source: String
         if Vector2(pos.x, pos.z).distance_to(center) <= radius:
             _set_hex_mask_state(key, walkable, source)
 
+func _build_nav_edit_panel() -> void:
+    nav_edit_panel = PanelContainer.new()
+    nav_edit_panel.name = "NavEditPanel"
+    nav_edit_panel.anchor_left = 0.5
+    nav_edit_panel.anchor_top = 1.0
+    nav_edit_panel.anchor_right = 0.5
+    nav_edit_panel.anchor_bottom = 1.0
+    nav_edit_panel.offset_left = -220.0
+    nav_edit_panel.offset_top = -190.0
+    nav_edit_panel.offset_right = 220.0
+    nav_edit_panel.offset_bottom = -34.0
+    nav_edit_panel.visible = false
+    ui_root.add_child(nav_edit_panel)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 12)
+    margin.add_theme_constant_override("margin_top", 10)
+    margin.add_theme_constant_override("margin_right", 12)
+    margin.add_theme_constant_override("margin_bottom", 10)
+    nav_edit_panel.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 7)
+    margin.add_child(box)
+
+    var title := Label.new()
+    title.text = "NAVIGATION TILE EDITOR"
+    title.add_theme_font_size_override("font_size", 15)
+    box.add_child(title)
+
+    nav_edit_info = Label.new()
+    nav_edit_info.text = "Tap a hex on the board."
+    nav_edit_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(nav_edit_info)
+
+    var actions := HBoxContainer.new()
+    actions.add_theme_constant_override("separation", 6)
+    box.add_child(actions)
+
+    var auto_button := Button.new()
+    auto_button.text = "AUTO"
+    auto_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    auto_button.pressed.connect(func(): _nav_set_selected_state("auto"))
+    actions.add_child(auto_button)
+
+    var open_button := Button.new()
+    open_button.text = "OPEN"
+    open_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    open_button.pressed.connect(func(): _nav_set_selected_state("open"))
+    actions.add_child(open_button)
+
+    var block_button := Button.new()
+    block_button.text = "BLOCK"
+    block_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    block_button.pressed.connect(func(): _nav_set_selected_state("blocked"))
+    actions.add_child(block_button)
+
+func _try_select_nav_hex(screen_position: Vector2) -> void:
+    var origin: Vector3 = camera.project_ray_origin(screen_position)
+    var ray_end: Vector3 = origin + camera.project_ray_normal(screen_position) * 200.0
+    var query := PhysicsRayQueryParameters3D.create(origin, ray_end)
+    query.collide_with_areas = true
+    query.collide_with_bodies = false
+    query.collision_mask = 2
+
+    var hit := get_world_3d().direct_space_state.intersect_ray(query)
+    if hit.is_empty():
+        status_label.text = "NAV EDIT: no hex under tap."
+        return
+
+    var collider = hit.get("collider")
+    if not collider or not collider.is_in_group("hex_cell"):
+        status_label.text = "NAV EDIT: no editable hex under tap."
+        return
+
+    _nav_select_hex(collider)
+
+func _nav_select_hex(area: Area3D) -> void:
+    var key := str(area.get_meta("hex_key", ""))
+    if key == "" or not hex_cells.has(key):
+        return
+    nav_selected_hex = key
+    _refresh_nav_edit_panel()
+
+func _nav_set_selected_state(state: String) -> void:
+    if nav_selected_hex == "" or not hex_cells.has(nav_selected_hex):
+        return
+
+    nav_debug_forced_open.erase(nav_selected_hex)
+    nav_debug_forced_blocked.erase(nav_selected_hex)
+
+    if state == "open":
+        nav_debug_forced_open[nav_selected_hex] = true
+    elif state == "blocked":
+        nav_debug_forced_blocked[nav_selected_hex] = true
+
+    _apply_nav_mask_overrides()
+    _apply_hex_classification_visuals()
+    _save_nav_debug_overrides()
+    _refresh_nav_edit_panel()
+
+func _refresh_nav_edit_panel() -> void:
+    if not nav_edit_panel or not nav_edit_info:
+        return
+
+    nav_edit_panel.visible = nav_debug_mode
+    if nav_selected_hex == "" or not hex_cells.has(nav_selected_hex):
+        nav_edit_info.text = "Tap a hex on the board, then choose AUTO, OPEN, or BLOCK."
+        return
+
+    var cell: Dictionary = hex_cells[nav_selected_hex]
+    var state := "AUTO"
+    if nav_debug_forced_open.has(nav_selected_hex):
+        state = "FORCED OPEN"
+    elif nav_debug_forced_blocked.has(nav_selected_hex):
+        state = "BLOCKED"
+    elif str(cell.get("nav_source", "auto")) == "mask_open":
+        state = "MASK OPEN"
+    elif str(cell.get("nav_source", "auto")) == "mask_blocked":
+        state = "MASK BLOCKED"
+    elif bool(cell.get("auto_blocked", false)):
+        state = "AUTO HAZARD"
+
+    nav_edit_info.text = "Hex %s  •  %s  •  Y %.2f\nBridge repair: %s  •  Surface: %s" % [
+        nav_selected_hex,
+        state,
+        float(cell.get("height", 0.0)),
+        "yes" if bool(cell.get("inferred_bridge", false)) else "no",
+        "yes" if bool(cell.get("has_surface", false)) else "no"
+    ]
+    status_label.text = "NAV %s • %s" % [nav_selected_hex, state]
+
 func _toggle_nav_debug() -> void:
     nav_debug_mode = not nav_debug_mode
     _cancel_unit_move()
+
     if hex_grid_overlay:
         hex_grid_overlay.visible = nav_debug_mode
     if nav_debug_button:
         nav_debug_button.text = "NAV EDIT: ON" if nav_debug_mode else "NAV EDIT: OFF"
-    status_label.text = "NAV EDIT: tap a surfaced hex to cycle Auto → Blocked → Open." if nav_debug_mode else "Navigation edit closed."
+
+    if not nav_debug_mode:
+        nav_selected_hex = ""
+        status_label.text = "Navigation edit closed."
+    else:
+        status_label.text = "NAV EDIT: tap a hex, then choose AUTO / OPEN / BLOCK."
+
+    _refresh_nav_edit_panel()
 
 func _nav_debug_cycle_hex(area: Area3D) -> void:
     var key := str(area.get_meta("hex_key", ""))
