@@ -349,17 +349,17 @@ func _touch_center() -> Vector2:
     return sum / float(touches.size())
 
 func _pan_camera(screen_delta: Vector2) -> void:
-    var zoom_scale := clamp(zoom_distance / 30.0, 0.65, 1.55)
+    var zoom_scale: float = clampf(zoom_distance / 30.0, 0.65, 1.55)
 
-    var right := yaw.global_transform.basis.x
+    var right: Vector3 = yaw.global_transform.basis.x
     right.y = 0.0
     right = right.normalized()
 
-    var forward := -yaw.global_transform.basis.z
+    var forward: Vector3 = -yaw.global_transform.basis.z
     forward.y = 0.0
     forward = forward.normalized()
 
-    var world_delta := (-right * screen_delta.x + forward * screen_delta.y) * PAN_SPEED * zoom_scale
+    var world_delta: Vector3 = (-right * screen_delta.x + forward * screen_delta.y) * PAN_SPEED * zoom_scale
     yaw.position += world_delta
     yaw.position.x = clamp(yaw.position.x, -PAN_LIMIT, PAN_LIMIT)
     yaw.position.z = clamp(yaw.position.z, -PAN_LIMIT, PAN_LIMIT)
