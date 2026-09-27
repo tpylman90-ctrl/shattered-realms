@@ -125,7 +125,7 @@ const HEX_MAX_STEP := 0.94
 const HEX_MIN_UP_DOT := 0.52
 const HEX_HIGH_OUTLIER := 0.46
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 11
+const HEX_GRID_VERSION := 12
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.86
 const FOG_CELL_SIZE := 4.0
@@ -723,9 +723,11 @@ func _build_hex_board() -> void:
                 "height": float(area.position.y),
                 "has_surface": has_surface,
                 "up_dot": float(sample.get("up_dot", -1.0)),
-                "walkable": has_surface,
-                "auto_walkable": has_surface,
-                "blocked_reason": "" if has_surface else "void",
+                "inferred_bridge": bool(sample.get("inferred_bridge", false)),
+                "auto_blocked": bool(sample.get("auto_blocked", false)),
+                "walkable": has_surface and not bool(sample.get("auto_blocked", false)),
+                "auto_walkable": has_surface and not bool(sample.get("auto_blocked", false)),
+                "blocked_reason": "auto_hazard" if bool(sample.get("auto_blocked", false)) else ("" if has_surface else "void"),
                 "nav_source": "auto"
             }
 
@@ -786,16 +788,19 @@ func _normalize_hex_surface_heights() -> void:
             area.position = pos
 
 func _classify_hex_cells() -> void:
-    # The generated navigation surface is the clean board footprint/grounding
-    # source. Detailed visual geometry no longer participates in gameplay
-    # collision. Authored mask data remains the final authority for obstacles.
+    # Generated nav data provides the cleaned board footprint, repaired bridge
+    # continuity, and conservative auto-hazard hints. The authored mask remains
+    # the final gameplay authority.
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
         var has_surface: bool = bool(cell.get("has_surface", false))
-        cell["walkable"] = has_surface
-        cell["auto_walkable"] = has_surface
-        cell["blocked_reason"] = "" if has_surface else "void"
+        var auto_blocked: bool = bool(cell.get("auto_blocked", false))
+        var auto_open: bool = has_surface and not auto_blocked
+
+        cell["walkable"] = auto_open
+        cell["auto_walkable"] = auto_open
+        cell["blocked_reason"] = "auto_hazard" if auto_blocked else ("" if has_surface else "void")
         cell["nav_source"] = "auto"
         hex_cells[key] = cell
 
@@ -899,7 +904,9 @@ func _sample_hex_surface(key: String, x: float, z: float) -> Dictionary:
     return {
         "has_surface": true,
         "position": position,
-        "up_dot": 1.0
+        "up_dot": 1.0,
+        "inferred_bridge": bool(tile.get("inferred_bridge", false)),
+        "auto_blocked": bool(tile.get("auto_blocked", false))
     }
 
 func _hex_raw_neighbor_count(key: String) -> int:
@@ -1022,10 +1029,21 @@ func _show_reachable_hexes() -> void:
         if bool(cell.get("walkable", false)):
             walkable_count += 1
 
-    status_label.text = "Grid %d • Nav %d • Open %d • Reachable %d • AP %d" % [
+    var inferred_count := 0
+    var hazard_count := 0
+    for cell_variant in hex_cells.values():
+        var nav_cell: Dictionary = cell_variant
+        if bool(nav_cell.get("inferred_bridge", false)):
+            inferred_count += 1
+        if bool(nav_cell.get("auto_blocked", false)):
+            hazard_count += 1
+
+    status_label.text = "Grid %d • Nav %d • Open %d • Bridge+ %d • Hazard %d • Reach %d • AP %d" % [
         hex_cells.size(),
         nav_grid_tiles.size(),
         walkable_count,
+        inferred_count,
+        hazard_count,
         maxi(0, reachable.size() - 1),
         moves_remaining
     ]
