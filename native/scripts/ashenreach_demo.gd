@@ -233,10 +233,6 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     glow_time += delta
-    var pulse := 1.0 + sin(glow_time * 1.35) * 0.08
-    vault_glow.scale = Vector3.ONE * pulse
-    vault_glow.position.y = 4.5 + sin(glow_time * 0.8) * 0.12
-    vault_light.light_energy = 5.0 + sin(glow_time * 1.7) * 0.65
     if selected_ring.visible:
         var ring_pulse := 1.0 + sin(glow_time * 2.3) * 0.12
         selected_ring.scale = Vector3.ONE * ring_pulse
