@@ -41,6 +41,16 @@ NEIGHBOR_MATCH_WORLD = 0.80
 NEIGHBOR_MATCH_LOCAL = NEIGHBOR_MATCH_WORLD / TERRAIN_SCALE
 SMOOTH_PASSES = 5
 
+# Gameplay classification on the already-cleaned surface.
+BRIDGE_MAX_SPAN_WORLD = 0.55
+BRIDGE_MAX_SPAN_LOCAL = BRIDGE_MAX_SPAN_WORLD / TERRAIN_SCALE
+BRIDGE_MIN_HEIGHT_WORLD = 2.75
+BRIDGE_MIN_HEIGHT_LOCAL = BRIDGE_MIN_HEIGHT_WORLD / TERRAIN_SCALE
+HAZARD_RADIUS = 2
+HAZARD_DEPTH_WORLD = 0.95
+HAZARD_DEPTH_LOCAL = HAZARD_DEPTH_WORLD / TERRAIN_SCALE
+HAZARD_MIN_NEIGHBORS = 6
+
 # Slightly overlap neighboring nav plates so downward grounding rays do not fall
 # through floating-point cracks at tile boundaries.
 HEX_RADIUS_LOCAL = (HEX_SIZE_WORLD * 0.97) / TERRAIN_SCALE
@@ -179,6 +189,104 @@ def choose_supported_surfaces(
     return selected
 
 
+def infer_bridge_gaps(
+    keys: list[str],
+    axial: dict[str, tuple[int, int]],
+    selected: list[float | None],
+):
+    """Fill only isolated gaps inside a straight, height-consistent 5-cell run."""
+    index_by_key = {key: i for i, key in enumerate(keys)}
+    filled = list(selected)
+    inferred: set[str] = set()
+
+    opposite_pairs = (
+        ((1, 0), (-1, 0)),
+        ((1, -1), (-1, 1)),
+        ((0, -1), (0, 1)),
+    )
+
+    for i, key in enumerate(keys):
+        if selected[i] is not None:
+            continue
+
+        q, r = axial[key]
+
+        for (a_q, a_r), (b_q, b_r) in opposite_pairs:
+            sample_indices = []
+            valid = True
+            for mul, (dq, dr) in (
+                (1, (a_q, a_r)),
+                (2, (a_q, a_r)),
+                (1, (b_q, b_r)),
+                (2, (b_q, b_r)),
+            ):
+                neighbor_key = f"{q + dq * mul},{r + dr * mul}"
+                j = index_by_key.get(neighbor_key)
+                if j is None or selected[j] is None:
+                    valid = False
+                    break
+                sample_indices.append(j)
+
+            if not valid:
+                continue
+
+            heights = [float(selected[j]) for j in sample_indices]
+            if max(heights) - min(heights) > BRIDGE_MAX_SPAN_LOCAL:
+                continue
+
+            inferred_height = float(np.median(np.asarray(heights, dtype=np.float64)))
+            if inferred_height < BRIDGE_MIN_HEIGHT_LOCAL:
+                continue
+
+            filled[i] = inferred_height
+            inferred.add(key)
+            break
+
+    return filled, inferred
+
+
+def classify_depression_hazards(
+    keys: list[str],
+    axial: dict[str, tuple[int, int]],
+    selected: list[float | None],
+):
+    """Mark narrow low basins (lava/chasm floors) after prop cleanup."""
+    index_by_key = {key: i for i, key in enumerate(keys)}
+    hazards: set[str] = set()
+
+    for i, key in enumerate(keys):
+        y = selected[i]
+        if y is None:
+            continue
+
+        q, r = axial[key]
+        nearby = []
+
+        for dq in range(-HAZARD_RADIUS, HAZARD_RADIUS + 1):
+            for dr in range(-HAZARD_RADIUS, HAZARD_RADIUS + 1):
+                ds = -dq - dr
+                distance = max(abs(dq), abs(dr), abs(ds))
+                if distance == 0 or distance > HAZARD_RADIUS:
+                    continue
+                j = index_by_key.get(f"{q+dq},{r+dr}")
+                if j is not None and selected[j] is not None:
+                    nearby.append(float(selected[j]))
+
+        if len(nearby) < HAZARD_MIN_NEIGHBORS:
+            continue
+
+        median = float(np.median(np.asarray(nearby, dtype=np.float64)))
+        higher = sum(v - float(y) >= HAZARD_DEPTH_LOCAL * 0.70 for v in nearby)
+
+        if (
+            median - float(y) >= HAZARD_DEPTH_LOCAL
+            and higher >= max(4, int(len(nearby) * 0.45))
+        ):
+            hazards.add(key)
+
+    return hazards
+
+
 def build_nav_mesh(
     keys: list[str],
     centers: np.ndarray,
@@ -244,6 +352,8 @@ def export_grid_json(
     keys: list[str],
     centers: np.ndarray,
     selected: list[float | None],
+    inferred: set[str],
+    hazards: set[str],
     output: Path,
 ):
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -257,10 +367,12 @@ def export_grid_json(
             "x": round(float(centers[i, 0]) * TERRAIN_SCALE, 5),
             "y": round(float(y_local) * TERRAIN_SCALE, 5),
             "z": round(float(centers[i, 2]) * TERRAIN_SCALE, 5),
+            "inferred_bridge": key in inferred,
+            "auto_blocked": key in hazards,
         }
 
     payload = {
-        "version": 1,
+        "version": 2,
         "terrain_scale": TERRAIN_SCALE,
         "hex_size": HEX_SIZE_WORLD,
         "tile_count": len(tiles),
@@ -287,16 +399,21 @@ def main():
     print(f"[nav] surface hits={hit_count:,}; multi-layer hits={multi_count:,}")
 
     selected = choose_supported_surfaces(keys, axial, candidates)
+    selected, inferred = infer_bridge_gaps(keys, axial, selected)
+    hazards = classify_depression_hazards(keys, axial, selected)
+
     chosen = [v for v in selected if v is not None]
     print(
         f"[nav] selected tiles={len(chosen):,}; "
+        f"inferred_bridge_tiles={len(inferred):,}; "
+        f"auto_hazard_tiles={len(hazards):,}; "
         f"y_local=[{min(chosen):.5f}, {max(chosen):.5f}] "
         f"y_world=[{min(chosen)*TERRAIN_SCALE:.2f}, {max(chosen)*TERRAIN_SCALE:.2f}]"
     )
 
     nav_mesh = build_nav_mesh(keys, centers, selected)
     export_glb(nav_mesh, OUTPUT)
-    export_grid_json(keys, centers, selected, GRID_OUTPUT)
+    export_grid_json(keys, centers, selected, inferred, hazards, GRID_OUTPUT)
 
     print(
         f"[nav] wrote {OUTPUT} "
