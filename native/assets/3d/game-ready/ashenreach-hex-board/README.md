@@ -1,11 +1,14 @@
-# Ashenreach Hex Board Drop Folder
+# Ashenreach Runtime Board
 
-Upload the new Ashenreach board model into this folder using this exact filename:
+The active Ashenreach terrain asset is:
 
 `ashenreach_hex_board.glb`
 
-Target path:
+This is the optimized runtime board used by `AshenreachDemo.tscn`.
 
-`native/assets/3d/game-ready/ashenreach-hex-board/ashenreach_hex_board.glb`
+Movement is now driven by the terrain-projected hex system in
+`native/scripts/ashenreach_demo.gd`. The previous road-node map, standalone gate,
+bedrock underlay, and old Ashenreach terrain assets have been retired.
 
-Do not rename the existing terrain assets. Once this GLB is uploaded, it can be inspected and wired into the new terrain-fused hex movement system.
+Keep source-quality or experimental board exports outside this runtime folder unless
+they are intentionally being promoted into the game.
