@@ -112,6 +112,9 @@ const HEX_SAMPLE_RADIUS := 0.16
 const HEX_MAX_LOCAL_VARIANCE := 0.58
 const HEX_MAX_STEP := 0.78
 const HEX_MIN_UP_DOT := 0.66
+const HEX_GRID_VERSION := 3
+const HEX_DEPRESSION_RADIUS := 3
+const HEX_DEPRESSION_DEPTH := 0.72
 const FOG_CELL_SIZE := 4.0
 const FOG_REVEAL_RADIUS := 6.5
 
@@ -680,8 +683,53 @@ func _build_hex_board() -> void:
             }
 
     _prune_unconnected_hexes()
+    _prune_deep_depression_hexes()
+    _prune_unconnected_hexes()
     _build_hex_grid_overlay()
     _clear_hex_highlights()
+
+func _prune_deep_depression_hexes() -> void:
+    # The board model includes flat lava floors. Geometry alone can therefore
+    # look walkable. Reject cells that sit significantly below the surrounding
+    # local terrain, which catches cracks and pits without treating every prop
+    # as an obstacle.
+    var remove_keys: Array[String] = []
+
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        var q: int = int(cell["q"])
+        var r: int = int(cell["r"])
+        var cell_height: float = float(cell["height"])
+        var nearby_heights: Array[float] = []
+
+        for dq in range(-HEX_DEPRESSION_RADIUS, HEX_DEPRESSION_RADIUS + 1):
+            for dr in range(-HEX_DEPRESSION_RADIUS, HEX_DEPRESSION_RADIUS + 1):
+                var ds: int = -dq - dr
+                var distance: int = maxi(abs(dq), maxi(abs(dr), abs(ds)))
+                if distance == 0 or distance > HEX_DEPRESSION_RADIUS:
+                    continue
+                var nearby_key := _hex_key(q + dq, r + dr)
+                if not hex_cells.has(nearby_key):
+                    continue
+                nearby_heights.append(float(hex_cells[nearby_key]["height"]))
+
+        if nearby_heights.size() < 5:
+            continue
+
+        nearby_heights.sort()
+        var median_height: float = nearby_heights[int(nearby_heights.size() / 2)]
+        if median_height - cell_height >= HEX_DEPRESSION_DEPTH:
+            remove_keys.append(key)
+
+    for key in remove_keys:
+        if not hex_cells.has(key):
+            continue
+        var cell: Dictionary = hex_cells[key]
+        var area := cell["area"] as Area3D
+        if area:
+            area.queue_free()
+        hex_cells.erase(key)
 
 func _build_hex_grid_overlay() -> void:
     if hex_grid_overlay and is_instance_valid(hex_grid_overlay):
@@ -1985,6 +2033,7 @@ func _save_game_state() -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("board", "turn", turn_number)
     cfg.set_value("board", "moves_remaining", moves_remaining)
+    cfg.set_value("board", "hex_grid_version", HEX_GRID_VERSION)
     cfg.set_value("board", "current_hex_key", current_hex_key)
     cfg.set_value("board", "campaign_phase", campaign_phase)
     cfg.set_value("board", "enemy_hex_positions", enemy_hex_positions)
@@ -2012,13 +2061,22 @@ func _load_game_state() -> void:
 
     turn_number = int(cfg.get_value("board", "turn", 1))
     moves_remaining = int(cfg.get_value("board", "moves_remaining", hero_move_points))
-    current_hex_key = str(cfg.get_value("board", "current_hex_key", ""))
+
+    var saved_grid_version: int = int(cfg.get_value("board", "hex_grid_version", 0))
+    if saved_grid_version == HEX_GRID_VERSION:
+        current_hex_key = str(cfg.get_value("board", "current_hex_key", ""))
+        var saved_enemy_positions = cfg.get_value("board", "enemy_hex_positions", {})
+        if saved_enemy_positions is Dictionary:
+            enemy_hex_positions = saved_enemy_positions.duplicate(true)
+    else:
+        # Grid coordinates changed. Preserve campaign progress but migrate all
+        # board pieces onto the current terrain grid instead of reusing stale q/r.
+        current_hex_key = ""
+        enemy_hex_positions.clear()
+
     campaign_phase = str(cfg.get_value("board", "campaign_phase", PHASE_PLAYER))
     if campaign_phase != PHASE_PLAYER:
         campaign_phase = PHASE_PLAYER
-    var saved_enemy_positions = cfg.get_value("board", "enemy_hex_positions", {})
-    if saved_enemy_positions is Dictionary:
-        enemy_hex_positions = saved_enemy_positions.duplicate(true)
     selected_hero_id = str(cfg.get_value("board", "selected_hero_id", selected_hero_id))
     hero_health = int(cfg.get_value("board", "hero_health", 100))
     hero_xp = int(cfg.get_value("board", "hero_xp", 0))
