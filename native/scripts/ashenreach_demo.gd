@@ -23,6 +23,7 @@ extends Node3D
 
 var touches: Dictionary = {}
 var previous_pinch_distance := 0.0
+var previous_two_finger_center := Vector2.ZERO
 var touch_start := Vector2.ZERO
 var touch_moved := false
 var zoom_distance := 30.0
@@ -95,6 +96,8 @@ var hex_material_current: StandardMaterial3D
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
 const ROTATE_SPEED := 0.0055
+const PAN_SPEED := 0.012
+const PAN_LIMIT := 15.5
 const HERO_GROUND_CLEARANCE := 0.025
 const HEX_SIZE := 1.05
 const HEX_WORLD_LIMIT := 17.3
@@ -268,46 +271,65 @@ func _unhandled_input(event: InputEvent) -> void:
             if touches.size() == 1:
                 touch_start = event.position
                 touch_moved = false
-            if touches.size() == 2:
+            elif touches.size() == 2:
                 previous_pinch_distance = _touch_distance()
+                previous_two_finger_center = _touch_center()
+                touch_moved = true
         else:
             var released_position: Vector2 = event.position
             var was_single := touches.size() == 1
             touches.erase(event.index)
-            previous_pinch_distance = 0.0
+
+            if touches.size() < 2:
+                previous_pinch_distance = 0.0
+                previous_two_finger_center = Vector2.ZERO
+
             if was_single and not touch_moved and released_position.distance_to(touch_start) < 18.0:
                 _try_select(released_position)
 
     elif event is InputEventScreenDrag:
         if touches.has(event.index):
             touches[event.index] = event.position
+
         if touches.size() == 1:
             touch_moved = true
+            _pan_camera(event.relative)
+
+        elif touches.size() >= 2:
+            touch_moved = true
+
+            var current_distance := _touch_distance()
+            if previous_pinch_distance > 0.0:
+                zoom_distance = clamp(
+                    zoom_distance - (current_distance - previous_pinch_distance) * 0.025,
+                    MIN_ZOOM,
+                    MAX_ZOOM
+                )
+                camera.position.z = zoom_distance
+            previous_pinch_distance = current_distance
+
+            var current_center := _touch_center()
+            if previous_two_finger_center != Vector2.ZERO:
+                var center_delta := current_center - previous_two_finger_center
+                yaw.rotation.y -= center_delta.x * ROTATE_SPEED * 1.25
+                pitch.rotation.x = clamp(
+                    pitch.rotation.x - center_delta.y * ROTATE_SPEED * 0.85,
+                    deg_to_rad(-72.0),
+                    deg_to_rad(-18.0)
+                )
+            previous_two_finger_center = current_center
+
+    elif event is InputEventMouseMotion:
+        if Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
             yaw.rotation.y -= event.relative.x * ROTATE_SPEED
             pitch.rotation.x = clamp(
                 pitch.rotation.x - event.relative.y * ROTATE_SPEED,
                 deg_to_rad(-72.0),
                 deg_to_rad(-18.0)
             )
-        elif touches.size() >= 2:
-            touch_moved = true
-            var current := _touch_distance()
-            if previous_pinch_distance > 0.0:
-                zoom_distance = clamp(
-                    zoom_distance - (current - previous_pinch_distance) * 0.025,
-                    MIN_ZOOM,
-                    MAX_ZOOM
-                )
-                camera.position.z = zoom_distance
-            previous_pinch_distance = current
+        elif Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+            _pan_camera(event.relative)
 
-    elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-        yaw.rotation.y -= event.relative.x * ROTATE_SPEED
-        pitch.rotation.x = clamp(
-            pitch.rotation.x - event.relative.y * ROTATE_SPEED,
-            deg_to_rad(-72.0),
-            deg_to_rad(-18.0)
-        )
     elif event is InputEventMouseButton:
         if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
             zoom_distance = clamp(zoom_distance - 1.4, MIN_ZOOM, MAX_ZOOM)
@@ -317,6 +339,31 @@ func _unhandled_input(event: InputEvent) -> void:
             camera.position.z = zoom_distance
         elif event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
             _try_select(event.position)
+
+func _touch_center() -> Vector2:
+    if touches.is_empty():
+        return Vector2.ZERO
+    var sum := Vector2.ZERO
+    for point_variant in touches.values():
+        sum += point_variant as Vector2
+    return sum / float(touches.size())
+
+func _pan_camera(screen_delta: Vector2) -> void:
+    var zoom_scale := clamp(zoom_distance / 30.0, 0.65, 1.55)
+
+    var right := yaw.global_transform.basis.x
+    right.y = 0.0
+    right = right.normalized()
+
+    var forward := -yaw.global_transform.basis.z
+    forward.y = 0.0
+    forward = forward.normalized()
+
+    var world_delta := (-right * screen_delta.x + forward * screen_delta.y) * PAN_SPEED * zoom_scale
+    yaw.position += world_delta
+    yaw.position.x = clamp(yaw.position.x, -PAN_LIMIT, PAN_LIMIT)
+    yaw.position.z = clamp(yaw.position.z, -PAN_LIMIT, PAN_LIMIT)
+    yaw.position.y = 3.5
 
 func _touch_distance() -> float:
     if touches.size() < 2:
