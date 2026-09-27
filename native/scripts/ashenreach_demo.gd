@@ -3350,7 +3350,9 @@ func _tune_imported_terrain_materials(node: Node) -> void:
                     tuned.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
                     mesh_instance.set_surface_override_material(surface_index, tuned)
     for child in node.get_children():
-        _tune_imported_terrain_materials(child)func _refresh_fog_reveal() -> void:
+        _tune_imported_terrain_materials(child)
+
+func _refresh_fog_reveal() -> void:
     if not fog_root:
         return
     var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
