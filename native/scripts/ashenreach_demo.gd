@@ -123,7 +123,7 @@ const HEX_MAX_STEP := 0.94
 const HEX_MIN_UP_DOT := 0.52
 const HEX_HIGH_OUTLIER := 0.46
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 7
+const HEX_GRID_VERSION := 8
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.86
 const FOG_CELL_SIZE := 4.0
@@ -608,7 +608,7 @@ func _select_unit(_unit: Area3D) -> void:
     if movement_title:
         movement_title.text = "MOVE %s" % hero_short
     var neighbor_count: int = _hex_neighbors(current_hex_key).size()
-    movement_stats.text = "%s selected. Action points remaining: %d\nAdjacent open hexes: %d. Each hex costs 1 AP." % [
+    movement_stats.text = "%s selected. Action points remaining: %d\nAdjacent open hexes: %d / 6. Each hex costs 1 AP." % [
         hero_name, moves_remaining, neighbor_count
     ]
     status_label.text = "%s — choose a destination" % hero_name
@@ -783,62 +783,15 @@ func _normalize_hex_surface_heights() -> void:
             area.position = pos
 
 func _classify_hex_cells() -> void:
-    # Full-grid-first model: every axial coordinate remains present. We only
-    # toggle walkability and picking after the lattice is populated.
+    # Navigation baseline: every surfaced hex is open. Gameplay obstacles are
+    # authored in the nav mask; the detailed art mesh does not get final say.
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
-        var walkable := true
-        var reason := ""
-
-        if not bool(cell.get("has_surface", false)):
-            walkable = false
-            reason = "void"
-
-        cell["walkable"] = walkable
-        cell["blocked_reason"] = reason
-        hex_cells[key] = cell
-
-    # Second pass: recessed cells are hazards relative to the complete local
-    # neighborhood. Keeping blocked cells in the lattice prevents random holes.
-    for key_variant in hex_cells.keys():
-        var key := str(key_variant)
-        var cell: Dictionary = hex_cells[key]
-        if not bool(cell.get("walkable", false)):
-            continue
-
-        var q: int = int(cell["q"])
-        var r: int = int(cell["r"])
-        var cell_height: float = float(cell["height"])
-        var nearby_heights: Array[float] = []
-
-        for dq in range(-HEX_DEPRESSION_RADIUS, HEX_DEPRESSION_RADIUS + 1):
-            for dr in range(-HEX_DEPRESSION_RADIUS, HEX_DEPRESSION_RADIUS + 1):
-                var ds: int = -dq - dr
-                var distance: int = maxi(abs(dq), maxi(abs(dr), abs(ds)))
-                if distance == 0 or distance > HEX_DEPRESSION_RADIUS:
-                    continue
-
-                var nearby_key := _hex_key(q + dq, r + dr)
-                if not hex_cells.has(nearby_key):
-                    continue
-
-                var nearby: Dictionary = hex_cells[nearby_key]
-                if bool(nearby.get("has_surface", false)):
-                    nearby_heights.append(float(nearby["height"]))
-
-        if nearby_heights.size() >= 5:
-            nearby_heights.sort()
-            var median_height: float = nearby_heights[int(nearby_heights.size() / 2)]
-            if median_height - cell_height >= HEX_DEPRESSION_DEPTH:
-                cell["walkable"] = false
-                cell["blocked_reason"] = "depression"
-                hex_cells[key] = cell
-
-    for key_variant in hex_cells.keys():
-        var key := str(key_variant)
-        var cell: Dictionary = hex_cells[key]
-        cell["auto_walkable"] = bool(cell.get("walkable", false))
+        var has_surface: bool = bool(cell.get("has_surface", false))
+        cell["walkable"] = has_surface
+        cell["auto_walkable"] = has_surface
+        cell["blocked_reason"] = "" if has_surface else "void"
         hex_cells[key] = cell
 
     _apply_nav_mask_overrides()
@@ -2153,9 +2106,15 @@ func _rebuild_nav_edge_cache() -> void:
 func _load_nav_debug_overrides() -> void:
     nav_debug_forced_open.clear()
     nav_debug_forced_blocked.clear()
+
     var cfg := ConfigFile.new()
     if cfg.load("user://ashenreach_nav_debug.cfg") != OK:
         return
+
+    var saved_grid_version: int = int(cfg.get_value("nav", "hex_grid_version", -1))
+    if saved_grid_version != HEX_GRID_VERSION:
+        return
+
     for key_variant in cfg.get_value("nav", "forced_open", []):
         nav_debug_forced_open[str(key_variant)] = true
     for key_variant in cfg.get_value("nav", "forced_blocked", []):
@@ -2163,6 +2122,7 @@ func _load_nav_debug_overrides() -> void:
 
 func _save_nav_debug_overrides() -> void:
     var cfg := ConfigFile.new()
+    cfg.set_value("nav", "hex_grid_version", HEX_GRID_VERSION)
     cfg.set_value("nav", "forced_open", nav_debug_forced_open.keys())
     cfg.set_value("nav", "forced_blocked", nav_debug_forced_blocked.keys())
     cfg.save("user://ashenreach_nav_debug.cfg")
