@@ -97,6 +97,7 @@ var hex_material_forced_open: StandardMaterial3D
 var hex_material_forced_blocked: StandardMaterial3D
 var hex_material_nav_edit: StandardMaterial3D
 var hex_material_nav_selected: StandardMaterial3D
+var hex_material_bridge_candidate: StandardMaterial3D
 var hex_grid_overlay: MeshInstance3D
 var nav_mask_data: Dictionary = {}
 var nav_grid_data: Dictionary = {}
@@ -683,6 +684,11 @@ func _build_hex_board() -> void:
     hex_material_nav_selected.emission = Color(1.0, 0.58, 0.04, 1.0)
     hex_material_nav_selected.emission_energy_multiplier = 1.35
 
+    hex_material_bridge_candidate = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_bridge_candidate.albedo_color = Color(0.66, 0.18, 0.92, 0.48)
+    hex_material_bridge_candidate.emission = Color(0.72, 0.20, 1.0, 1.0)
+    hex_material_bridge_candidate.emission_energy_multiplier = 1.0
+
     var q_min := -23
     var q_max := 23
     var r_min := -30
@@ -742,6 +748,9 @@ func _build_hex_board() -> void:
                 "area": area,
                 "height": float(area.position.y),
                 "has_surface": has_surface,
+                "generated_has_surface": has_surface,
+                "generated_position": area.position,
+                "generated_height": float(area.position.y),
                 "up_dot": float(sample.get("up_dot", -1.0)),
                 "inferred_bridge": bool(sample.get("inferred_bridge", false)),
                 "auto_blocked": bool(sample.get("auto_blocked", false)),
@@ -837,15 +846,29 @@ func _apply_hex_classification_visuals() -> void:
 
         var walkable: bool = bool(cell.get("walkable", false))
         var has_surface: bool = bool(cell.get("has_surface", false))
+        var bridge_candidate: bool = nav_debug_mode and (not has_surface) and _is_bridge_repair_candidate(key)
         var visual := area.get_node_or_null("Visual") as MeshInstance3D
         var pick_shape := area.get_node_or_null("PickShape") as CollisionShape3D
 
+        # Reset to the cell's current authoritative position before applying
+        # editor-only preview placement for missing bridge cells.
+        area.position = cell["position"]
+
+        if bridge_candidate:
+            var bridge_height: float = _estimate_bridge_repair_height(key)
+            if bridge_height > -INF:
+                var preview_position: Vector3 = area.position
+                preview_position.y = bridge_height
+                area.position = preview_position
+
         if visual:
-            visual.visible = has_surface
+            visual.visible = has_surface or bridge_candidate
             var source: String = str(cell.get("nav_source", "auto"))
 
             if nav_debug_mode and key == nav_selected_hex:
                 visual.material_override = hex_material_nav_selected
+            elif bridge_candidate:
+                visual.material_override = hex_material_bridge_candidate
             elif source == "debug_open" or source == "mask_open":
                 visual.material_override = hex_material_forced_open
             elif source == "debug_blocked" or source == "mask_blocked":
@@ -858,7 +881,7 @@ func _apply_hex_classification_visuals() -> void:
                 visual.material_override = hex_material_idle if walkable else hex_material_blocked
 
         if pick_shape:
-            pick_shape.disabled = not has_surface
+            pick_shape.disabled = not (has_surface or bridge_candidate)
 
 func _build_hex_grid_overlay() -> void:
     if hex_grid_overlay and is_instance_valid(hex_grid_overlay):
@@ -2226,8 +2249,22 @@ func _apply_nav_mask_overrides() -> void:
     for key_variant in hex_cells.keys():
         var key := str(key_variant)
         var cell: Dictionary = hex_cells[key]
+
+        var generated_has_surface: bool = bool(cell.get("generated_has_surface", cell.get("has_surface", false)))
+        var generated_position: Vector3 = cell.get("generated_position", cell["position"]) as Vector3
+        var generated_height: float = float(cell.get("generated_height", generated_position.y))
+
+        cell["has_surface"] = generated_has_surface
+        cell["position"] = generated_position
+        cell["height"] = generated_height
+        cell["bridge_override"] = false
         cell["walkable"] = bool(cell.get("auto_walkable", false))
         cell["nav_source"] = "auto"
+
+        var area := cell["area"] as Area3D
+        if area:
+            area.position = generated_position
+
         hex_cells[key] = cell
 
     for key_variant in nav_mask_data.get("blocked_hexes", []):
@@ -2250,9 +2287,14 @@ func _apply_nav_mask_overrides() -> void:
 func _set_hex_mask_state(key: String, walkable: bool, source: String) -> void:
     if not hex_cells.has(key):
         return
+
+    if walkable:
+        var open_cell: Dictionary = hex_cells[key]
+        if not bool(open_cell.get("has_surface", false)):
+            if not _prepare_bridge_override(key):
+                return
+
     var cell: Dictionary = hex_cells[key]
-    if walkable and not bool(cell.get("has_surface", false)):
-        return
     cell["walkable"] = walkable
     cell["nav_source"] = source
     cell["blocked_reason"] = "" if walkable else source
@@ -2331,6 +2373,12 @@ func _build_nav_edit_panel() -> void:
     block_button.pressed.connect(func(): _nav_set_selected_state("blocked"))
     actions.add_child(block_button)
 
+    var bridge_button := Button.new()
+    bridge_button.text = "BRIDGE"
+    bridge_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    bridge_button.pressed.connect(_nav_repair_selected_bridge)
+    actions.add_child(bridge_button)
+
 func _try_select_nav_hex(screen_position: Vector2) -> void:
     var origin: Vector3 = camera.project_ray_origin(screen_position)
     var ray_end: Vector3 = origin + camera.project_ray_normal(screen_position) * 200.0
@@ -2359,6 +2407,123 @@ func _nav_select_hex(area: Area3D) -> void:
     _apply_hex_classification_visuals()
     _refresh_nav_edit_panel()
 
+func _is_bridge_repair_candidate(key: String) -> bool:
+    if not hex_cells.has(key):
+        return false
+    var cell: Dictionary = hex_cells[key]
+    if bool(cell.get("has_surface", false)):
+        return false
+
+    var q: int = int(cell["q"])
+    var r: int = int(cell["r"])
+    var opposite_pairs := [
+        [Vector2i(1, 0), Vector2i(-1, 0)],
+        [Vector2i(1, -1), Vector2i(-1, 1)],
+        [Vector2i(0, -1), Vector2i(0, 1)]
+    ]
+
+    for pair_variant in opposite_pairs:
+        var pair: Array = pair_variant
+        var a: Vector2i = pair[0]
+        var b: Vector2i = pair[1]
+        var a_key := _hex_key(q + a.x, r + a.y)
+        var b_key := _hex_key(q + b.x, r + b.y)
+        if not hex_cells.has(a_key) or not hex_cells.has(b_key):
+            continue
+
+        var a_cell: Dictionary = hex_cells[a_key]
+        var b_cell: Dictionary = hex_cells[b_key]
+        if not bool(a_cell.get("has_surface", false)) or not bool(b_cell.get("has_surface", false)):
+            continue
+
+        var height_delta: float = absf(float(a_cell["height"]) - float(b_cell["height"]))
+        if height_delta <= 1.10:
+            return true
+
+    return false
+
+func _estimate_bridge_repair_height(key: String) -> float:
+    if not hex_cells.has(key):
+        return -INF
+
+    var cell: Dictionary = hex_cells[key]
+    var q: int = int(cell["q"])
+    var r: int = int(cell["r"])
+    var opposite_pairs := [
+        [Vector2i(1, 0), Vector2i(-1, 0)],
+        [Vector2i(1, -1), Vector2i(-1, 1)],
+        [Vector2i(0, -1), Vector2i(0, 1)]
+    ]
+
+    var best_height := -INF
+    var best_delta := INF
+
+    for pair_variant in opposite_pairs:
+        var pair: Array = pair_variant
+        var a: Vector2i = pair[0]
+        var b: Vector2i = pair[1]
+        var a_key := _hex_key(q + a.x, r + a.y)
+        var b_key := _hex_key(q + b.x, r + b.y)
+        if not hex_cells.has(a_key) or not hex_cells.has(b_key):
+            continue
+
+        var a_cell: Dictionary = hex_cells[a_key]
+        var b_cell: Dictionary = hex_cells[b_key]
+        if not bool(a_cell.get("has_surface", false)) or not bool(b_cell.get("has_surface", false)):
+            continue
+
+        var a_height: float = float(a_cell["height"])
+        var b_height: float = float(b_cell["height"])
+        var delta: float = absf(a_height - b_height)
+        if delta <= 1.10 and delta < best_delta:
+            best_delta = delta
+            best_height = (a_height + b_height) * 0.5
+
+    return best_height
+
+func _prepare_bridge_override(key: String) -> bool:
+    if not _is_bridge_repair_candidate(key):
+        return false
+
+    var bridge_height: float = _estimate_bridge_repair_height(key)
+    if bridge_height <= -INF:
+        return false
+
+    var cell: Dictionary = hex_cells[key]
+    var pos: Vector3 = cell["position"]
+    pos.y = bridge_height
+
+    cell["has_surface"] = true
+    cell["walkable"] = true
+    cell["position"] = pos
+    cell["height"] = bridge_height
+    cell["bridge_override"] = true
+    cell["inferred_bridge"] = true
+    cell["blocked_reason"] = ""
+    hex_cells[key] = cell
+
+    var area := cell["area"] as Area3D
+    if area:
+        area.position = pos
+
+    return true
+
+func _nav_repair_selected_bridge() -> void:
+    if nav_selected_hex == "" or not hex_cells.has(nav_selected_hex):
+        return
+
+    if not _prepare_bridge_override(nav_selected_hex):
+        status_label.text = "BRIDGE: selected gap does not have matching supported tiles on opposite sides."
+        return
+
+    nav_debug_forced_blocked.erase(nav_selected_hex)
+    nav_debug_forced_open[nav_selected_hex] = true
+
+    _apply_nav_mask_overrides()
+    _apply_hex_classification_visuals()
+    _save_nav_debug_overrides()
+    _refresh_nav_edit_panel()
+
 func _nav_set_selected_state(state: String) -> void:
     if nav_selected_hex == "" or not hex_cells.has(nav_selected_hex):
         return
@@ -2382,7 +2547,7 @@ func _refresh_nav_edit_panel() -> void:
 
     nav_edit_panel.visible = nav_debug_mode
     if nav_selected_hex == "" or not hex_cells.has(nav_selected_hex):
-        nav_edit_info.text = "Tap a hex on the board, then choose AUTO, OPEN, or BLOCK."
+        nav_edit_info.text = "Tap a tile. Purple gaps are bridge-repair candidates. Use AUTO, OPEN, BLOCK, or BRIDGE."
         return
 
     var cell: Dictionary = hex_cells[nav_selected_hex]
@@ -2398,12 +2563,13 @@ func _refresh_nav_edit_panel() -> void:
     elif bool(cell.get("auto_blocked", false)):
         state = "AUTO HAZARD"
 
-    nav_edit_info.text = "Hex %s  •  %s  •  Y %.2f\nBridge repair: %s  •  Surface: %s" % [
+    var repair_candidate: bool = _is_bridge_repair_candidate(nav_selected_hex)
+    nav_edit_info.text = "Hex %s  •  %s  •  Y %.2f\nBridge: %s  •  Surface: %s" % [
         nav_selected_hex,
         state,
         float(cell.get("height", 0.0)),
-        "yes" if bool(cell.get("inferred_bridge", false)) else "no",
-        "yes" if bool(cell.get("has_surface", false)) else "no"
+        "REPAIRABLE" if repair_candidate else ("yes" if bool(cell.get("inferred_bridge", false)) else "no"),
+        "yes" if bool(cell.get("has_surface", false)) else "missing"
     ]
     status_label.text = "NAV %s • %s" % [nav_selected_hex, state]
 
@@ -2424,7 +2590,7 @@ func _toggle_nav_debug() -> void:
         nav_selected_hex = ""
         status_label.text = "Navigation edit closed."
     else:
-        status_label.text = "NAV EDIT: all cyan tiles are editable. Tap one, then choose AUTO / OPEN / BLOCK."
+        status_label.text = "NAV EDIT: cyan=normal, red=blocked, green=open, purple=bridge gap. Tap a tile to edit."
 
     _apply_hex_classification_visuals()
     _refresh_nav_edit_panel()
