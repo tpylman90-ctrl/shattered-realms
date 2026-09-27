@@ -97,6 +97,8 @@ var hex_material_forced_open: StandardMaterial3D
 var hex_material_forced_blocked: StandardMaterial3D
 var hex_grid_overlay: MeshInstance3D
 var nav_mask_data: Dictionary = {}
+var nav_grid_data: Dictionary = {}
+var nav_grid_tiles: Dictionary = {}
 var nav_blocked_edges: Dictionary = {}
 var nav_debug_forced_open: Dictionary = {}
 var nav_debug_forced_blocked: Dictionary = {}
@@ -123,7 +125,7 @@ const HEX_MAX_STEP := 0.94
 const HEX_MIN_UP_DOT := 0.52
 const HEX_HIGH_OUTLIER := 0.46
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 10
+const HEX_GRID_VERSION := 11
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.86
 const FOG_CELL_SIZE := 4.0
@@ -218,9 +220,7 @@ const POI_DATA := {
 
 func _ready() -> void:
     _tune_imported_terrain_materials($TerrainRoot)
-    _build_terrain_collision($NavSurfaceRoot)
-    await get_tree().physics_frame
-    await get_tree().physics_frame
+    _load_generated_nav_grid()
     _load_nav_mask_data()
     _load_nav_debug_overrides()
     _build_hex_board()
@@ -676,8 +676,8 @@ func _build_hex_board() -> void:
             if absf(center2.x) > HEX_WORLD_LIMIT or absf(center2.y) > HEX_WORLD_LIMIT:
                 continue
 
-            var sample: Dictionary = _sample_hex_surface(center2.x, center2.y)
             var key := _hex_key(q, r)
+            var sample: Dictionary = _sample_hex_surface(key, center2.x, center2.y)
             var has_surface: bool = bool(sample.get("has_surface", false))
             var sampled_position: Vector3 = sample.get(
                 "position",
@@ -874,31 +874,32 @@ func _hex_to_world_2d(q: int, r: int) -> Vector2:
 func _hex_key(q: int, r: int) -> String:
     return "%d,%d" % [q, r]
 
-func _sample_hex_surface(x: float, z: float) -> Dictionary:
-    # Sampling never decides whether the cell exists. It only records the
-    # surface under the complete logical lattice; classification happens later.
-    var from := Vector3(x, 14.0, z)
-    var to := Vector3(x, -2.0, z)
-    var query := PhysicsRayQueryParameters3D.create(from, to)
-    query.collide_with_areas = false
-    query.collide_with_bodies = true
-    query.collision_mask = 8
-
-    var hit := get_world_3d().direct_space_state.intersect_ray(query)
-    if hit.is_empty():
+func _sample_hex_surface(key: String, x: float, z: float) -> Dictionary:
+    # The build-time generator already solved the cleaned navigation height for
+    # every supported cell. Read that result directly instead of raycasting the
+    # generated mesh and rediscovering the same data at runtime.
+    if not nav_grid_tiles.has(key):
         return {
             "has_surface": false
         }
 
-    var center_position: Vector3 = hit["position"] as Vector3
-    var normal: Vector3 = hit.get("normal", Vector3.UP) as Vector3
-    var up_dot: float = normal.dot(Vector3.UP)
-    center_position.y += HERO_GROUND_CLEARANCE
+    var tile_variant: Variant = nav_grid_tiles[key]
+    if not tile_variant is Dictionary:
+        return {
+            "has_surface": false
+        }
+
+    var tile: Dictionary = tile_variant as Dictionary
+    var position := Vector3(
+        float(tile.get("x", x)),
+        float(tile.get("y", CAMPAIGN_START_POSITION.y)) + HERO_GROUND_CLEARANCE,
+        float(tile.get("z", z))
+    )
 
     return {
         "has_surface": true,
-        "position": center_position,
-        "up_dot": up_dot
+        "position": position,
+        "up_dot": 1.0
     }
 
 func _hex_raw_neighbor_count(key: String) -> int:
@@ -1021,10 +1022,10 @@ func _show_reachable_hexes() -> void:
         if bool(cell.get("walkable", false)):
             walkable_count += 1
 
-    status_label.text = "Grid %d • Open %d • Blocked %d • Reachable %d • AP %d" % [
+    status_label.text = "Grid %d • Nav %d • Open %d • Reachable %d • AP %d" % [
         hex_cells.size(),
+        nav_grid_tiles.size(),
         walkable_count,
-        maxi(0, hex_cells.size() - walkable_count),
         maxi(0, reachable.size() - 1),
         moves_remaining
     ]
@@ -2094,6 +2095,33 @@ func _resolve_world_phase() -> void:
         last_enemy_phase_summary += " Vulgrim's eruption pressure is critical."
     elif vulgrim_heat >= 50:
         last_enemy_phase_summary += " The wastes become increasingly unstable."
+
+func _load_generated_nav_grid() -> void:
+    nav_grid_data.clear()
+    nav_grid_tiles.clear()
+
+    var path := "res://data/generated/ashenreach_nav_grid.json"
+    if not FileAccess.file_exists(path):
+        push_error("Ashenreach nav grid data is missing: %s" % path)
+        return
+
+    var file := FileAccess.open(path, FileAccess.READ)
+    if not file:
+        push_error("Unable to open Ashenreach nav grid data.")
+        return
+
+    var parsed: Variant = JSON.parse_string(file.get_as_text())
+    if not parsed is Dictionary:
+        push_error("Ashenreach nav grid data is invalid JSON.")
+        return
+
+    nav_grid_data = (parsed as Dictionary).duplicate(true)
+    var tiles_variant: Variant = nav_grid_data.get("tiles", {})
+    if tiles_variant is Dictionary:
+        nav_grid_tiles = (tiles_variant as Dictionary).duplicate(true)
+
+    if nav_grid_tiles.is_empty():
+        push_error("Ashenreach nav grid contains no tiles.")
 
 func _load_nav_mask_data() -> void:
     nav_mask_data = {
