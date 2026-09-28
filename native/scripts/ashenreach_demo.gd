@@ -865,8 +865,12 @@ func _apply_hex_classification_visuals() -> void:
                 area.position = preview_position
 
         if visual:
-            visual.visible = has_surface or bridge_candidate
             var source: String = str(cell.get("nav_source", "auto"))
+
+            # Navigation paint is an authoring/debug layer. In normal gameplay
+            # every base hex stays hidden until movement selection explicitly
+            # reveals current/reachable/target cells.
+            visual.visible = nav_debug_mode and (has_surface or bridge_candidate)
 
             if nav_debug_mode and key == nav_selected_hex:
                 visual.material_override = hex_material_nav_selected
@@ -1071,6 +1075,7 @@ func _show_reachable_hexes() -> void:
         var visual := area.get_node_or_null("Visual") as MeshInstance3D
         if not visual:
             continue
+        visual.visible = true
         if key == current_hex_key:
             visual.material_override = hex_material_current
         else:
@@ -1132,6 +1137,7 @@ func _select_hex_destination(area: Area3D) -> void:
     var target_area := target_cell["area"] as Area3D
     var target_visual := target_area.get_node_or_null("Visual") as MeshInstance3D
     if target_visual:
+        target_visual.visible = true
         target_visual.material_override = hex_material_target
 
 func _shortest_hex_path(start_key: String, goal_key: String) -> Array[String]:
@@ -1181,6 +1187,27 @@ func _show_hex_route_preview(path: Array[String]) -> void:
     route_preview.mesh = mesh
     route_preview.visible = true
 
+func _hero_target_yaw(from_position: Vector3, to_position: Vector3) -> float:
+    var direction := to_position - from_position
+    direction.y = 0.0
+    if direction.length_squared() < 0.000001:
+        return hero_unit.rotation.y
+    direction = direction.normalized()
+
+    # Godot's forward axis is -Z. Keep the root upright and rotate only on Y.
+    return atan2(-direction.x, -direction.z)
+
+func _face_hero_toward(target_position: Vector3, duration: float = 0.10) -> void:
+    var target_yaw := _hero_target_yaw(hero_unit.global_position, target_position)
+    var current_yaw := hero_unit.rotation.y
+    var shortest_target := current_yaw + wrapf(target_yaw - current_yaw, -PI, PI)
+
+    var turn_tween := create_tween()
+    turn_tween.set_trans(Tween.TRANS_SINE)
+    turn_tween.set_ease(Tween.EASE_OUT)
+    turn_tween.tween_property(hero_unit, "rotation:y", shortest_target, duration)
+    await turn_tween.finished
+
 func _confirm_hex_move() -> void:
     if campaign_phase != PHASE_PLAYER or pending_hex_path.size() < 2:
         return
@@ -1193,6 +1220,11 @@ func _confirm_hex_move() -> void:
     for i in range(1, pending_hex_path.size()):
         var key: String = pending_hex_path[i]
         var target: Vector3 = hex_cells[key]["position"]
+
+        # Turn toward each segment so path bends visibly change facing instead
+        # of sliding the hero sideways across the board.
+        await _face_hero_toward(target, 0.09)
+
         var tween := create_tween()
         tween.set_trans(Tween.TRANS_SINE)
         tween.set_ease(Tween.EASE_IN_OUT)
