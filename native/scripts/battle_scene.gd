@@ -1,5 +1,7 @@
 extends Node3D
 
+const HeroProgressionService = preload("res://scripts/hero_progression.gd")
+
 const RETURN_SCENE := "res://scenes/AshenreachDemo.tscn"
 const CONTEXT_PATH := "user://battle_context.cfg"
 const RESULT_PATH := "user://battle_result.cfg"
@@ -18,6 +20,11 @@ var hero_name := "Hero"
 var hero_hp := 100
 var hero_max_hp := 100
 var hero_xp := 0
+var hero_level := 1
+var hero_mp := 0
+var hero_max_mp := 0
+var hero_stats: Dictionary = {}
+var hero_profile: Dictionary = {}
 var enemy_hp := 70
 var enemy_max_hp := 70
 var enemy_attack := 10
@@ -29,6 +36,7 @@ var enemy_atb := 0.0
 var hero_ready := false
 var battle_over := false
 var defending := false
+var guard_multiplier := 0.45
 var item_used := false
 var action_locked := false
 
@@ -39,6 +47,7 @@ var transition_rect: ColorRect
 var battle_ui_layer: CanvasLayer
 
 var hero_hp_label: Label
+var hero_mp_label: Label
 var enemy_hp_label: Label
 var hero_hp_bar: ProgressBar
 var enemy_hp_bar: ProgressBar
@@ -47,15 +56,18 @@ var enemy_atb_bar: ProgressBar
 var message_label: Label
 var command_box: VBoxContainer
 var attack_button: Button
-var ability_button: Button
+var skills_button: Button
 var defend_button: Button
 var item_button: Button
+var skill_panel: PanelContainer
+var skill_list: VBoxContainer
 
 
 func _ready() -> void:
     action_locked = true
     _load_context()
     _load_hero_data()
+    _load_progression_profile()
     _build_background()
     _build_world()
     _build_ui()
@@ -135,6 +147,25 @@ func _load_hero_data() -> void:
     if heroes.has(hero_id):
         hero_data = (heroes[hero_id] as Dictionary).duplicate(true)
         hero_name = str(hero_data.get("name", hero_id))
+
+
+func _load_progression_profile() -> void:
+    hero_profile = HeroProgressionService.ensure_profile(hero_id, hero_xp)
+    if hero_profile.is_empty():
+        hero_level = 1
+        hero_stats = {"hp": 100, "mp": 40, "power": 15, "magic": 15, "defense": 10, "resistance": 10, "speed": 10, "crit": 5.0}
+        hero_max_hp = 100
+        hero_max_mp = 40
+        hero_mp = hero_max_mp
+        return
+
+    hero_level = int(hero_profile.get("level", 1))
+    hero_xp = int(hero_profile.get("xp", hero_xp))
+    hero_stats = (hero_profile.get("stats", {}) as Dictionary).duplicate(true)
+    hero_max_hp = int(hero_stats.get("hp", 100))
+    hero_max_mp = int(hero_stats.get("mp", 40))
+    hero_mp = hero_max_mp
+    hero_hp = clampi(hero_hp, 1, hero_max_hp)
 
 
 func _build_background() -> void:
@@ -384,6 +415,10 @@ func _build_ui() -> void:
     hero_hp_bar = ProgressBar.new()
     hero_hp_bar.show_percentage = false
     hero_box.add_child(hero_hp_bar)
+
+    hero_mp_label = Label.new()
+    hero_box.add_child(hero_mp_label)
+
     hero_atb_bar = ProgressBar.new()
     hero_atb_bar.show_percentage = false
     hero_box.add_child(hero_atb_bar)
@@ -449,10 +484,11 @@ func _build_ui() -> void:
     command_box.add_child(command_label)
 
     attack_button = _make_command_button("ATTACK", _on_attack)
-    ability_button = _make_command_button(str(hero_data.get("signature_ability", "ABILITY")).to_upper(), _on_ability)
+    skills_button = _make_command_button("SKILLS", _open_skill_panel)
     defend_button = _make_command_button("DEFEND", _on_defend)
     item_button = _make_command_button("ITEM", _on_item)
 
+    _build_skill_panel()
     _set_commands_enabled(false)
 
     transition_rect = ColorRect.new()
@@ -529,7 +565,7 @@ func _set_commands_enabled(enabled: bool) -> void:
     if not attack_button:
         return
     attack_button.disabled = not enabled
-    ability_button.disabled = not enabled
+    skills_button.disabled = not enabled
     defend_button.disabled = not enabled
     item_button.disabled = not enabled or item_used
 
@@ -547,7 +583,8 @@ func _refresh_ui() -> void:
     hero_atb_bar.max_value = 100.0
     enemy_atb_bar.max_value = 100.0
 
-    hero_hp_label.text = "%s  HP %d/%d" % [hero_name, hero_hp, hero_max_hp]
+    hero_hp_label.text = "%s  LV %d  •  HP %d/%d" % [hero_name, hero_level, hero_hp, hero_max_hp]
+    hero_mp_label.text = "MP %d/%d  •  SP %d" % [hero_mp, hero_max_mp, int(hero_profile.get("skill_points", 0))]
     enemy_hp_label.text = "%s  HP %d/%d" % [enemy_name, enemy_hp, enemy_max_hp]
     _refresh_gauges()
 
@@ -564,7 +601,8 @@ func _on_attack() -> void:
     action_locked = true
     _consume_hero_turn()
 
-    var damage := 13 + randi_range(0, 6)
+    var power := int(hero_stats.get("power", 15))
+    var damage := 7 + int(round(float(power) * 0.72)) + randi_range(0, 5)
     message_label.text = "%s attacks for %d damage!" % [hero_name, damage]
     await _lunge(hero_anchor, 0.38)
     enemy_hp = maxi(0, enemy_hp - damage)
@@ -577,26 +615,147 @@ func _on_attack() -> void:
     _check_battle_end()
 
 
-func _on_ability() -> void:
+func _build_skill_panel() -> void:
+    skill_panel = PanelContainer.new()
+    skill_panel.visible = false
+    skill_panel.anchor_left = 0.5
+    skill_panel.anchor_top = 0.5
+    skill_panel.anchor_right = 0.5
+    skill_panel.anchor_bottom = 0.5
+    skill_panel.offset_left = -255.0
+    skill_panel.offset_top = -185.0
+    skill_panel.offset_right = 255.0
+    skill_panel.offset_bottom = 185.0
+    battle_ui_layer.add_child(skill_panel)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 14)
+    margin.add_theme_constant_override("margin_top", 12)
+    margin.add_theme_constant_override("margin_right", 14)
+    margin.add_theme_constant_override("margin_bottom", 12)
+    skill_panel.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 7)
+    margin.add_child(box)
+
+    var title := Label.new()
+    title.text = "%s • LEARNED SKILLS" % hero_name.to_upper()
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 17)
+    box.add_child(title)
+
+    skill_list = VBoxContainer.new()
+    skill_list.add_theme_constant_override("separation", 5)
+    box.add_child(skill_list)
+
+    var close := Button.new()
+    close.text = "BACK"
+    close.pressed.connect(_close_skill_panel)
+    box.add_child(close)
+
+    _refresh_skill_list()
+
+
+func _refresh_skill_list() -> void:
+    if not skill_list:
+        return
+
+    for child in skill_list.get_children():
+        child.queue_free()
+
+    var equipped: Array = hero_profile.get("equipped_skills", [])
+    for skill_id_variant in equipped:
+        var skill_id := str(skill_id_variant)
+        var skill := HeroProgressionService.skill_by_id(hero_id, skill_id)
+        if skill.is_empty() or str(skill.get("type", "active")) != "active":
+            continue
+
+        var button := Button.new()
+        var mp_cost := int(skill.get("mp", 0))
+        button.text = "%s   MP %d" % [str(skill.get("name", skill_id)).to_upper(), mp_cost]
+        button.disabled = hero_mp < mp_cost
+        button.tooltip_text = "Power %d • %s" % [int(skill.get("power", 0)), str(skill.get("element", "none")).capitalize()]
+        button.pressed.connect(_use_skill.bind(skill_id))
+        skill_list.add_child(button)
+
+
+func _open_skill_panel() -> void:
     if not hero_ready or action_locked or battle_over:
         return
+    _refresh_skill_list()
+    skill_panel.visible = true
+    _set_commands_enabled(false)
+
+
+func _close_skill_panel() -> void:
+    skill_panel.visible = false
+    if hero_ready and not action_locked and not battle_over:
+        _set_commands_enabled(true)
+
+
+func _use_skill(skill_id: String) -> void:
+    if not hero_ready or action_locked or battle_over:
+        return
+
+    var skill := HeroProgressionService.skill_by_id(hero_id, skill_id)
+    if skill.is_empty():
+        return
+
+    var mp_cost := int(skill.get("mp", 0))
+    if hero_mp < mp_cost:
+        message_label.text = "Not enough MP."
+        return
+
+    skill_panel.visible = false
     action_locked = true
+    hero_mp -= mp_cost
     _consume_hero_turn()
 
-    var ability_name := str(hero_data.get("signature_ability", "Signature Ability"))
-    var damage := 25 + randi_range(0, 7)
-    if hero_id == "vesper":
-        damage = 19 + randi_range(0, 5)
-        defending = true
+    var effect := str(skill.get("effect", ""))
+    var skill_name := str(skill.get("name", "Skill"))
+    var base_power := int(skill.get("power", 0))
+    var scaling := str(skill.get("scaling", "power"))
+    var scale_stat := 0.0
 
-    message_label.text = "%s uses %s! %d damage." % [hero_name, ability_name, damage]
-    await _ability_flash()
-    enemy_hp = maxi(0, enemy_hp - damage)
+    if scaling == "magic":
+        scale_stat = float(hero_stats.get("magic", 15))
+    elif scaling == "power_magic":
+        scale_stat = (float(hero_stats.get("power", 15)) + float(hero_stats.get("magic", 15))) * 0.5
+    elif scaling == "none":
+        scale_stat = 0.0
+    else:
+        scale_stat = float(hero_stats.get("power", 15))
+
+    if effect.begins_with("guard_") or effect == "resist_guard" or effect == "fire_guard":
+        defending = true
+        if effect == "guard_75":
+            guard_multiplier = 0.25
+        elif effect == "guard_70":
+            guard_multiplier = 0.30
+        elif effect == "guard_60":
+            guard_multiplier = 0.40
+        else:
+            guard_multiplier = 0.38
+        message_label.text = "%s uses %s." % [hero_name, skill_name]
+        await _ability_flash()
+    else:
+        var damage := maxi(1, base_power + int(round(scale_stat * 0.55)) + randi_range(-2, 4))
+        enemy_hp = maxi(0, enemy_hp - damage)
+        message_label.text = "%s uses %s! %d damage." % [hero_name, skill_name, damage]
+        await _ability_flash()
+        _show_damage_popup(enemy_anchor, damage)
+        _impact_bump(enemy_anchor, 0.17)
+        _camera_impact(0.12)
+
+        if effect == "lifesteal" or effect == "heal_self":
+            var healed := mini(hero_max_hp - hero_hp, maxi(1, int(round(float(damage) * 0.30))))
+            hero_hp += healed
+            if healed > 0:
+                _show_damage_popup(hero_anchor, healed, true)
+
     _refresh_ui()
-    _show_damage_popup(enemy_anchor, damage)
-    _impact_bump(enemy_anchor, 0.17)
-    _camera_impact(0.12)
-    await get_tree().create_timer(0.65).timeout
+    await get_tree().create_timer(0.55).timeout
     action_locked = false
     _check_battle_end()
 
@@ -605,6 +764,7 @@ func _on_defend() -> void:
     if not hero_ready or action_locked or battle_over:
         return
     defending = true
+    guard_multiplier = 0.45
     _consume_hero_turn()
     message_label.text = "%s braces for the next attack." % hero_name
 
@@ -629,11 +789,13 @@ func _enemy_turn() -> void:
     action_locked = true
     _set_commands_enabled(false)
 
-    var damage := enemy_attack + randi_range(-2, 3)
+    var defense := int(hero_stats.get("defense", 10))
+    var damage := enemy_attack + randi_range(-2, 3) - int(round(float(defense) * 0.18))
     damage = maxi(1, damage)
     if defending:
-        damage = maxi(1, int(round(float(damage) * 0.45)))
+        damage = maxi(1, int(round(float(damage) * guard_multiplier)))
         defending = false
+        guard_multiplier = 0.45
 
     message_label.text = "%s attacks for %d damage!" % [enemy_name, damage]
     await _lunge(enemy_anchor, -0.32)
@@ -688,8 +850,16 @@ func _finish_battle(victory: bool) -> void:
     _set_commands_enabled(false)
 
     if victory:
-        hero_xp += reward_xp
-        message_label.text = "VICTORY! %s defeated. +%d XP" % [enemy_name, reward_xp]
+        var progression := HeroProgressionService.add_xp(hero_id, reward_xp, hero_xp)
+        var gained_levels := int(progression.get("levels_gained", 0))
+        hero_xp = int(progression.get("xp", hero_xp + reward_xp))
+        hero_level = int(progression.get("level", hero_level))
+        hero_profile = progression
+        hero_stats = (progression.get("stats", hero_stats) as Dictionary).duplicate(true)
+        if gained_levels > 0:
+            message_label.text = "VICTORY! +%d XP • LEVEL %d! • +%d SP" % [reward_xp, hero_level, gained_levels]
+        else:
+            message_label.text = "VICTORY! %s defeated. +%d XP" % [enemy_name, reward_xp]
     else:
         message_label.text = "%s has fallen..." % hero_name
 
@@ -698,6 +868,7 @@ func _finish_battle(victory: bool) -> void:
     cfg.set_value("battle", "victory", victory)
     cfg.set_value("battle", "hero_hp", hero_hp)
     cfg.set_value("battle", "hero_xp", hero_xp)
+    cfg.set_value("battle", "hero_level", hero_level)
     cfg.set_value("battle", "enemy_name", enemy_name)
     cfg.save(RESULT_PATH)
 
