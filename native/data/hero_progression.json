@@ -1,0 +1,1240 @@
+{
+  "version": 1,
+  "rules": {
+    "max_level": 30,
+    "skill_points_per_level": 1,
+    "equipped_active_limit": 6,
+    "equipped_passive_limit": 3,
+    "xp_curve": {
+      "base": 70,
+      "growth": 1.34
+    },
+    "stats": [
+      "hp",
+      "mp",
+      "power",
+      "magic",
+      "defense",
+      "resistance",
+      "speed",
+      "crit"
+    ]
+  },
+  "heroes": {
+    "ignis": {
+      "name": "Ignis, The Magma-Heart",
+      "archetype": "Pyromancer / Juggernaut",
+      "base_stats": {
+        "hp": 130,
+        "mp": 42,
+        "power": 18,
+        "magic": 17,
+        "defense": 15,
+        "resistance": 11,
+        "speed": 10,
+        "crit": 5
+      },
+      "growth": {
+        "hp": 12,
+        "mp": 4,
+        "power": 2.1,
+        "magic": 1.8,
+        "defense": 1.6,
+        "resistance": 1.1,
+        "speed": 0.55,
+        "crit": 0.12
+      },
+      "starting_skills": [
+        "ignis_eruption_strike",
+        "ignis_magma_guard"
+      ],
+      "starting_equipped": [
+        "ignis_eruption_strike",
+        "ignis_magma_guard"
+      ],
+      "skills": [
+        {
+          "id": "ignis_eruption_strike",
+          "name": "Eruption Strike",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 8,
+          "power": 30,
+          "scaling": "power",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "heavy_hit"
+        },
+        {
+          "id": "ignis_magma_guard",
+          "name": "Magma Guard",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 6,
+          "power": 0,
+          "scaling": "none",
+          "element": "fire",
+          "target": "self",
+          "effect": "guard_60"
+        },
+        {
+          "id": "ignis_cinder_sweep",
+          "name": "Cinder Sweep",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 10,
+          "power": 22,
+          "scaling": "power",
+          "element": "fire",
+          "target": "enemy_all",
+          "effect": "burn_chance",
+          "requires": [
+            "ignis_eruption_strike"
+          ]
+        },
+        {
+          "id": "ignis_molten_core",
+          "name": "Molten Core",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "hp_power_bonus",
+          "requires": [
+            "ignis_magma_guard"
+          ]
+        },
+        {
+          "id": "ignis_caldera_break",
+          "name": "Caldera Break",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 18,
+          "power": 48,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "armor_break",
+          "requires": [
+            "ignis_cinder_sweep",
+            "ignis_molten_core"
+          ]
+        }
+      ]
+    },
+    "vesper": {
+      "name": "Vesper, The Frostbinder",
+      "archetype": "Cryomancer / Warden",
+      "base_stats": {
+        "hp": 108,
+        "mp": 58,
+        "power": 12,
+        "magic": 20,
+        "defense": 15,
+        "resistance": 18,
+        "speed": 11,
+        "crit": 5
+      },
+      "growth": {
+        "hp": 9,
+        "mp": 6,
+        "power": 1.1,
+        "magic": 2.2,
+        "defense": 1.5,
+        "resistance": 2,
+        "speed": 0.65,
+        "crit": 0.12
+      },
+      "starting_skills": [
+        "vesper_frostbind",
+        "vesper_glacial_bastion"
+      ],
+      "starting_equipped": [
+        "vesper_frostbind",
+        "vesper_glacial_bastion"
+      ],
+      "skills": [
+        {
+          "id": "vesper_frostbind",
+          "name": "Frostbind",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 7,
+          "power": 24,
+          "scaling": "magic",
+          "element": "ice",
+          "target": "enemy",
+          "effect": "slow"
+        },
+        {
+          "id": "vesper_glacial_bastion",
+          "name": "Glacial Bastion",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 7,
+          "power": 0,
+          "scaling": "none",
+          "element": "ice",
+          "target": "self",
+          "effect": "guard_75"
+        },
+        {
+          "id": "vesper_shard_lance",
+          "name": "Shard Lance",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 10,
+          "power": 31,
+          "scaling": "magic",
+          "element": "ice",
+          "target": "enemy",
+          "effect": "pierce"
+        },
+        {
+          "id": "vesper_permafrost",
+          "name": "Permafrost",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "ice_resist_control_bonus",
+          "requires": [
+            "vesper_frostbind"
+          ]
+        },
+        {
+          "id": "vesper_whiteout",
+          "name": "Whiteout",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 18,
+          "power": 39,
+          "scaling": "magic",
+          "element": "ice",
+          "target": "enemy_all",
+          "effect": "slow_all",
+          "requires": [
+            "vesper_shard_lance",
+            "vesper_permafrost"
+          ]
+        }
+      ]
+    },
+    "lyra_vane": {
+      "name": "Lyra Vane, The Shadow Stalker",
+      "archetype": "Ranger / Assassin",
+      "base_stats": {
+        "hp": 96,
+        "mp": 38,
+        "power": 17,
+        "magic": 10,
+        "defense": 10,
+        "resistance": 11,
+        "speed": 18,
+        "crit": 10
+      },
+      "growth": {
+        "hp": 8,
+        "mp": 3,
+        "power": 1.9,
+        "magic": 0.9,
+        "defense": 1,
+        "resistance": 1,
+        "speed": 1.7,
+        "crit": 0.35
+      },
+      "starting_skills": [
+        "lyra_phantom_arrows",
+        "lyra_evasive_step"
+      ],
+      "starting_equipped": [
+        "lyra_phantom_arrows",
+        "lyra_evasive_step"
+      ],
+      "skills": [
+        {
+          "id": "lyra_phantom_arrows",
+          "name": "Phantom Arrows",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 7,
+          "power": 25,
+          "scaling": "power",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "multi_hit"
+        },
+        {
+          "id": "lyra_evasive_step",
+          "name": "Evasive Step",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 0,
+          "scaling": "none",
+          "element": "none",
+          "target": "self",
+          "effect": "evade"
+        },
+        {
+          "id": "lyra_marked_prey",
+          "name": "Marked Prey",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 6,
+          "power": 8,
+          "scaling": "power",
+          "element": "none",
+          "target": "enemy",
+          "effect": "mark"
+        },
+        {
+          "id": "lyra_night_hunter",
+          "name": "Night Hunter",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "crit_vs_marked",
+          "requires": [
+            "lyra_marked_prey"
+          ]
+        },
+        {
+          "id": "lyra_umbral_volley",
+          "name": "Umbral Volley",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power",
+          "element": "shadow",
+          "target": "enemy_all",
+          "effect": "multi_hit",
+          "requires": [
+            "lyra_phantom_arrows",
+            "lyra_night_hunter"
+          ]
+        }
+      ]
+    },
+    "thorvald": {
+      "name": "Thorvald Thunderbrow, The Peak Sentinel",
+      "archetype": "Tempest Warrior / Smith",
+      "base_stats": {
+        "hp": 125,
+        "mp": 34,
+        "power": 19,
+        "magic": 12,
+        "defense": 17,
+        "resistance": 13,
+        "speed": 9,
+        "crit": 5
+      },
+      "growth": {
+        "hp": 11,
+        "mp": 3,
+        "power": 2.1,
+        "magic": 1.2,
+        "defense": 1.9,
+        "resistance": 1.3,
+        "speed": 0.45,
+        "crit": 0.12
+      },
+      "starting_skills": [
+        "thorvald_lightning_smash",
+        "thorvald_forgeguard"
+      ],
+      "starting_equipped": [
+        "thorvald_lightning_smash",
+        "thorvald_forgeguard"
+      ],
+      "skills": [
+        {
+          "id": "thorvald_lightning_smash",
+          "name": "Lightning Smash",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 8,
+          "power": 29,
+          "scaling": "power",
+          "element": "lightning",
+          "target": "enemy",
+          "effect": "shock"
+        },
+        {
+          "id": "thorvald_forgeguard",
+          "name": "Forgeguard",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 0,
+          "scaling": "none",
+          "element": "none",
+          "target": "self",
+          "effect": "guard_60"
+        },
+        {
+          "id": "thorvald_storm_hammer",
+          "name": "Storm Hammer",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 10,
+          "power": 34,
+          "scaling": "power",
+          "element": "lightning",
+          "target": "enemy",
+          "effect": "stagger"
+        },
+        {
+          "id": "thorvald_tempered_soul",
+          "name": "Tempered Soul",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "defense_shock_resist",
+          "requires": [
+            "thorvald_forgeguard"
+          ]
+        },
+        {
+          "id": "thorvald_skybreaker",
+          "name": "Skybreaker",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 18,
+          "power": 50,
+          "scaling": "power",
+          "element": "lightning",
+          "target": "enemy",
+          "effect": "shock_break",
+          "requires": [
+            "thorvald_storm_hammer",
+            "thorvald_tempered_soul"
+          ]
+        }
+      ]
+    },
+    "cedric": {
+      "name": "General Cedric Ironclad",
+      "archetype": "Heavy Cavalry Commander",
+      "base_stats": {
+        "hp": 136,
+        "mp": 30,
+        "power": 18,
+        "magic": 8,
+        "defense": 20,
+        "resistance": 14,
+        "speed": 8,
+        "crit": 4
+      },
+      "growth": {
+        "hp": 13,
+        "mp": 2,
+        "power": 1.8,
+        "magic": 0.7,
+        "defense": 2.2,
+        "resistance": 1.4,
+        "speed": 0.4,
+        "crit": 0.1
+      },
+      "starting_skills": [
+        "cedric_phalanx_charge",
+        "cedric_hold_line"
+      ],
+      "starting_equipped": [
+        "cedric_phalanx_charge",
+        "cedric_hold_line"
+      ],
+      "skills": [
+        {
+          "id": "cedric_phalanx_charge",
+          "name": "Phalanx Charge",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 7,
+          "power": 27,
+          "scaling": "power",
+          "element": "none",
+          "target": "enemy",
+          "effect": "stagger"
+        },
+        {
+          "id": "cedric_hold_line",
+          "name": "Hold the Line",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 0,
+          "scaling": "none",
+          "element": "none",
+          "target": "self",
+          "effect": "guard_70"
+        },
+        {
+          "id": "cedric_commanders_mark",
+          "name": "Commander's Mark",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 6,
+          "power": 0,
+          "scaling": "none",
+          "element": "none",
+          "target": "enemy",
+          "effect": "vulnerability"
+        },
+        {
+          "id": "cedric_iron_discipline",
+          "name": "Iron Discipline",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "defense_status_resist",
+          "requires": [
+            "cedric_hold_line"
+          ]
+        },
+        {
+          "id": "cedric_unbroken_advance",
+          "name": "Unbroken Advance",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 43,
+          "scaling": "power",
+          "element": "none",
+          "target": "enemy_all",
+          "effect": "team_guard",
+          "requires": [
+            "cedric_phalanx_charge",
+            "cedric_iron_discipline"
+          ]
+        }
+      ]
+    },
+    "morana": {
+      "name": "Morana, The Rot-Weaver",
+      "archetype": "Plague Shaman / Witch",
+      "base_stats": {
+        "hp": 102,
+        "mp": 62,
+        "power": 9,
+        "magic": 21,
+        "defense": 10,
+        "resistance": 17,
+        "speed": 10,
+        "crit": 4
+      },
+      "growth": {
+        "hp": 8,
+        "mp": 7,
+        "power": 0.7,
+        "magic": 2.3,
+        "defense": 0.9,
+        "resistance": 1.8,
+        "speed": 0.55,
+        "crit": 0.1
+      },
+      "starting_skills": [
+        "morana_venomous_miasma",
+        "morana_bogward"
+      ],
+      "starting_equipped": [
+        "morana_venomous_miasma",
+        "morana_bogward"
+      ],
+      "skills": [
+        {
+          "id": "morana_venomous_miasma",
+          "name": "Venomous Miasma",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 8,
+          "power": 18,
+          "scaling": "magic",
+          "element": "poison",
+          "target": "enemy_all",
+          "effect": "poison"
+        },
+        {
+          "id": "morana_bogward",
+          "name": "Bogward",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 6,
+          "power": 0,
+          "scaling": "none",
+          "element": "poison",
+          "target": "self",
+          "effect": "resist_guard"
+        },
+        {
+          "id": "morana_rot_bloom",
+          "name": "Rot Bloom",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 10,
+          "power": 28,
+          "scaling": "magic",
+          "element": "poison",
+          "target": "enemy",
+          "effect": "decay"
+        },
+        {
+          "id": "morana_plague_bearer",
+          "name": "Plague Bearer",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "poison_duration_bonus",
+          "requires": [
+            "morana_venomous_miasma"
+          ]
+        },
+        {
+          "id": "morana_black_marsh",
+          "name": "Black Marsh",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 19,
+          "power": 38,
+          "scaling": "magic",
+          "element": "poison",
+          "target": "enemy_all",
+          "effect": "poison_slow",
+          "requires": [
+            "morana_rot_bloom",
+            "morana_plague_bearer"
+          ]
+        }
+      ]
+    },
+    "dareth": {
+      "name": "Dareth Scalebreaker",
+      "archetype": "Dragon Slayer / Vanguard",
+      "base_stats": {
+        "hp": 128,
+        "mp": 32,
+        "power": 21,
+        "magic": 7,
+        "defense": 16,
+        "resistance": 12,
+        "speed": 11,
+        "crit": 7
+      },
+      "growth": {
+        "hp": 11,
+        "mp": 2,
+        "power": 2.3,
+        "magic": 0.5,
+        "defense": 1.6,
+        "resistance": 1.1,
+        "speed": 0.7,
+        "crit": 0.2
+      },
+      "starting_skills": [
+        "dareth_draconic_cleave",
+        "dareth_scale_guard"
+      ],
+      "starting_equipped": [
+        "dareth_draconic_cleave",
+        "dareth_scale_guard"
+      ],
+      "skills": [
+        {
+          "id": "dareth_draconic_cleave",
+          "name": "Draconic Cleave",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 7,
+          "power": 31,
+          "scaling": "power",
+          "element": "none",
+          "target": "enemy",
+          "effect": "armor_pierce"
+        },
+        {
+          "id": "dareth_scale_guard",
+          "name": "Scale Guard",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 0,
+          "scaling": "none",
+          "element": "none",
+          "target": "self",
+          "effect": "guard_60"
+        },
+        {
+          "id": "dareth_wyrmbane",
+          "name": "Wyrmbane",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 34,
+          "scaling": "power",
+          "element": "none",
+          "target": "enemy",
+          "effect": "bonus_vs_large"
+        },
+        {
+          "id": "dareth_dragonhide",
+          "name": "Dragonhide",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "fire_defense_bonus",
+          "requires": [
+            "dareth_scale_guard"
+          ]
+        },
+        {
+          "id": "dareth_heartpiercer",
+          "name": "Heartpiercer",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 17,
+          "power": 53,
+          "scaling": "power",
+          "element": "none",
+          "target": "enemy",
+          "effect": "crit_bonus",
+          "requires": [
+            "dareth_wyrmbane",
+            "dareth_dragonhide"
+          ]
+        }
+      ]
+    },
+    "jora": {
+      "name": "Captain Jora Stormtide",
+      "archetype": "Naval Commander / Swashbuckler",
+      "base_stats": {
+        "hp": 106,
+        "mp": 41,
+        "power": 16,
+        "magic": 11,
+        "defense": 12,
+        "resistance": 12,
+        "speed": 16,
+        "crit": 8
+      },
+      "growth": {
+        "hp": 9,
+        "mp": 3,
+        "power": 1.7,
+        "magic": 1,
+        "defense": 1.1,
+        "resistance": 1.1,
+        "speed": 1.4,
+        "crit": 0.25
+      },
+      "starting_skills": [
+        "jora_tidal_blade",
+        "jora_riposte"
+      ],
+      "starting_equipped": [
+        "jora_tidal_blade",
+        "jora_riposte"
+      ],
+      "skills": [
+        {
+          "id": "jora_tidal_blade",
+          "name": "Tidal Blade",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 7,
+          "power": 25,
+          "scaling": "power",
+          "element": "water",
+          "target": "enemy",
+          "effect": "speed_down"
+        },
+        {
+          "id": "jora_riposte",
+          "name": "Riposte",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 0,
+          "scaling": "none",
+          "element": "none",
+          "target": "self",
+          "effect": "counter"
+        },
+        {
+          "id": "jora_broadside",
+          "name": "Broadside",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 10,
+          "power": 28,
+          "scaling": "power",
+          "element": "water",
+          "target": "enemy_all",
+          "effect": "stagger"
+        },
+        {
+          "id": "jora_sea_legs",
+          "name": "Sea Legs",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "speed_evasion_bonus",
+          "requires": [
+            "jora_riposte"
+          ]
+        },
+        {
+          "id": "jora_maelstrom_cut",
+          "name": "Maelstrom Cut",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 17,
+          "power": 45,
+          "scaling": "power",
+          "element": "water",
+          "target": "enemy",
+          "effect": "multi_hit",
+          "requires": [
+            "jora_broadside",
+            "jora_sea_legs"
+          ]
+        }
+      ]
+    },
+    "alistair": {
+      "name": "Sir Alistair of Ravenford",
+      "archetype": "Paladin / Guardian",
+      "base_stats": {
+        "hp": 122,
+        "mp": 48,
+        "power": 16,
+        "magic": 15,
+        "defense": 19,
+        "resistance": 18,
+        "speed": 8,
+        "crit": 4
+      },
+      "growth": {
+        "hp": 11,
+        "mp": 4,
+        "power": 1.5,
+        "magic": 1.5,
+        "defense": 2,
+        "resistance": 1.9,
+        "speed": 0.4,
+        "crit": 0.1
+      },
+      "starting_skills": [
+        "alistair_aura_light",
+        "alistair_shield_oath"
+      ],
+      "starting_equipped": [
+        "alistair_aura_light",
+        "alistair_shield_oath"
+      ],
+      "skills": [
+        {
+          "id": "alistair_aura_light",
+          "name": "Aura of Light",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 8,
+          "power": 18,
+          "scaling": "magic",
+          "element": "holy",
+          "target": "enemy",
+          "effect": "heal_self"
+        },
+        {
+          "id": "alistair_shield_oath",
+          "name": "Shield Oath",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 6,
+          "power": 0,
+          "scaling": "none",
+          "element": "holy",
+          "target": "self",
+          "effect": "guard_75"
+        },
+        {
+          "id": "alistair_smite",
+          "name": "Ravenford Smite",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 10,
+          "power": 30,
+          "scaling": "power_magic",
+          "element": "holy",
+          "target": "enemy",
+          "effect": "bonus_vs_undead"
+        },
+        {
+          "id": "alistair_beacon",
+          "name": "Beacon",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "resistance_regen_bonus",
+          "requires": [
+            "alistair_aura_light"
+          ]
+        },
+        {
+          "id": "alistair_last_bastion",
+          "name": "Last Bastion",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 18,
+          "power": 0,
+          "scaling": "none",
+          "element": "holy",
+          "target": "self",
+          "effect": "invulnerable_one_hit",
+          "requires": [
+            "alistair_shield_oath",
+            "alistair_beacon"
+          ]
+        }
+      ]
+    },
+    "zephyr": {
+      "name": "Zephyr, The Mirage Blade",
+      "archetype": "Dervish / Tactician",
+      "base_stats": {
+        "hp": 98,
+        "mp": 46,
+        "power": 16,
+        "magic": 14,
+        "defense": 10,
+        "resistance": 12,
+        "speed": 19,
+        "crit": 9
+      },
+      "growth": {
+        "hp": 8,
+        "mp": 4,
+        "power": 1.6,
+        "magic": 1.3,
+        "defense": 0.9,
+        "resistance": 1,
+        "speed": 1.8,
+        "crit": 0.3
+      },
+      "starting_skills": [
+        "zephyr_mirage_step",
+        "zephyr_whirlwind_cut"
+      ],
+      "starting_equipped": [
+        "zephyr_mirage_step",
+        "zephyr_whirlwind_cut"
+      ],
+      "skills": [
+        {
+          "id": "zephyr_mirage_step",
+          "name": "Mirage Step",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 6,
+          "power": 0,
+          "scaling": "none",
+          "element": "wind",
+          "target": "self",
+          "effect": "haste_evade"
+        },
+        {
+          "id": "zephyr_whirlwind_cut",
+          "name": "Whirlwind Cut",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 7,
+          "power": 23,
+          "scaling": "power",
+          "element": "wind",
+          "target": "enemy",
+          "effect": "speed_scale"
+        },
+        {
+          "id": "zephyr_feint",
+          "name": "Desert Feint",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 7,
+          "power": 16,
+          "scaling": "power",
+          "element": "wind",
+          "target": "enemy",
+          "effect": "accuracy_down"
+        },
+        {
+          "id": "zephyr_afterimage",
+          "name": "Afterimage",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "evasion_after_action",
+          "requires": [
+            "zephyr_mirage_step"
+          ]
+        },
+        {
+          "id": "zephyr_thousand_cuts",
+          "name": "Thousand Cuts",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 17,
+          "power": 44,
+          "scaling": "power",
+          "element": "wind",
+          "target": "enemy",
+          "effect": "multi_hit",
+          "requires": [
+            "zephyr_feint",
+            "zephyr_afterimage"
+          ]
+        }
+      ]
+    },
+    "malakor": {
+      "name": "Malakor, The Soul Reaper",
+      "archetype": "Necromancer / Reaver",
+      "base_stats": {
+        "hp": 110,
+        "mp": 64,
+        "power": 13,
+        "magic": 22,
+        "defense": 11,
+        "resistance": 16,
+        "speed": 9,
+        "crit": 5
+      },
+      "growth": {
+        "hp": 9,
+        "mp": 7,
+        "power": 1.2,
+        "magic": 2.4,
+        "defense": 1,
+        "resistance": 1.7,
+        "speed": 0.45,
+        "crit": 0.12
+      },
+      "starting_skills": [
+        "malakor_soul_harvest",
+        "malakor_grave_shroud"
+      ],
+      "starting_equipped": [
+        "malakor_soul_harvest",
+        "malakor_grave_shroud"
+      ],
+      "skills": [
+        {
+          "id": "malakor_soul_harvest",
+          "name": "Soul Harvest",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 8,
+          "power": 24,
+          "scaling": "magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "lifesteal"
+        },
+        {
+          "id": "malakor_grave_shroud",
+          "name": "Grave Shroud",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 6,
+          "power": 0,
+          "scaling": "none",
+          "element": "shadow",
+          "target": "self",
+          "effect": "resist_guard"
+        },
+        {
+          "id": "malakor_spectral_rend",
+          "name": "Spectral Rend",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 11,
+          "power": 32,
+          "scaling": "magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "resistance_break"
+        },
+        {
+          "id": "malakor_deathless",
+          "name": "Deathless Will",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "survive_lethal_once",
+          "requires": [
+            "malakor_grave_shroud"
+          ]
+        },
+        {
+          "id": "malakor_reaping_field",
+          "name": "Reaping Field",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 20,
+          "power": 41,
+          "scaling": "magic",
+          "element": "shadow",
+          "target": "enemy_all",
+          "effect": "lifesteal",
+          "requires": [
+            "malakor_spectral_rend",
+            "malakor_deathless"
+          ]
+        }
+      ]
+    },
+    "ignacia": {
+      "name": "Ignacia, Flame of the Coast",
+      "archetype": "Dragon Tamer / Sorceress",
+      "base_stats": {
+        "hp": 104,
+        "mp": 63,
+        "power": 11,
+        "magic": 22,
+        "defense": 11,
+        "resistance": 17,
+        "speed": 12,
+        "crit": 5
+      },
+      "growth": {
+        "hp": 8,
+        "mp": 7,
+        "power": 1,
+        "magic": 2.4,
+        "defense": 1,
+        "resistance": 1.7,
+        "speed": 0.7,
+        "crit": 0.12
+      },
+      "starting_skills": [
+        "ignacia_dragon_breath",
+        "ignacia_ember_ward"
+      ],
+      "starting_equipped": [
+        "ignacia_dragon_breath",
+        "ignacia_ember_ward"
+      ],
+      "skills": [
+        {
+          "id": "ignacia_dragon_breath",
+          "name": "Dragon Breath",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 9,
+          "power": 27,
+          "scaling": "magic",
+          "element": "fire",
+          "target": "enemy_all",
+          "effect": "burn_chance"
+        },
+        {
+          "id": "ignacia_ember_ward",
+          "name": "Ember Ward",
+          "type": "active",
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 6,
+          "power": 0,
+          "scaling": "none",
+          "element": "fire",
+          "target": "self",
+          "effect": "fire_guard"
+        },
+        {
+          "id": "ignacia_drake_call",
+          "name": "Drake Call",
+          "type": "active",
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 11,
+          "power": 32,
+          "scaling": "magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "summon_strike"
+        },
+        {
+          "id": "ignacia_bonded_flame",
+          "name": "Bonded Flame",
+          "type": "passive",
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "magic_fire_bonus",
+          "requires": [
+            "ignacia_dragon_breath"
+          ]
+        },
+        {
+          "id": "ignacia_skyfire",
+          "name": "Skyfire",
+          "type": "active",
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 20,
+          "power": 49,
+          "scaling": "magic",
+          "element": "fire",
+          "target": "enemy_all",
+          "effect": "burn",
+          "requires": [
+            "ignacia_drake_call",
+            "ignacia_bonded_flame"
+          ]
+        }
+      ]
+    }
+  }
+}
