@@ -6,7 +6,7 @@ const RETURN_SCENE := "res://scenes/AshenreachDemo.tscn"
 const CONTEXT_PATH := "user://battle_context.cfg"
 const RESULT_PATH := "user://battle_result.cfg"
 const CATALOG_PATH := "res://data/world_catalog.json"
-const BACKDROP_PATH := "res://assets/battle/generated/ashenreach_fortress_arena.png"
+const BACKDROP_PATH := "res://assets/battle/ashenreach_battle_arena_v2.jpg"
 
 var context: Dictionary = {}
 var hero_data: Dictionary = {}
