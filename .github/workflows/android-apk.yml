@@ -54,6 +54,22 @@ jobs:
           test -f native/assets/3d/heroes/generated/vesper_single.glb
           test -f native/assets/3d/heroes/generated/ignis_single.glb
 
+      - name: Reconstruct verified battle backdrop
+        shell: bash
+        run: |
+          mkdir -p native/assets/battle/generated
+          cat native/assets/battle/source/arena_v2.part1.b64 native/assets/battle/source/arena_v2.part2.b64 | base64 --decode > native/assets/battle/generated/ashenreach_battle_arena_v2.jpg
+          test -s native/assets/battle/generated/ashenreach_battle_arena_v2.jpg
+          file native/assets/battle/generated/ashenreach_battle_arena_v2.jpg
+          python3 - <<'PY'
+          from PIL import Image
+          p = "native/assets/battle/generated/ashenreach_battle_arena_v2.jpg"
+          with Image.open(p) as im:
+              im.load()
+              assert im.size == (480, 270), im.size
+          print("[battle] verified", p)
+          PY
+
       - name: Generate Ashenreach navigation surface
         shell: bash
         run: |
