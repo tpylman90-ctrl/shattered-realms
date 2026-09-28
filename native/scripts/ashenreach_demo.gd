@@ -75,6 +75,9 @@ var last_enemy_phase_summary := ""
 const PHASE_PLAYER := "PLAYER"
 const PHASE_ENEMY := "ENEMY"
 const PHASE_WORLD := "WORLD"
+const BATTLE_SCENE_PATH := "res://scenes/BattleScene.tscn"
+const BATTLE_CONTEXT_PATH := "user://battle_context.cfg"
+const BATTLE_RESULT_PATH := "user://battle_result.cfg"
 var route_preview: MeshInstance3D
 var victory_panel: PanelContainer
 var hud_expanded := false
