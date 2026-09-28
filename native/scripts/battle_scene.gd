@@ -64,12 +64,21 @@ func _process(delta: float) -> void:
     if battle_over or action_locked:
         return
 
-    if not hero_ready:
-        hero_atb = minf(1.0, hero_atb + delta * 0.31)
-        if hero_atb >= 1.0:
-            hero_ready = true
-            _set_commands_enabled(true)
-            message_label.text = "%s is ready." % hero_name
+    # "Wait" ATB behavior: once the hero is ready, combat time pauses until
+    # the player chooses a command. This prevents enemies from continuing to
+    # cycle attacks while the command menu is open.
+    if hero_ready:
+        _refresh_gauges()
+        return
+
+    hero_atb = minf(1.0, hero_atb + delta * 0.31)
+    if hero_atb >= 1.0:
+        hero_atb = 1.0
+        hero_ready = true
+        _set_commands_enabled(true)
+        message_label.text = "%s is ready." % hero_name
+        _refresh_gauges()
+        return
 
     enemy_atb = minf(1.0, enemy_atb + delta * (0.20 + float(danger) * 0.025))
     if enemy_atb >= 1.0:
