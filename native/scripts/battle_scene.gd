@@ -4,7 +4,7 @@ const RETURN_SCENE := "res://scenes/AshenreachDemo.tscn"
 const CONTEXT_PATH := "user://battle_context.cfg"
 const RESULT_PATH := "user://battle_result.cfg"
 const CATALOG_PATH := "res://data/world_catalog.json"
-const BACKDROP_PATH := "res://assets/battle/ashenreach_basalt_arena.jpg"
+const BACKDROP_PATH := "res://assets/battle/ashenreach_fortress_arena.jpg"
 
 var context: Dictionary = {}
 var hero_data: Dictionary = {}
@@ -12,6 +12,7 @@ var hero_data: Dictionary = {}
 var hero_id := "ignis"
 var encounter_id := ""
 var enemy_name := "Enemy"
+var enemy_family := "skirmisher"
 var hero_name := "Hero"
 
 var hero_hp := 100
@@ -33,6 +34,9 @@ var action_locked := false
 
 var hero_anchor: Node3D
 var enemy_anchor: Node3D
+var battle_camera: Camera3D
+var transition_rect: ColorRect
+var battle_ui_layer: CanvasLayer
 
 var hero_hp_label: Label
 var enemy_hp_label: Label
@@ -49,6 +53,7 @@ var item_button: Button
 
 
 func _ready() -> void:
+    action_locked = true
     _load_context()
     _load_hero_data()
     _build_background()
@@ -58,6 +63,8 @@ func _ready() -> void:
     _spawn_enemy_placeholder()
     _refresh_ui()
     message_label.text = "%s confronts %s." % [hero_name, enemy_name]
+    await _play_battle_intro()
+    action_locked = false
 
 
 func _process(delta: float) -> void:
@@ -96,6 +103,7 @@ func _load_context() -> void:
     hero_id = str(cfg.get_value("battle", "hero_id", "ignis"))
     encounter_id = str(cfg.get_value("battle", "encounter_id", ""))
     enemy_name = str(cfg.get_value("battle", "enemy_name", "Enemy"))
+    enemy_family = str(cfg.get_value("battle", "enemy_family", "skirmisher"))
     hero_hp = int(cfg.get_value("battle", "hero_hp", 100))
     hero_max_hp = int(cfg.get_value("battle", "hero_max_hp", 100))
     hero_xp = int(cfg.get_value("battle", "hero_xp", 0))
@@ -130,31 +138,37 @@ func _load_hero_data() -> void:
 
 
 func _build_background() -> void:
-    var layer := CanvasLayer.new()
-    layer.layer = -10
-    add_child(layer)
-
-    var backdrop := TextureRect.new()
-    backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     var texture := load(BACKDROP_PATH) as Texture2D
-    backdrop.texture = texture
-    layer.add_child(backdrop)
+    if not texture:
+        push_error("Battle backdrop failed to load: %s" % BACKDROP_PATH)
+        return
 
-    var shade := ColorRect.new()
-    shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    shade.color = Color(0.02, 0.01, 0.015, 0.15)
-    layer.add_child(shade)
+    # Use a physical 3D quad behind the combatants. This is intentionally not
+    # a negative CanvasLayer: several mobile renderers can clear over that path.
+    var backdrop := MeshInstance3D.new()
+    backdrop.name = "BattleBackdrop"
 
+    var quad := QuadMesh.new()
+    quad.size = Vector2(16.8, 9.45)
+    backdrop.mesh = quad
+    backdrop.position = Vector3(0.0, 0.72, -4.0)
+    backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+    var mat := StandardMaterial3D.new()
+    mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+    mat.albedo_texture = texture
+    backdrop.material_override = mat
+    add_child(backdrop)
 
 func _build_world() -> void:
-    var camera := Camera3D.new()
-    camera.position = Vector3(0.0, 2.35, 8.2)
-    camera.rotation_degrees = Vector3(-8.0, 0.0, 0.0)
-    camera.fov = 42.0
-    add_child(camera)
-    camera.current = true
+    battle_camera = Camera3D.new()
+    battle_camera.position = Vector3(0.0, 2.35, 8.2)
+    battle_camera.rotation_degrees = Vector3(-8.0, 0.0, 0.0)
+    battle_camera.fov = 42.0
+    add_child(battle_camera)
+    battle_camera.current = true
 
     var key_light := DirectionalLight3D.new()
     key_light.rotation_degrees = Vector3(-48.0, -28.0, 0.0)
@@ -170,13 +184,13 @@ func _build_world() -> void:
     add_child(warm_light)
 
     hero_anchor = Node3D.new()
-    hero_anchor.position = Vector3(-2.25, -1.35, 0.0)
-    hero_anchor.rotation_degrees.y = -18.0
+    hero_anchor.position = Vector3(-2.35, -1.28, 0.15)
+    hero_anchor.rotation_degrees.y = -12.0
     add_child(hero_anchor)
 
     enemy_anchor = Node3D.new()
-    enemy_anchor.position = Vector3(2.15, -1.25, 0.0)
-    enemy_anchor.rotation_degrees.y = 165.0
+    enemy_anchor.position = Vector3(2.30, -1.22, 0.10)
+    enemy_anchor.rotation_degrees.y = 168.0
     add_child(enemy_anchor)
 
     _add_shadow_disc(hero_anchor, 0.80)
@@ -231,21 +245,74 @@ func _spawn_hero() -> void:
 
 
 func _spawn_enemy_placeholder() -> void:
-    _spawn_placeholder(enemy_anchor, Color(0.85, 0.12, 0.035), 1.18)
+    if enemy_family == "hound":
+        _spawn_hound_placeholder()
+    elif enemy_family == "revenant":
+        _spawn_wraith_placeholder()
+    elif enemy_family == "warden":
+        _spawn_placeholder(enemy_anchor, Color(0.46, 0.12, 0.06), 1.34)
+    elif enemy_family == "stalker":
+        _spawn_placeholder(enemy_anchor, Color(0.28, 0.08, 0.05), 0.96)
+    else:
+        _spawn_placeholder(enemy_anchor, Color(0.85, 0.12, 0.035), 1.10)
 
-    var horn_left := MeshInstance3D.new()
-    var horn_mesh := PrismMesh.new()
-    horn_mesh.size = Vector3(0.18, 0.62, 0.18)
-    horn_left.mesh = horn_mesh
-    horn_left.position = Vector3(-0.34, 1.42, 0.0)
-    horn_left.rotation_degrees.z = -20.0
-    enemy_anchor.add_child(horn_left)
 
-    var horn_right := horn_left.duplicate() as MeshInstance3D
-    horn_right.position.x = 0.34
-    horn_right.rotation_degrees.z = 20.0
-    enemy_anchor.add_child(horn_right)
+func _spawn_wraith_placeholder() -> void:
+    var body := MeshInstance3D.new()
+    var mesh := CylinderMesh.new()
+    mesh.top_radius = 0.30
+    mesh.bottom_radius = 0.70
+    mesh.height = 1.75
+    mesh.radial_segments = 20
+    body.mesh = mesh
+    body.position.y = 0.92
 
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(0.16, 0.04, 0.03, 0.94)
+    mat.emission_enabled = true
+    mat.emission = Color(0.95, 0.10, 0.025)
+    mat.emission_energy_multiplier = 1.25
+    mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    body.material_override = mat
+    enemy_anchor.add_child(body)
+
+    var core := MeshInstance3D.new()
+    var sphere := SphereMesh.new()
+    sphere.radius = 0.30
+    sphere.height = 0.60
+    core.mesh = sphere
+    core.position.y = 1.55
+    var core_mat := mat.duplicate() as StandardMaterial3D
+    core_mat.albedo_color = Color(1.0, 0.18, 0.03)
+    core_mat.emission_energy_multiplier = 2.1
+    core.material_override = core_mat
+    enemy_anchor.add_child(core)
+
+
+func _spawn_hound_placeholder() -> void:
+    var body := MeshInstance3D.new()
+    var mesh := CapsuleMesh.new()
+    mesh.radius = 0.38
+    mesh.height = 1.35
+    body.mesh = mesh
+    body.rotation_degrees.z = 90.0
+    body.position = Vector3(0.0, 0.58, 0.0)
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(0.20, 0.045, 0.02)
+    mat.emission_enabled = true
+    mat.emission = Color(0.95, 0.16, 0.02)
+    mat.emission_energy_multiplier = 0.85
+    body.material_override = mat
+    enemy_anchor.add_child(body)
+
+    var head := MeshInstance3D.new()
+    var sphere := SphereMesh.new()
+    sphere.radius = 0.34
+    sphere.height = 0.68
+    head.mesh = sphere
+    head.position = Vector3(-0.70, 0.67, 0.0)
+    head.material_override = mat
+    enemy_anchor.add_child(head)
 
 func _spawn_placeholder(parent: Node3D, color: Color, scale_value: float) -> void:
     var body := MeshInstance3D.new()
@@ -268,9 +335,16 @@ func _spawn_placeholder(parent: Node3D, color: Color, scale_value: float) -> voi
 
 
 func _build_ui() -> void:
-    var layer := CanvasLayer.new()
-    layer.layer = 10
-    add_child(layer)
+    battle_ui_layer = CanvasLayer.new()
+    battle_ui_layer.layer = 10
+    add_child(battle_ui_layer)
+
+    var mode_label := Label.new()
+    mode_label.text = "ASHENREACH • ATB WAIT"
+    mode_label.position = Vector2(28.0, 8.0)
+    mode_label.add_theme_font_size_override("font_size", 12)
+    mode_label.modulate = Color(1.0, 0.72, 0.45, 0.92)
+    battle_ui_battle_ui_layer.add_child(mode_label)
 
     var top := PanelContainer.new()
     top.anchor_left = 0.0
@@ -281,13 +355,20 @@ func _build_ui() -> void:
     top.offset_top = 18.0
     top.offset_right = -22.0
     top.offset_bottom = 102.0
-    layer.add_child(top)
+    battle_ui_layer.add_child(top)
 
     var top_margin := MarginContainer.new()
     top_margin.add_theme_constant_override("margin_left", 16)
     top_margin.add_theme_constant_override("margin_top", 10)
     top_margin.add_theme_constant_override("margin_right", 16)
     top_margin.add_theme_constant_override("margin_bottom", 10)
+    var top_style := StyleBoxFlat.new()
+    top_style.bg_color = Color(0.025, 0.02, 0.025, 0.84)
+    top_style.corner_radius_top_left = 8
+    top_style.corner_radius_top_right = 8
+    top_style.corner_radius_bottom_left = 8
+    top_style.corner_radius_bottom_right = 8
+    top.add_theme_stylebox_override("panel", top_style)
     top.add_child(top_margin)
 
     var top_row := HBoxContainer.new()
@@ -330,13 +411,20 @@ func _build_ui() -> void:
     bottom.offset_top = -190.0
     bottom.offset_right = -22.0
     bottom.offset_bottom = -18.0
-    layer.add_child(bottom)
+    battle_ui_layer.add_child(bottom)
 
     var bottom_margin := MarginContainer.new()
     bottom_margin.add_theme_constant_override("margin_left", 16)
     bottom_margin.add_theme_constant_override("margin_top", 12)
     bottom_margin.add_theme_constant_override("margin_right", 16)
     bottom_margin.add_theme_constant_override("margin_bottom", 12)
+    var bottom_style := StyleBoxFlat.new()
+    bottom_style.bg_color = Color(0.025, 0.018, 0.02, 0.88)
+    bottom_style.corner_radius_top_left = 8
+    bottom_style.corner_radius_top_right = 8
+    bottom_style.corner_radius_bottom_left = 8
+    bottom_style.corner_radius_bottom_right = 8
+    bottom.add_theme_stylebox_override("panel", bottom_style)
     bottom.add_child(bottom_margin)
 
     var row := HBoxContainer.new()
@@ -354,12 +442,78 @@ func _build_ui() -> void:
     command_box.add_theme_constant_override("separation", 5)
     row.add_child(command_box)
 
+    var command_label := Label.new()
+    command_label.text = "COMMAND"
+    command_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    command_label.modulate = Color(1.0, 0.72, 0.45)
+    command_box.add_child(command_label)
+
     attack_button = _make_command_button("ATTACK", _on_attack)
     ability_button = _make_command_button(str(hero_data.get("signature_ability", "ABILITY")).to_upper(), _on_ability)
     defend_button = _make_command_button("DEFEND", _on_defend)
     item_button = _make_command_button("ITEM", _on_item)
 
     _set_commands_enabled(false)
+
+    transition_rect = ColorRect.new()
+    transition_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    transition_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    transition_rect.color = Color(0.0, 0.0, 0.0, 1.0)
+    battle_ui_layer.add_child(transition_rect)
+
+
+func _play_battle_intro() -> void:
+    var hero_home: Vector3 = hero_anchor.position
+    var enemy_home: Vector3 = enemy_anchor.position
+    hero_anchor.position = hero_home + Vector3(-1.2, 0.0, 0.0)
+    enemy_anchor.position = enemy_home + Vector3(1.2, 0.0, 0.0)
+
+    var entrance := create_tween()
+    entrance.set_parallel(true)
+    entrance.set_trans(Tween.TRANS_QUAD)
+    entrance.set_ease(Tween.EASE_OUT)
+    entrance.tween_property(hero_anchor, "position", hero_home, 0.42)
+    entrance.tween_property(enemy_anchor, "position", enemy_home, 0.42)
+    entrance.tween_property(transition_rect, "color:a", 0.0, 0.50)
+    await entrance.finished
+
+
+func _show_damage_popup(anchor: Node3D, amount: int, is_heal: bool = false) -> void:
+    var label := Label3D.new()
+    label.text = ("+%d" % amount) if is_heal else str(amount)
+    label.font_size = 52
+    label.outline_size = 9
+    label.modulate = Color(0.35, 1.0, 0.45) if is_heal else Color(1.0, 0.82, 0.28)
+    label.position = anchor.position + Vector3(0.0, 2.05, 0.35)
+    label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    add_child(label)
+
+    var start: Vector3 = label.position
+    var tween := create_tween()
+    tween.set_parallel(true)
+    tween.tween_property(label, "position", start + Vector3(0.0, 0.72, 0.0), 0.68)
+    tween.tween_property(label, "modulate:a", 0.0, 0.68)
+    await tween.finished
+    label.queue_free()
+
+
+func _impact_bump(actor: Node3D, strength: float = 0.10) -> void:
+    var start_scale: Vector3 = actor.scale
+    var tween := create_tween()
+    tween.tween_property(actor, "scale", start_scale * (1.0 + strength), 0.07)
+    tween.tween_property(actor, "scale", start_scale, 0.12)
+    await tween.finished
+
+
+func _camera_impact(strength: float = 0.08) -> void:
+    if not battle_camera:
+        return
+    var start: Vector3 = battle_camera.position
+    var tween := create_tween()
+    tween.tween_property(battle_camera, "position", start + Vector3(strength, 0.0, 0.0), 0.045)
+    tween.tween_property(battle_camera, "position", start - Vector3(strength * 0.65, 0.0, 0.0), 0.045)
+    tween.tween_property(battle_camera, "position", start, 0.055)
+    await tween.finished
 
 
 func _make_command_button(label_text: String, callback: Callable) -> Button:
@@ -415,6 +569,9 @@ func _on_attack() -> void:
     await _lunge(hero_anchor, 0.38)
     enemy_hp = maxi(0, enemy_hp - damage)
     _refresh_ui()
+    _show_damage_popup(enemy_anchor, damage)
+    _impact_bump(enemy_anchor, 0.12)
+    _camera_impact(0.07)
     await get_tree().create_timer(0.55).timeout
     action_locked = false
     _check_battle_end()
@@ -436,6 +593,9 @@ func _on_ability() -> void:
     await _ability_flash()
     enemy_hp = maxi(0, enemy_hp - damage)
     _refresh_ui()
+    _show_damage_popup(enemy_anchor, damage)
+    _impact_bump(enemy_anchor, 0.17)
+    _camera_impact(0.12)
     await get_tree().create_timer(0.65).timeout
     action_locked = false
     _check_battle_end()
@@ -453,10 +613,13 @@ func _on_item() -> void:
     if not hero_ready or action_locked or battle_over or item_used:
         return
     item_used = true
+    var before_hp: int = hero_hp
     hero_hp = mini(hero_max_hp, hero_hp + 28)
+    var restored: int = hero_hp - before_hp
     _consume_hero_turn()
-    message_label.text = "%s restores health." % hero_name
+    message_label.text = "%s restores %d health." % [hero_name, restored]
     _refresh_ui()
+    _show_damage_popup(hero_anchor, restored, true)
 
 
 func _enemy_turn() -> void:
@@ -476,6 +639,9 @@ func _enemy_turn() -> void:
     await _lunge(enemy_anchor, -0.32)
     hero_hp = maxi(0, hero_hp - damage)
     _refresh_ui()
+    _show_damage_popup(hero_anchor, damage)
+    _impact_bump(hero_anchor, 0.10)
+    _camera_impact(0.065)
     await get_tree().create_timer(0.50).timeout
 
     action_locked = false
@@ -535,5 +701,9 @@ func _finish_battle(victory: bool) -> void:
     cfg.set_value("battle", "enemy_name", enemy_name)
     cfg.save(RESULT_PATH)
 
-    await get_tree().create_timer(1.25).timeout
+    await get_tree().create_timer(1.05).timeout
+    if transition_rect:
+        var fade := create_tween()
+        fade.tween_property(transition_rect, "color:a", 1.0, 0.40)
+        await fade.finished
     get_tree().change_scene_to_file(RETURN_SCENE)
