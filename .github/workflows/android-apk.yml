@@ -54,6 +54,14 @@ jobs:
           test -f native/assets/3d/heroes/generated/vesper_single.glb
           test -f native/assets/3d/heroes/generated/ignis_single.glb
 
+      - name: Prepare battle backdrops
+        shell: bash
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 native/tools/prepare_battle_assets.py
+          test -f native/assets/battle/generated/ashenreach_fortress_arena.png
+          ls -lh native/assets/battle/generated/ashenreach_fortress_arena.png
+
       - name: Generate Ashenreach navigation surface
         shell: bash
         run: |
