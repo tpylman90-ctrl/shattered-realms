@@ -344,7 +344,7 @@ func _build_ui() -> void:
     mode_label.position = Vector2(28.0, 8.0)
     mode_label.add_theme_font_size_override("font_size", 12)
     mode_label.modulate = Color(1.0, 0.72, 0.45, 0.92)
-    battle_ui_battle_ui_layer.add_child(mode_label)
+    battle_ui_layer.add_child(mode_label)
 
     var top := PanelContainer.new()
     top.anchor_left = 0.0
