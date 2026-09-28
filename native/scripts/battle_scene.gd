@@ -6,7 +6,7 @@ const RETURN_SCENE := "res://scenes/AshenreachDemo.tscn"
 const CONTEXT_PATH := "user://battle_context.cfg"
 const RESULT_PATH := "user://battle_result.cfg"
 const CATALOG_PATH := "res://data/world_catalog.json"
-const BACKDROP_PATH := "res://assets/battle/ashenreach_fortress_arena.jpg"
+const BACKDROP_PATH := "res://assets/battle/generated/ashenreach_fortress_arena.png"
 
 var context: Dictionary = {}
 var hero_data: Dictionary = {}
@@ -45,6 +45,7 @@ var enemy_anchor: Node3D
 var battle_camera: Camera3D
 var transition_rect: ColorRect
 var battle_ui_layer: CanvasLayer
+var backdrop_loaded := false
 
 var hero_hp_label: Label
 var hero_mp_label: Label
@@ -75,6 +76,8 @@ func _ready() -> void:
     _spawn_enemy_placeholder()
     _refresh_ui()
     message_label.text = "%s confronts %s." % [hero_name, enemy_name]
+    if not backdrop_loaded:
+        message_label.text += "  [Backdrop asset failed to load]"
     await _play_battle_intro()
     action_locked = false
 
@@ -169,27 +172,34 @@ func _load_progression_profile() -> void:
 
 
 func _build_background() -> void:
-    var texture := load(BACKDROP_PATH) as Texture2D
-    if not texture:
-        push_error("Battle backdrop failed to load: %s" % BACKDROP_PATH)
-        return
-
-    # Use a physical 3D quad behind the combatants. This is intentionally not
-    # a negative CanvasLayer: several mobile renderers can clear over that path.
     var backdrop := MeshInstance3D.new()
     backdrop.name = "BattleBackdrop"
 
+    # Oversize the backdrop so camera framing changes can never expose the
+    # viewport clear color around the image.
     var quad := QuadMesh.new()
-    quad.size = Vector2(16.8, 9.45)
+    quad.size = Vector2(24.0, 13.5)
     backdrop.mesh = quad
-    backdrop.position = Vector3(0.0, 0.72, -4.0)
+    backdrop.position = Vector3(0.0, 1.05, -6.0)
     backdrop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
     var mat := StandardMaterial3D.new()
     mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     mat.cull_mode = BaseMaterial3D.CULL_DISABLED
     mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-    mat.albedo_texture = texture
+    mat.albedo_color = Color.WHITE
+
+    var texture := load(BACKDROP_PATH) as Texture2D
+    if texture:
+        mat.albedo_texture = texture
+        backdrop_loaded = true
+    else:
+        # Bright diagnostic fallback: if this ever appears we know immediately
+        # that asset loading failed rather than camera framing being wrong.
+        mat.albedo_color = Color(0.34, 0.015, 0.015, 1.0)
+        backdrop_loaded = false
+        push_error("Battle backdrop failed to load: %s" % BACKDROP_PATH)
+
     backdrop.material_override = mat
     add_child(backdrop)
 
