@@ -86,7 +86,8 @@
       "danger": 1,
       "xp": 25,
       "health_loss": 8,
-      "description": "A raider band springs from the ruined pass."
+      "description": "A raider band springs from the ruined pass.",
+      "battle_family": "skirmisher"
     },
     "CapitalSouth": {
       "name": "Ashbound Guardians",
@@ -94,7 +95,8 @@
       "danger": 2,
       "xp": 40,
       "health_loss": 14,
-      "description": "Ancient guardians block the approach to the capital."
+      "description": "Ancient guardians block the approach to the capital.",
+      "battle_family": "warden"
     },
     "EastBridge": {
       "name": "Magma Hound Pack",
@@ -102,7 +104,8 @@
       "danger": 2,
       "xp": 35,
       "health_loss": 12,
-      "description": "Magma hounds emerge from the fractured bridgeworks."
+      "description": "Magma hounds emerge from the fractured bridgeworks.",
+      "battle_family": "hound"
     },
     "VaultRoad": {
       "name": "Cinder Wraiths",
@@ -110,7 +113,8 @@
       "danger": 1,
       "xp": 30,
       "health_loss": 10,
-      "description": "Cinder wraiths gather along the road to the Sundered Vault."
+      "description": "Cinder wraiths gather along the road to the Sundered Vault.",
+      "battle_family": "revenant"
     },
     "AmbushPassNode": {
       "name": "Ash Stalkers",
@@ -118,7 +122,8 @@
       "danger": 2,
       "xp": 35,
       "health_loss": 12,
-      "description": "Ash-cloaked hunters emerge from the shattered pass and cut off the road."
+      "description": "Ash-cloaked hunters emerge from the shattered pass and cut off the road.",
+      "battle_family": "stalker"
     },
     "ElevatedOutpostNode": {
       "name": "Broken Legion",
@@ -126,7 +131,8 @@
       "danger": 2,
       "xp": 45,
       "health_loss": 15,
-      "description": "Remnants of the old garrison still defend the elevated outpost."
+      "description": "Remnants of the old garrison still defend the elevated outpost.",
+      "battle_family": "revenant"
     },
     "DeadForestNode": {
       "name": "Cinder Wolf Pack",
@@ -134,7 +140,8 @@
       "danger": 2,
       "xp": 40,
       "health_loss": 13,
-      "description": "Ember-eyed predators circle through the blackened trunks of the dead forest."
+      "description": "Ember-eyed predators circle through the blackened trunks of the dead forest.",
+      "battle_family": "hound"
     },
     "AshenPlainsNode": {
       "name": "Ash Wraiths",
@@ -142,7 +149,8 @@
       "danger": 1,
       "xp": 30,
       "health_loss": 9,
-      "description": "Restless shades drift across the open plains and gather around the road."
+      "description": "Restless shades drift across the open plains and gather around the road.",
+      "battle_family": "revenant"
     }
   },
   "legendary_threat": {
