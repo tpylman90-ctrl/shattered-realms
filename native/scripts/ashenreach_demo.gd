@@ -1,5 +1,7 @@
 extends Node3D
 
+const HeroProgressionService = preload("res://scripts/hero_progression.gd")
+
 @onready var yaw: Node3D = $CameraRig
 @onready var pitch: Node3D = $CameraRig/Pitch
 @onready var camera: Camera3D = $CameraRig/Pitch/Camera3D
@@ -115,6 +117,10 @@ var nav_debug_button: Button
 var nav_edit_panel: PanelContainer
 var nav_edit_info: Label
 var nav_selected_hex := ""
+var progression_panel: PanelContainer
+var progression_info: Label
+var progression_skill_list: VBoxContainer
+var progression_button: Button
 
 const MIN_ZOOM := 16.0
 const MAX_ZOOM := 48.0
@@ -495,8 +501,165 @@ func grant_collectible(collectible_id: String) -> void:
     owned_collectibles.append(collectible_id)
     _refresh_unlocked_heroes()
 
+func _build_progression_panel() -> void:
+    progression_panel = PanelContainer.new()
+    progression_panel.name = "ProgressionPanel"
+    progression_panel.visible = false
+    progression_panel.anchor_left = 0.5
+    progression_panel.anchor_top = 0.5
+    progression_panel.anchor_right = 0.5
+    progression_panel.anchor_bottom = 0.5
+    progression_panel.offset_left = -310.0
+    progression_panel.offset_top = -260.0
+    progression_panel.offset_right = 310.0
+    progression_panel.offset_bottom = 260.0
+    ui_root.add_child(progression_panel)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 16)
+    margin.add_theme_constant_override("margin_top", 14)
+    margin.add_theme_constant_override("margin_right", 16)
+    margin.add_theme_constant_override("margin_bottom", 14)
+    progression_panel.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 8)
+    margin.add_child(box)
+
+    var title := Label.new()
+    title.text = "HERO PROGRESSION"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 20)
+    box.add_child(title)
+
+    progression_info = Label.new()
+    progression_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(progression_info)
+
+    var scroll := ScrollContainer.new()
+    scroll.custom_minimum_size = Vector2(0.0, 330.0)
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    box.add_child(scroll)
+
+    progression_skill_list = VBoxContainer.new()
+    progression_skill_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    progression_skill_list.add_theme_constant_override("separation", 6)
+    scroll.add_child(progression_skill_list)
+
+    var close := Button.new()
+    close.text = "CLOSE"
+    close.custom_minimum_size = Vector2(0, 42)
+    close.pressed.connect(_close_progression_panel)
+    box.add_child(close)
+
+
+func _open_progression_panel() -> void:
+    _cancel_unit_move()
+    _close_poi_panel()
+    if hero_select_panel:
+        hero_select_panel.visible = false
+    _refresh_progression_panel()
+    progression_panel.visible = true
+
+
+func _close_progression_panel() -> void:
+    if progression_panel:
+        progression_panel.visible = false
+
+
+func _refresh_progression_panel() -> void:
+    if not progression_panel or not progression_info or not progression_skill_list:
+        return
+
+    var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    var definition := HeroProgressionService.hero_definition(selected_hero_id)
+    if profile.is_empty() or definition.is_empty():
+        progression_info.text = "Progression data unavailable."
+        return
+
+    var level := int(profile.get("level", 1))
+    var xp := int(profile.get("xp", 0))
+    var next_xp := HeroProgressionService.xp_for_level(level + 1)
+    var points := int(profile.get("skill_points", 0))
+    var stats: Dictionary = profile.get("stats", {})
+    var learned: Array = profile.get("learned_skills", [])
+
+    progression_info.text = "%s\nLevel %d  •  XP %d/%d  •  Skill Points %d\nHP %d  MP %d  POW %d  MAG %d  DEF %d  RES %d  SPD %d" % [
+        str(definition.get("name", selected_hero_id)),
+        level,
+        xp,
+        next_xp,
+        points,
+        int(stats.get("hp", 0)),
+        int(stats.get("mp", 0)),
+        int(stats.get("power", 0)),
+        int(stats.get("magic", 0)),
+        int(stats.get("defense", 0)),
+        int(stats.get("resistance", 0)),
+        int(stats.get("speed", 0))
+    ]
+
+    for child in progression_skill_list.get_children():
+        child.queue_free()
+
+    for skill_variant in definition.get("skills", []):
+        if not skill_variant is Dictionary:
+            continue
+        var skill: Dictionary = skill_variant
+        var skill_id := str(skill.get("id", ""))
+        var learned_now := learned.has(skill_id)
+        var can_learn := HeroProgressionService.can_learn(selected_hero_id, skill_id)
+        var required_level := int(skill.get("level_req", 1))
+        var cost := int(skill.get("cost_sp", 0))
+
+        var row := HBoxContainer.new()
+        row.add_theme_constant_override("separation", 8)
+        progression_skill_list.add_child(row)
+
+        var label := Label.new()
+        label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        var state_text := "LEARNED" if learned_now else ("AVAILABLE" if can_learn else "LOCKED")
+        label.text = "%s\n%s • Lv %d • %d SP • %s" % [
+            str(skill.get("name", skill_id)),
+            str(skill.get("type", "active")).capitalize(),
+            required_level,
+            cost,
+            state_text
+        ]
+        label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        row.add_child(label)
+
+        var learn_button := Button.new()
+        learn_button.text = "Learn" if not learned_now else "Learned"
+        learn_button.custom_minimum_size = Vector2(92.0, 46.0)
+        learn_button.disabled = not can_learn
+        if can_learn:
+            learn_button.pressed.connect(_learn_hero_skill.bind(skill_id))
+        row.add_child(learn_button)
+
+
+func _learn_hero_skill(skill_id: String) -> void:
+    if HeroProgressionService.learn_skill(selected_hero_id, skill_id):
+        var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+        var equipped: Array[String] = []
+        for raw_id in profile.get("equipped_skills", []):
+            equipped.append(str(raw_id))
+
+        # Newly learned active skills automatically fill an empty battle slot.
+        var skill := HeroProgressionService.skill_by_id(selected_hero_id, skill_id)
+        var limit := int(HeroProgressionService.data().get("rules", {}).get("equipped_active_limit", 6))
+        if str(skill.get("type", "active")) == "active" and equipped.size() < limit:
+            equipped.append(skill_id)
+            HeroProgressionService.set_equipped_skills(selected_hero_id, equipped)
+
+        status_label.text = "%s learned." % str(skill.get("name", skill_id))
+        _refresh_progression_panel()
+        _refresh_game_hud()
+
+
 func _open_hero_select() -> void:
     _cancel_unit_move()
+    _close_progression_panel()
     _close_poi_panel()
     for child in hero_roster_box.get_children():
         child.queue_free()
@@ -523,6 +686,7 @@ func _select_hero(hero_id: String) -> void:
     hero_select_panel.visible = false
 
 func _apply_selected_hero() -> void:
+    _close_progression_panel()
     if not hero_catalog.has(selected_hero_id):
         return
     var data: Dictionary = hero_catalog[selected_hero_id]
@@ -1342,6 +1506,12 @@ func _build_game_hud() -> void:
     ability_button.pressed.connect(_prime_signature_ability)
     box.add_child(ability_button)
 
+    progression_button = Button.new()
+    progression_button.text = "Skills & Progression"
+    progression_button.custom_minimum_size = Vector2(0, 38)
+    progression_button.pressed.connect(_open_progression_panel)
+    box.add_child(progression_button)
+
     boss_button = Button.new()
     boss_button.text = "Confront Vulgrim"
     boss_button.custom_minimum_size = Vector2(0, 44)
@@ -1388,6 +1558,7 @@ func _build_game_hud() -> void:
 
     _build_encounter_panel()
     _build_nav_edit_panel()
+    _build_progression_panel()
 
 func _toggle_hud_details() -> void:
     hud_expanded = not hud_expanded
@@ -1460,8 +1631,16 @@ func _refresh_game_hud() -> void:
     var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
     var phase_text := campaign_phase.capitalize()
     turn_label.text = "TURN %d  •  %s PHASE  •  AP %d/%d" % [turn_number, phase_text, moves_remaining, hero_move_points]
-    var level: int = 1 + int(hero_xp / 100)
-    hero_stats_label.text = "%s\nLevel %d  •  Health %d/100  •  XP %d" % [hero_name, level, hero_health, hero_xp]
+    var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    var level: int = int(profile.get("level", 1))
+    var persistent_xp: int = int(profile.get("xp", hero_xp))
+    var stats: Dictionary = profile.get("stats", {})
+    var max_hp: int = int(stats.get("hp", 100))
+    hero_xp = persistent_xp
+    hero_health = clampi(hero_health, 0, max_hp)
+    hero_stats_label.text = "%s\nLevel %d  •  Health %d/%d  •  XP %d  •  SP %d" % [
+        hero_name, level, hero_health, max_hp, persistent_xp, int(profile.get("skill_points", 0))
+    ]
     objective_label.text = _objective_text()
     var objective_total: int = board_data.get("objectives", []).size()
     var objective_done: int = 0
