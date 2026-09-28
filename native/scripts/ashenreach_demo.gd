@@ -1950,6 +1950,7 @@ func _start_standard_battle(encounter_id: String, data: Dictionary) -> void:
     cfg.set_value("battle", "hero_id", selected_hero_id)
     cfg.set_value("battle", "encounter_id", encounter_id)
     cfg.set_value("battle", "enemy_name", str(data.get("name", "Enemy")))
+    cfg.set_value("battle", "enemy_family", str(data.get("battle_family", "skirmisher")))
     cfg.set_value("battle", "hero_hp", hero_health)
     cfg.set_value("battle", "hero_max_hp", 100)
     cfg.set_value("battle", "hero_xp", hero_xp)
