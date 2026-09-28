@@ -1549,6 +1549,14 @@ func _build_game_hud() -> void:
     nav_debug_button.pressed.connect(_toggle_nav_debug)
     box.add_child(nav_debug_button)
 
+    var battle_test_button := Button.new()
+    battle_test_button.name = "BattleTestButton"
+    battle_test_button.text = "BATTLE TEST"
+    battle_test_button.custom_minimum_size = Vector2(0, 36)
+    battle_test_button.visible = false
+    battle_test_button.pressed.connect(_start_battle_test)
+    box.add_child(battle_test_button)
+
     event_log_label = Label.new()
     event_log_label.text = "Ashenreach expedition begun."
     event_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1570,6 +1578,9 @@ func _toggle_hud_details() -> void:
         restart_button.visible = hud_expanded
     if nav_debug_button:
         nav_debug_button.visible = hud_expanded
+    var battle_test_button := game_hud.find_child("BattleTestButton", true, false) as Button
+    if battle_test_button:
+        battle_test_button.visible = hud_expanded
     if hud_details_button:
         hud_details_button.text = "Hide" if hud_expanded else "Details"
     if game_hud:
@@ -2124,6 +2135,16 @@ func _trigger_node_encounter(node_name: String) -> void:
     movement_panel.visible = false
     event_log_label.text = "Encounter: %s" % str(data.get("name", "Unknown threat"))
 
+func _start_battle_test() -> void:
+    var data := {
+        "name": "Ash Wraith Test",
+        "battle_family": "revenant",
+        "danger": 1,
+        "xp": 0
+    }
+    _start_standard_battle("__battle_test__", data)
+
+
 func _start_standard_battle(encounter_id: String, data: Dictionary) -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("battle", "hero_id", selected_hero_id)
@@ -2160,7 +2181,7 @@ func _consume_battle_result() -> void:
     hero_health = result_hp
     hero_xp = result_xp
 
-    if victory and encounter_id != "":
+    if victory and encounter_id != "" and encounter_id != "__battle_test__":
         completed_encounters[encounter_id] = true
     elif not victory and hero_health <= 0:
         _handle_hero_defeat()
@@ -2168,7 +2189,9 @@ func _consume_battle_result() -> void:
     DirAccess.remove_absolute(BATTLE_RESULT_PATH)
 
     # HUD/enemy board may not exist yet during _ready; their refresh happens later.
-    if victory:
+    if victory and encounter_id == "__battle_test__":
+        pending_battle_message = "Battle test complete. Campaign state unchanged."
+    elif victory:
         pending_battle_message = "%s defeated in battle." % enemy_name
     else:
         pending_battle_message = "Battle lost against %s." % enemy_name
