@@ -47,6 +47,7 @@ var discovered_pois: Dictionary = {}
 var claimed_pois: Dictionary = {}
 var completed_encounters: Dictionary = {}
 var current_encounter_node := ""
+var pending_battle_message := ""
 var territory_secured := false
 var vulgrim_available := false
 var vulgrim_defeated := false
@@ -246,6 +247,7 @@ func _ready() -> void:
     _load_board_data()
     _refresh_unlocked_heroes()
     _load_game_state()
+    _consume_battle_result()
     _restore_hex_state()
     _apply_selected_hero()
     moves_remaining = clamp(moves_remaining, 0, hero_move_points)
@@ -261,6 +263,10 @@ func _ready() -> void:
     _refresh_claimed_poi_style()
     _refresh_enemy_visibility()
     _refresh_game_hud()
+    if pending_battle_message != "" and event_log_label:
+        event_log_label.text = pending_battle_message
+        pending_battle_message = ""
+        _save_game_state()
     if sundered_vault_cleared and event_log_label:
         event_log_label.text = "Sundered Vault cleared. Ember Seal recovered."
     if vulgrim_defeated and victory_panel:
@@ -1936,6 +1942,54 @@ func _trigger_node_encounter(node_name: String) -> void:
     movement_panel.visible = false
     event_log_label.text = "Encounter: %s" % str(data.get("name", "Unknown threat"))
 
+func _start_standard_battle(encounter_id: String, data: Dictionary) -> void:
+    var cfg := ConfigFile.new()
+    cfg.set_value("battle", "hero_id", selected_hero_id)
+    cfg.set_value("battle", "encounter_id", encounter_id)
+    cfg.set_value("battle", "enemy_name", str(data.get("name", "Enemy")))
+    cfg.set_value("battle", "hero_hp", hero_health)
+    cfg.set_value("battle", "hero_max_hp", 100)
+    cfg.set_value("battle", "hero_xp", hero_xp)
+    cfg.set_value("battle", "danger", int(data.get("danger", 1)))
+    cfg.set_value("battle", "enemy_hp", 48 + int(data.get("danger", 1)) * 22)
+    cfg.set_value("battle", "enemy_attack", 5 + int(data.get("danger", 1)) * 4)
+    cfg.set_value("battle", "reward_xp", int(data.get("xp", 0)))
+    cfg.save(BATTLE_CONTEXT_PATH)
+
+    # Save territory state before leaving so the return is lossless.
+    _save_game_state()
+    encounter_panel.visible = false
+    current_encounter_node = ""
+    get_tree().change_scene_to_file(BATTLE_SCENE_PATH)
+
+
+func _consume_battle_result() -> void:
+    var cfg := ConfigFile.new()
+    if cfg.load(BATTLE_RESULT_PATH) != OK:
+        return
+
+    var encounter_id := str(cfg.get_value("battle", "encounter_id", ""))
+    var victory := bool(cfg.get_value("battle", "victory", false))
+    var result_hp := int(cfg.get_value("battle", "hero_hp", hero_health))
+    var result_xp := int(cfg.get_value("battle", "hero_xp", hero_xp))
+    var enemy_name := str(cfg.get_value("battle", "enemy_name", "Enemy"))
+
+    hero_health = result_hp
+    hero_xp = result_xp
+
+    if victory and encounter_id != "":
+        completed_encounters[encounter_id] = true
+    elif not victory and hero_health <= 0:
+        _handle_hero_defeat()
+
+    DirAccess.remove_absolute(BATTLE_RESULT_PATH)
+
+    # HUD/enemy board may not exist yet during _ready; their refresh happens later.
+    if victory:
+        pending_battle_message = "%s defeated in battle." % enemy_name
+    else:
+        pending_battle_message = "Battle lost against %s." % enemy_name
+
 func _resolve_encounter(engage: bool) -> void:
     if current_encounter_node == "__VULGRIM__":
         if engage:
@@ -1959,25 +2013,8 @@ func _resolve_encounter(engage: bool) -> void:
 
     var data: Dictionary = encounters[current_encounter_node]
     if engage:
-        var loss: int = int(data.get("health_loss", 0))
-        var gain: int = int(data.get("xp", 0))
-        var ability_note := ""
-        if signature_ability_primed:
-            if selected_hero_id == "vesper":
-                loss = 0
-                ability_note = " Glacial Bastion absorbed the incoming damage."
-            elif selected_hero_id == "ignis":
-                loss = int(floor(float(loss) * 0.5))
-                gain += 10
-                ability_note = " Eruption Strike broke the enemy line."
-            signature_ability_primed = false
-        hero_health = max(0, hero_health - loss)
-        hero_xp += gain
-        completed_encounters[current_encounter_node] = true
-        _refresh_enemy_board()
-        event_log_label.text = "%s defeated. +%d XP, -%d health.%s" % [str(data.get("name", "Enemy")), gain, loss, ability_note]
-        if hero_health <= 0:
-            _handle_hero_defeat()
+        _start_standard_battle(current_encounter_node, data)
+        return
     else:
         moves_remaining = 0
         event_log_label.text = "Withdrew from %s. Movement exhausted this turn." % str(data.get("name", "encounter"))
