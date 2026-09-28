@@ -18,3 +18,6 @@ native/assets/3d/game-ready/ashenreach-hex-board/generated/
 
 # Build-time generated navigation data
 native/data/generated/
+
+# Build-time generated battle backdrops
+native/assets/battle/generated/
