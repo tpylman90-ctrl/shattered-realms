@@ -132,7 +132,7 @@ const HEX_MAX_STEP := 0.94
 const HEX_MIN_UP_DOT := 0.52
 const HEX_HIGH_OUTLIER := 0.46
 const HEX_MIN_PLAYABLE_HEIGHT := 3.25
-const HEX_GRID_VERSION := 12
+const HEX_GRID_VERSION := 13
 const HEX_DEPRESSION_RADIUS := 3
 const HEX_DEPRESSION_DEPTH := 0.86
 const FOG_CELL_SIZE := 4.0
@@ -2276,6 +2276,12 @@ func _apply_nav_mask_overrides() -> void:
 
     for key_variant in nav_mask_data.get("blocked_hexes", []):
         _set_hex_mask_state(str(key_variant), false, "mask_blocked")
+
+    for key_variant in nav_mask_data.get("bridge_overrides", []):
+        var bridge_key := str(key_variant)
+        if _prepare_forced_bridge_override(bridge_key):
+            _set_hex_mask_state(bridge_key, true, "mask_open")
+
     for key_variant in nav_mask_data.get("forced_open_hexes", []):
         _set_hex_mask_state(str(key_variant), true, "mask_open")
 
@@ -2301,7 +2307,10 @@ func _set_hex_mask_state(key: String, walkable: bool, source: String) -> void:
     if walkable:
         var open_cell: Dictionary = hex_cells[key]
         if not bool(open_cell.get("has_surface", false)):
-            if not _prepare_bridge_override(key):
+            var repaired := _prepare_bridge_override(key)
+            if not repaired:
+                repaired = _prepare_forced_bridge_override(key)
+            if not repaired:
                 return
 
     var cell: Dictionary = hex_cells[key]
