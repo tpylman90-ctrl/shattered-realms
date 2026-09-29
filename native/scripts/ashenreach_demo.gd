@@ -1,6 +1,7 @@
 extends Node3D
 
 const HeroProgressionService = preload("res://scripts/hero_progression.gd")
+const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
 
 @onready var yaw: Node3D = $CameraRig
 @onready var pitch: Node3D = $CameraRig/Pitch
@@ -120,6 +121,9 @@ var nav_selected_hex := ""
 var progression_panel: PanelContainer
 var progression_info: Label
 var progression_skill_list: VBoxContainer
+var equipment_panel: PanelContainer
+var equipment_list: VBoxContainer
+var equipment_info: Label
 var progression_button: Button
 
 const MIN_ZOOM := 16.0
@@ -509,10 +513,13 @@ func _build_progression_panel() -> void:
     progression_panel.anchor_top = 0.5
     progression_panel.anchor_right = 0.5
     progression_panel.anchor_bottom = 0.5
-    progression_panel.offset_left = -310.0
-    progression_panel.offset_top = -260.0
-    progression_panel.offset_right = 310.0
-    progression_panel.offset_bottom = 260.0
+    var panel_size := get_viewport().get_visible_rect().size
+    var half_width := minf(310.0, panel_size.x * 0.46)
+    var half_height := minf(260.0, panel_size.y * 0.42)
+    progression_panel.offset_left = -half_width
+    progression_panel.offset_top = -half_height
+    progression_panel.offset_right = half_width
+    progression_panel.offset_bottom = half_height
     ui_root.add_child(progression_panel)
 
     var margin := MarginContainer.new()
@@ -537,7 +544,7 @@ func _build_progression_panel() -> void:
     box.add_child(progression_info)
 
     var scroll := ScrollContainer.new()
-    scroll.custom_minimum_size = Vector2(0.0, 330.0)
+    scroll.custom_minimum_size = Vector2(0.0, minf(330.0, panel_size.y * 0.48))
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     box.add_child(scroll)
 
@@ -556,6 +563,7 @@ func _build_progression_panel() -> void:
 func _open_progression_panel() -> void:
     _cancel_unit_move()
     _close_poi_panel()
+    _close_equipment_panel()
     if hero_select_panel:
         hero_select_panel.visible = false
     _refresh_progression_panel()
@@ -581,10 +589,10 @@ func _refresh_progression_panel() -> void:
     var xp := int(profile.get("xp", 0))
     var next_xp := HeroProgressionService.xp_for_level(level + 1)
     var points := int(profile.get("skill_points", 0))
-    var stats: Dictionary = profile.get("stats", {})
+    var stats: Dictionary = HeroEquipmentService.effective_stats(selected_hero_id, profile.get("stats", {}))
     var learned: Array = profile.get("learned_skills", [])
 
-    progression_info.text = "%s\nLevel %d  •  XP %d/%d  •  Skill Points %d\nHP %d  MP %d  POW %d  MAG %d  DEF %d  RES %d  SPD %d" % [
+    progression_info.text = "%s\nLevel %d  •  XP %d/%d  •  Skill Points %d\nEquipped gear is included in these stats.\nHP %d  MP %d  POW %d  MAG %d  DEF %d  RES %d  SPD %d" % [
         str(definition.get("name", selected_hero_id)),
         level,
         xp,
@@ -618,13 +626,17 @@ func _refresh_progression_panel() -> void:
 
         var label := Label.new()
         label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        var state_text := "LEARNED" if learned_now else ("AVAILABLE" if can_learn else "LOCKED")
-        label.text = "%s\n%s • Lv %d • %d SP • %s" % [
+        var equipped_now: Array = profile.get("equipped_skills", [])
+        var state_text := ("EQUIPPED" if equipped_now.has(skill_id) else "LEARNED") if learned_now else ("AVAILABLE" if can_learn else "LOCKED")
+        var requirements: Array = skill.get("requires", [])
+        var prerequisite := " • Requires %s" % ", ".join(PackedStringArray(requirements)) if not requirements.is_empty() else ""
+        label.text = "%s\n%s • Lv %d • %d SP • %s%s" % [
             str(skill.get("name", skill_id)),
             str(skill.get("type", "active")).capitalize(),
             required_level,
             cost,
-            state_text
+            state_text,
+            prerequisite
         ]
         label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         row.add_child(label)
@@ -636,6 +648,12 @@ func _refresh_progression_panel() -> void:
         if can_learn:
             learn_button.pressed.connect(_learn_hero_skill.bind(skill_id))
         row.add_child(learn_button)
+        if learned_now and str(skill.get("type", "active")) == "active":
+            var equip_button := Button.new()
+            equip_button.text = "Remove" if equipped_now.has(skill_id) else "Equip"
+            equip_button.custom_minimum_size = Vector2(82, 46)
+            equip_button.pressed.connect(_toggle_hero_skill.bind(skill_id))
+            row.add_child(equip_button)
 
 
 func _learn_hero_skill(skill_id: String) -> void:
@@ -657,9 +675,120 @@ func _learn_hero_skill(skill_id: String) -> void:
         _refresh_game_hud()
 
 
+func _toggle_hero_skill(skill_id: String) -> void:
+    var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    var equipped: Array[String] = []
+    for raw_id in profile.get("equipped_skills", []):
+        if str(raw_id) != skill_id:
+            equipped.append(str(raw_id))
+    if not profile.get("equipped_skills", []).has(skill_id):
+        equipped.append(skill_id)
+    HeroProgressionService.set_equipped_skills(selected_hero_id, equipped)
+    _refresh_progression_panel()
+
+
+func _build_equipment_panel() -> void:
+    equipment_panel = PanelContainer.new()
+    equipment_panel.name = "EquipmentPanel"
+    equipment_panel.visible = false
+    equipment_panel.set_anchors_preset(Control.PRESET_CENTER)
+    var panel_size := get_viewport().get_visible_rect().size
+    var half_width := minf(295.0, panel_size.x * 0.46)
+    var half_height := minf(250.0, panel_size.y * 0.42)
+    equipment_panel.offset_left = -half_width
+    equipment_panel.offset_top = -half_height
+    equipment_panel.offset_right = half_width
+    equipment_panel.offset_bottom = half_height
+    ui_root.add_child(equipment_panel)
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 16)
+    margin.add_theme_constant_override("margin_right", 16)
+    margin.add_theme_constant_override("margin_top", 12)
+    margin.add_theme_constant_override("margin_bottom", 12)
+    equipment_panel.add_child(margin)
+    var box := VBoxContainer.new()
+    margin.add_child(box)
+    var title := Label.new()
+    title.text = "HERO EQUIPMENT"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 20)
+    box.add_child(title)
+    equipment_info = Label.new()
+    box.add_child(equipment_info)
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    box.add_child(scroll)
+    equipment_list = VBoxContainer.new()
+    equipment_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.add_child(equipment_list)
+    var close := Button.new()
+    close.text = "CLOSE"
+    close.custom_minimum_size.y = 42
+    close.pressed.connect(_close_equipment_panel)
+    box.add_child(close)
+
+
+func _open_equipment_panel() -> void:
+    _cancel_unit_move()
+    _close_poi_panel()
+    _close_progression_panel()
+    hero_select_panel.visible = false
+    _refresh_equipment_panel()
+    equipment_panel.visible = true
+
+
+func _close_equipment_panel() -> void:
+    if equipment_panel:
+        equipment_panel.visible = false
+
+
+func _refresh_equipment_panel() -> void:
+    if not equipment_list:
+        return
+    var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    var stats := HeroEquipmentService.effective_stats(selected_hero_id, profile.get("stats", {}))
+    equipment_info.text = "%s  •  HP %d  POW %d  DEF %d  RES %d" % [
+        str(hero_catalog.get(selected_hero_id, {}).get("name", selected_hero_id)),
+        int(stats.get("hp", 0)), int(stats.get("power", 0)),
+        int(stats.get("defense", 0)), int(stats.get("resistance", 0))]
+    for child in equipment_list.get_children():
+        child.queue_free()
+    var loadout := HeroEquipmentService.loadout(selected_hero_id)
+    for slot in HeroEquipmentService.SLOTS:
+        var row := HBoxContainer.new()
+        equipment_list.add_child(row)
+        var label := Label.new()
+        label.text = str(slot).replace("_", " ").capitalize()
+        label.custom_minimum_size.x = 120
+        row.add_child(label)
+        var picker := OptionButton.new()
+        picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        picker.add_item("Empty")
+        var selected_index := 0
+        for item_id in HeroEquipmentService.items().keys():
+            var item: Dictionary = HeroEquipmentService.items()[item_id]
+            if str(item.get("slot", "")) != slot or not HeroEquipmentService.owned(str(item_id), owned_collectibles):
+                continue
+            picker.add_item(str(item.get("name", item_id)))
+            picker.set_item_metadata(picker.item_count - 1, str(item_id))
+            if str(loadout.get(slot, "")) == str(item_id):
+                selected_index = picker.item_count - 1
+        picker.select(selected_index)
+        picker.item_selected.connect(_choose_equipment.bind(str(slot), picker))
+        row.add_child(picker)
+
+
+func _choose_equipment(index: int, slot: String, picker: OptionButton) -> void:
+    var item_id := "" if index == 0 else str(picker.get_item_metadata(index))
+    if HeroEquipmentService.equip(selected_hero_id, slot, item_id, owned_collectibles):
+        _refresh_equipment_panel()
+        _refresh_game_hud()
+
+
 func _open_hero_select() -> void:
     _cancel_unit_move()
     _close_progression_panel()
+    _close_equipment_panel()
     _close_poi_panel()
     for child in hero_roster_box.get_children():
         child.queue_free()
@@ -1512,6 +1641,12 @@ func _build_game_hud() -> void:
     progression_button.pressed.connect(_open_progression_panel)
     box.add_child(progression_button)
 
+    var equipment_button := Button.new()
+    equipment_button.text = "Equipment"
+    equipment_button.custom_minimum_size = Vector2(0, 38)
+    equipment_button.pressed.connect(_open_equipment_panel)
+    box.add_child(equipment_button)
+
     boss_button = Button.new()
     boss_button.text = "Confront Vulgrim"
     boss_button.custom_minimum_size = Vector2(0, 44)
@@ -1567,6 +1702,7 @@ func _build_game_hud() -> void:
     _build_encounter_panel()
     _build_nav_edit_panel()
     _build_progression_panel()
+    _build_equipment_panel()
 
 func _toggle_hud_details() -> void:
     hud_expanded = not hud_expanded
@@ -1645,7 +1781,7 @@ func _refresh_game_hud() -> void:
     var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
     var level: int = int(profile.get("level", 1))
     var persistent_xp: int = int(profile.get("xp", hero_xp))
-    var stats: Dictionary = profile.get("stats", {})
+    var stats: Dictionary = HeroEquipmentService.effective_stats(selected_hero_id, profile.get("stats", {}))
     var max_hp: int = int(stats.get("hp", 100))
     hero_xp = persistent_xp
     hero_health = clampi(hero_health, 0, max_hp)
