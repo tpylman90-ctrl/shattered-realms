@@ -54,37 +54,20 @@ jobs:
           test -f native/assets/3d/heroes/generated/vesper_single.glb
           test -f native/assets/3d/heroes/generated/ignis_single.glb
 
-      - name: Reconstruct verified battle backdrop
+      - name: Generate Ashenreach battle backdrop
         shell: bash
         run: |
-          mkdir -p native/assets/battle/generated
           python3 -m pip install --quiet pillow
+          python3 native/tools/generate_battle_backdrop.py
+          test -f native/assets/battle/generated/ashenreach_battle_arena.png
           python3 - <<'PY'
-          import base64
-          from pathlib import Path
           from PIL import Image
-
-          parts = [
-              Path("native/assets/battle/source/arena_v2.part1.b64"),
-              Path("native/assets/battle/source/arena_v2.part2.b64"),
-          ]
-          payload = "".join(p.read_text(encoding="utf-8") for p in parts)
-          payload = "".join(payload.split())
-          payload += "=" * ((4 - len(payload) % 4) % 4)
-
-          out = Path("native/assets/battle/generated/ashenreach_battle_arena_v2.jpg")
-          out.write_bytes(base64.b64decode(payload, validate=False))
-
-          if out.stat().st_size < 10000:
-              raise SystemExit(f"Backdrop decode suspiciously small: {out.stat().st_size} bytes")
-
-          with Image.open(out) as im:
+          p="native/assets/battle/generated/ashenreach_battle_arena.png"
+          with Image.open(p) as im:
               im.load()
-              assert im.size == (480, 270), im.size
-
-          print(f"[battle] verified {out} ({out.stat().st_size} bytes)")
+              assert im.size == (1280,720), im.size
+          print("[battle] verified", p)
           PY
-          file native/assets/battle/generated/ashenreach_battle_arena_v2.jpg
 
       - name: Generate Ashenreach navigation surface
         shell: bash
