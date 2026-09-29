@@ -34,6 +34,14 @@ var danger := 1
 var hero_atb := 0.0
 var enemy_atb := 0.0
 var hero_ready := false
+var active_actor_id := ""
+var command_position := "rear"
+var army_slots: Array[Dictionary] = []
+var army_anchors: Array[Node3D] = []
+var army_slot_panels: Array[PanelContainer] = []
+var army_slot_labels: Array[Label] = []
+var army_slot_hp_bars: Array[ProgressBar] = []
+var army_slot_atb_bars: Array[ProgressBar] = []
 var battle_over := false
 var defending := false
 var guard_multiplier := 0.45
@@ -63,6 +71,7 @@ var defend_button: Button
 var item_button: Button
 var skill_panel: PanelContainer
 var skill_list: VBoxContainer
+var formation_strip: HBoxContainer
 
 
 func _ready() -> void:
@@ -72,8 +81,10 @@ func _ready() -> void:
     _load_progression_profile()
     _build_background()
     _build_world()
+    _build_army_formation()
     _build_ui()
     _spawn_hero()
+    _spawn_army_placeholders()
     _spawn_enemy_placeholder()
     _refresh_ui()
     message_label.text = "%s confronts %s." % [hero_name, enemy_name]
@@ -87,21 +98,35 @@ func _process(delta: float) -> void:
     if battle_over or action_locked:
         return
 
-    # "Wait" ATB behavior: once the hero is ready, combat time pauses until
-    # the player chooses a command. This prevents enemies from continuing to
-    # cycle attacks while the command menu is open.
-    if hero_ready:
+    if command_box and command_box.visible:
+        _update_command_ring_position()
+
+    # Wait-mode ATB: once any controllable actor is ready, battle time pauses
+    # until that actor receives a command.
+    if active_actor_id != "":
         _refresh_gauges()
         return
 
     hero_atb = minf(1.0, hero_atb + delta * 0.31)
-    if hero_atb >= 1.0:
+    for slot in army_slots:
+        if int(slot.get("hp", 0)) <= 0:
+            continue
+        var atb := float(slot.get("atb", 0.0))
+        var speed_scale := float(slot.get("speed_scale", 1.0))
+        slot["atb"] = minf(1.0, atb + delta * 0.27 * speed_scale)
+
+    if hero_hp > 0 and hero_atb >= 1.0:
         hero_atb = 1.0
         hero_ready = true
-        _set_commands_enabled(true)
-        message_label.text = "%s is ready." % hero_name
-        _refresh_gauges()
+        _begin_actor_turn("hero")
         return
+
+    for i in range(army_slots.size()):
+        var slot: Dictionary = army_slots[i]
+        if int(slot.get("hp", 0)) > 0 and float(slot.get("atb", 0.0)) >= 1.0:
+            slot["atb"] = 1.0
+            _begin_actor_turn("army_%d" % i)
+            return
 
     enemy_atb = minf(1.0, enemy_atb + delta * (0.20 + float(danger) * 0.025))
     if enemy_atb >= 1.0:
@@ -109,7 +134,6 @@ func _process(delta: float) -> void:
         _enemy_turn()
 
     _refresh_gauges()
-
 
 func _load_context() -> void:
     var cfg := ConfigFile.new()
@@ -237,6 +261,76 @@ func _build_world() -> void:
 
     _add_shadow_disc(hero_anchor, 0.80)
     _add_shadow_disc(enemy_anchor, 0.92)
+
+
+func _build_army_formation() -> void:
+    army_slots.clear()
+    army_anchors.clear()
+
+    var definitions := [
+        {"name":"Vanguard I","hp":72,"max_hp":72,"power":11,"defense":8,"speed_scale":1.02},
+        {"name":"Vanguard II","hp":72,"max_hp":72,"power":11,"defense":8,"speed_scale":0.98},
+        {"name":"Ranger I","hp":60,"max_hp":60,"power":13,"defense":6,"speed_scale":1.10},
+        {"name":"Ranger II","hp":60,"max_hp":60,"power":13,"defense":6,"speed_scale":1.06},
+    ]
+
+    var positions := [
+        Vector3(-1.45, -1.24, 0.58),
+        Vector3(-1.55, -1.24, -0.38),
+        Vector3(-2.35, -1.24, 0.86),
+        Vector3(-2.48, -1.24, -0.68),
+    ]
+
+    # Commander defaults to rear. This is deliberately stored as formation data
+    # so front/middle/rear can become a pre-battle selection later.
+    if command_position == "front":
+        hero_anchor.position = Vector3(-1.15, -1.28, 0.10)
+    elif command_position == "middle":
+        hero_anchor.position = Vector3(-2.05, -1.28, 0.10)
+    else:
+        hero_anchor.position = Vector3(-3.15, -1.28, 0.10)
+
+    for i in range(4):
+        var anchor := Node3D.new()
+        anchor.name = "ArmySlot%d" % (i + 1)
+        anchor.position = positions[i]
+        anchor.rotation_degrees.y = -10.0
+        add_child(anchor)
+        army_anchors.append(anchor)
+        _add_shadow_disc(anchor, 0.48)
+
+        var slot: Dictionary = definitions[i].duplicate(true)
+        slot["atb"] = 0.0
+        slot["defending"] = false
+        slot["guard_multiplier"] = 0.50
+        army_slots.append(slot)
+
+
+func _spawn_army_placeholders() -> void:
+    var colors := [
+        Color(0.22, 0.48, 0.78),
+        Color(0.20, 0.42, 0.72),
+        Color(0.32, 0.64, 0.42),
+        Color(0.28, 0.58, 0.38),
+    ]
+    for i in range(army_anchors.size()):
+        var anchor := army_anchors[i]
+        _spawn_base_unit_placeholder(anchor, colors[i], i < 2)
+
+
+func _spawn_base_unit_placeholder(parent: Node3D, color: Color, armored: bool) -> void:
+    var body := MeshInstance3D.new()
+    var mesh := CapsuleMesh.new()
+    mesh.radius = 0.26 if armored else 0.23
+    mesh.height = 1.02
+    body.mesh = mesh
+    body.position.y = 0.55
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = color
+    mat.metallic = 0.30 if armored else 0.12
+    mat.roughness = 0.58
+    body.material_override = mat
+    parent.add_child(body)
 
 
 func _add_shadow_disc(parent: Node3D, radius: float) -> void:
@@ -485,13 +579,12 @@ func _build_ui() -> void:
     command_box = Control.new()
     command_box.name = "CommandWheel"
     command_box.anchor_left = 0.0
-    command_box.anchor_top = 1.0
+    command_box.anchor_top = 0.0
     command_box.anchor_right = 0.0
-    command_box.anchor_bottom = 1.0
-    command_box.offset_left = 360.0
-    command_box.offset_top = -300.0
-    command_box.offset_right = 720.0
-    command_box.offset_bottom = -25.0
+    command_box.anchor_bottom = 0.0
+    command_box.position = Vector2.ZERO
+    command_box.size = Vector2(360.0, 275.0)
+    command_box.visible = false
     battle_ui_layer.add_child(command_box)
 
     var ring := Panel.new()
@@ -545,6 +638,7 @@ func _build_ui() -> void:
     defend_button = _make_radial_button("DEFEND", Vector2(126.0, 214.0), _on_defend)
     item_button = _make_radial_button("ITEM", Vector2(6.0, 109.0), _on_item)
 
+    _build_formation_strip()
     _build_skill_panel()
     _set_commands_enabled(false)
 
@@ -553,6 +647,139 @@ func _build_ui() -> void:
     transition_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
     transition_rect.color = Color(0.0, 0.0, 0.0, 1.0)
     battle_ui_layer.add_child(transition_rect)
+
+
+func _build_formation_strip() -> void:
+    formation_strip = HBoxContainer.new()
+    formation_strip.anchor_left = 0.5
+    formation_strip.anchor_top = 1.0
+    formation_strip.anchor_right = 0.5
+    formation_strip.anchor_bottom = 1.0
+    formation_strip.offset_left = -300.0
+    formation_strip.offset_top = -74.0
+    formation_strip.offset_right = 300.0
+    formation_strip.offset_bottom = -16.0
+    formation_strip.alignment = BoxContainer.ALIGNMENT_CENTER
+    formation_strip.add_theme_constant_override("separation", 7)
+    battle_ui_layer.add_child(formation_strip)
+
+    army_slot_panels.clear()
+    army_slot_labels.clear()
+    army_slot_hp_bars.clear()
+    army_slot_atb_bars.clear()
+
+    for i in range(4):
+        var panel := PanelContainer.new()
+        panel.custom_minimum_size = Vector2(132.0, 54.0)
+        var style := StyleBoxFlat.new()
+        style.bg_color = Color(0.025, 0.022, 0.03, 0.86)
+        style.border_width_left = 2
+        style.border_width_top = 2
+        style.border_width_right = 2
+        style.border_width_bottom = 2
+        style.border_color = Color(0.30, 0.34, 0.40, 0.9)
+        style.corner_radius_top_left = 7
+        style.corner_radius_top_right = 7
+        style.corner_radius_bottom_left = 7
+        style.corner_radius_bottom_right = 7
+        panel.add_theme_stylebox_override("panel", style)
+        formation_strip.add_child(panel)
+
+        var box := VBoxContainer.new()
+        panel.add_child(box)
+
+        var label := Label.new()
+        label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        label.add_theme_font_size_override("font_size", 10)
+        box.add_child(label)
+
+        var hp := ProgressBar.new()
+        hp.show_percentage = false
+        hp.custom_minimum_size = Vector2(120.0, 8.0)
+        box.add_child(hp)
+
+        var atb := ProgressBar.new()
+        atb.show_percentage = false
+        atb.custom_minimum_size = Vector2(120.0, 6.0)
+        box.add_child(atb)
+
+        army_slot_panels.append(panel)
+        army_slot_labels.append(label)
+        army_slot_hp_bars.append(hp)
+        army_slot_atb_bars.append(atb)
+
+
+func _begin_actor_turn(actor_id: String) -> void:
+    active_actor_id = actor_id
+    _set_commands_enabled(true)
+
+    if actor_id == "hero":
+        hero_ready = true
+        skills_button.text = "SKILLS"
+        item_button.text = "ITEM"
+        message_label.text = "%s is ready." % hero_name
+    else:
+        hero_ready = false
+        skills_button.text = "ABILITY"
+        item_button.text = "HOLD"
+        var index := int(actor_id.trim_prefix("army_"))
+        var slot: Dictionary = army_slots[index]
+        message_label.text = "%s is ready." % str(slot.get("name", "Unit"))
+
+    _configure_commands_for_active_actor()
+    _update_command_ring_position()
+    _refresh_gauges()
+
+
+func _configure_commands_for_active_actor() -> void:
+    var is_hero := active_actor_id == "hero"
+    attack_button.text = "ATTACK"
+    skills_button.text = "SKILLS" if is_hero else "ABILITY"
+    defend_button.text = "DEFEND"
+    item_button.text = "ITEM" if is_hero else "HOLD"
+    skills_button.disabled = false
+    item_button.disabled = item_used if is_hero else false
+
+
+func _active_actor_anchor() -> Node3D:
+    if active_actor_id == "hero":
+        return hero_anchor
+    if active_actor_id.begins_with("army_"):
+        var index := int(active_actor_id.trim_prefix("army_"))
+        if index >= 0 and index < army_anchors.size():
+            return army_anchors[index]
+    return null
+
+
+func _update_command_ring_position() -> void:
+    if not command_box or not command_box.visible or not battle_camera:
+        return
+    var anchor := _active_actor_anchor()
+    if not anchor:
+        return
+
+    var world_pos := anchor.global_position + Vector3(0.0, 0.95, 0.0)
+    var screen_pos := battle_camera.unproject_position(world_pos)
+    var view := get_viewport().get_visible_rect().size
+    var top_left := screen_pos - Vector2(180.0, 137.0)
+    top_left.x = clampf(top_left.x, 6.0, maxf(6.0, view.x - 366.0))
+    top_left.y = clampf(top_left.y, 112.0, maxf(112.0, view.y - 281.0))
+    command_box.position = top_left
+
+
+func _consume_active_turn() -> void:
+    if active_actor_id == "hero":
+        hero_ready = false
+        hero_atb = 0.0
+    elif active_actor_id.begins_with("army_"):
+        var index := int(active_actor_id.trim_prefix("army_"))
+        if index >= 0 and index < army_slots.size():
+            army_slots[index]["atb"] = 0.0
+
+    active_actor_id = ""
+    if command_box:
+        command_box.visible = false
+    _set_commands_enabled(false)
 
 
 func _play_battle_intro() -> void:
@@ -655,7 +882,8 @@ func _set_commands_enabled(enabled: bool) -> void:
     defend_button.disabled = not enabled
     item_button.disabled = not enabled or item_used
     if command_box:
-        command_box.modulate.a = 1.0 if enabled else 0.52
+        command_box.visible = enabled and active_actor_id != ""
+        command_box.modulate.a = 1.0
     if command_center_label:
         command_center_label.text = "READY" if enabled else "WAIT"
         command_center_label.modulate = Color(1.0, 0.72, 0.45) if enabled else Color(0.62, 0.64, 0.68)
@@ -664,6 +892,19 @@ func _set_commands_enabled(enabled: bool) -> void:
 func _refresh_gauges() -> void:
     hero_atb_bar.value = hero_atb * 100.0
     enemy_atb_bar.value = enemy_atb * 100.0
+
+    for i in range(mini(army_slots.size(), army_slot_atb_bars.size())):
+        var slot: Dictionary = army_slots[i]
+        army_slot_atb_bars[i].max_value = 100.0
+        army_slot_atb_bars[i].value = float(slot.get("atb", 0.0)) * 100.0
+        army_slot_hp_bars[i].max_value = int(slot.get("max_hp", 1))
+        army_slot_hp_bars[i].value = int(slot.get("hp", 0))
+        army_slot_labels[i].text = "%s  %d/%d" % [
+            str(slot.get("name", "Unit")),
+            int(slot.get("hp", 0)),
+            int(slot.get("max_hp", 1))
+        ]
+        army_slot_panels[i].modulate = Color.WHITE if int(slot.get("hp", 0)) > 0 else Color(0.45, 0.45, 0.45, 0.65)
 
 
 func _refresh_ui() -> void:
@@ -681,27 +922,36 @@ func _refresh_ui() -> void:
 
 
 func _consume_hero_turn() -> void:
-    hero_ready = false
-    hero_atb = 0.0
-    _set_commands_enabled(false)
+    _consume_active_turn()
 
 
 func _on_attack() -> void:
-    if not hero_ready or action_locked or battle_over:
+    if active_actor_id == "" or action_locked or battle_over:
         return
-    action_locked = true
-    _consume_hero_turn()
 
+    action_locked = true
+    var actor_id := active_actor_id
+    var actor_anchor := _active_actor_anchor()
+    var actor_name := hero_name
     var power := int(hero_stats.get("power", 15))
-    var damage := 7 + int(round(float(power) * 0.72)) + randi_range(0, 5)
-    message_label.text = "%s attacks for %d damage!" % [hero_name, damage]
-    await _lunge(hero_anchor, 0.38)
+
+    if actor_id.begins_with("army_"):
+        var index := int(actor_id.trim_prefix("army_"))
+        var slot: Dictionary = army_slots[index]
+        actor_name = str(slot.get("name", "Unit"))
+        power = int(slot.get("power", 10))
+
+    _consume_active_turn()
+    var damage := 6 + int(round(float(power) * 0.72)) + randi_range(0, 4)
+    message_label.text = "%s attacks for %d damage!" % [actor_name, damage]
+
+    await _lunge(actor_anchor, 0.34)
     enemy_hp = maxi(0, enemy_hp - damage)
     _refresh_ui()
     _show_damage_popup(enemy_anchor, damage)
-    _impact_bump(enemy_anchor, 0.12)
-    _camera_impact(0.07)
-    await get_tree().create_timer(0.55).timeout
+    _impact_bump(enemy_anchor, 0.10)
+    _camera_impact(0.06)
+    await get_tree().create_timer(0.45).timeout
     action_locked = false
     _check_battle_end()
 
@@ -786,7 +1036,10 @@ func _refresh_skill_list() -> void:
 
 
 func _open_skill_panel() -> void:
-    if not hero_ready or action_locked or battle_over:
+    if active_actor_id == "" or action_locked or battle_over:
+        return
+    if active_actor_id != "hero":
+        _use_army_ability()
         return
     _refresh_skill_list()
     skill_panel.visible = true
@@ -795,12 +1048,37 @@ func _open_skill_panel() -> void:
 
 func _close_skill_panel() -> void:
     skill_panel.visible = false
-    if hero_ready and not action_locked and not battle_over:
+    if active_actor_id == "hero" and not action_locked and not battle_over:
         _set_commands_enabled(true)
 
 
+func _use_army_ability() -> void:
+    if not active_actor_id.begins_with("army_") or action_locked or battle_over:
+        return
+
+    action_locked = true
+    var index := int(active_actor_id.trim_prefix("army_"))
+    var slot: Dictionary = army_slots[index]
+    var anchor := army_anchors[index]
+    var name := str(slot.get("name", "Unit"))
+    var power := int(slot.get("power", 10))
+    var damage := 10 + int(round(float(power) * 0.90)) + randi_range(0, 4)
+
+    _consume_active_turn()
+    message_label.text = "%s uses formation strike! %d damage." % [name, damage]
+    await _lunge(anchor, 0.42)
+    enemy_hp = maxi(0, enemy_hp - damage)
+    _show_damage_popup(enemy_anchor, damage)
+    _impact_bump(enemy_anchor, 0.12)
+    _camera_impact(0.08)
+    _refresh_ui()
+    await get_tree().create_timer(0.50).timeout
+    action_locked = false
+    _check_battle_end()
+
+
 func _use_skill(skill_id: String) -> void:
-    if not hero_ready or action_locked or battle_over:
+    if active_actor_id != "hero" or action_locked or battle_over:
         return
 
     var skill := HeroProgressionService.skill_by_id(hero_id, skill_id)
@@ -866,22 +1144,41 @@ func _use_skill(skill_id: String) -> void:
 
 
 func _on_defend() -> void:
-    if not hero_ready or action_locked or battle_over:
+    if active_actor_id == "" or action_locked or battle_over:
         return
-    defending = true
-    guard_multiplier = 0.45
-    _consume_hero_turn()
-    message_label.text = "%s braces for the next attack." % hero_name
+
+    if active_actor_id == "hero":
+        defending = true
+        guard_multiplier = 0.45
+        message_label.text = "%s braces for the next attack." % hero_name
+    else:
+        var index := int(active_actor_id.trim_prefix("army_"))
+        army_slots[index]["defending"] = true
+        army_slots[index]["guard_multiplier"] = 0.45
+        message_label.text = "%s takes a defensive stance." % str(army_slots[index].get("name", "Unit"))
+
+    _consume_active_turn()
 
 
 func _on_item() -> void:
-    if not hero_ready or action_locked or battle_over or item_used:
+    if active_actor_id == "" or action_locked or battle_over:
         return
+
+    if active_actor_id != "hero":
+        var index := int(active_actor_id.trim_prefix("army_"))
+        var unit_name := str(army_slots[index].get("name", "Unit"))
+        _consume_active_turn()
+        message_label.text = "%s holds position." % unit_name
+        return
+
+    if item_used:
+        return
+
     item_used = true
     var before_hp: int = hero_hp
     hero_hp = mini(hero_max_hp, hero_hp + 28)
     var restored: int = hero_hp - before_hp
-    _consume_hero_turn()
+    _consume_active_turn()
     message_label.text = "%s restores %d health." % [hero_name, restored]
     _refresh_ui()
     _show_damage_popup(hero_anchor, restored, true)
@@ -894,26 +1191,61 @@ func _enemy_turn() -> void:
     action_locked = true
     _set_commands_enabled(false)
 
+    var targets: Array[String] = []
+    if hero_hp > 0:
+        targets.append("hero")
+    for i in range(army_slots.size()):
+        if int(army_slots[i].get("hp", 0)) > 0:
+            targets.append("army_%d" % i)
+
+    if targets.is_empty():
+        action_locked = false
+        _finish_battle(false)
+        return
+
+    var target_id := targets[randi_range(0, targets.size() - 1)]
+    var target_anchor: Node3D
+    var target_name := hero_name
     var defense := int(hero_stats.get("defense", 10))
+    var guarded := defending
+    var guard := guard_multiplier
+
+    if target_id == "hero":
+        target_anchor = hero_anchor
+    else:
+        var index := int(target_id.trim_prefix("army_"))
+        var slot: Dictionary = army_slots[index]
+        target_anchor = army_anchors[index]
+        target_name = str(slot.get("name", "Unit"))
+        defense = int(slot.get("defense", 7))
+        guarded = bool(slot.get("defending", false))
+        guard = float(slot.get("guard_multiplier", 0.50))
+
     var damage := enemy_attack + randi_range(-2, 3) - int(round(float(defense) * 0.18))
     damage = maxi(1, damage)
-    if defending:
-        damage = maxi(1, int(round(float(damage) * guard_multiplier)))
+    if guarded:
+        damage = maxi(1, int(round(float(damage) * guard)))
+
+    message_label.text = "%s attacks %s for %d damage!" % [enemy_name, target_name, damage]
+    await _lunge(enemy_anchor, -0.32)
+
+    if target_id == "hero":
+        hero_hp = maxi(0, hero_hp - damage)
         defending = false
         guard_multiplier = 0.45
+    else:
+        var index := int(target_id.trim_prefix("army_"))
+        army_slots[index]["hp"] = maxi(0, int(army_slots[index].get("hp", 0)) - damage)
+        army_slots[index]["defending"] = false
+        army_slots[index]["guard_multiplier"] = 0.50
 
-    message_label.text = "%s attacks for %d damage!" % [enemy_name, damage]
-    await _lunge(enemy_anchor, -0.32)
-    hero_hp = maxi(0, hero_hp - damage)
     _refresh_ui()
-    _show_damage_popup(hero_anchor, damage)
-    _impact_bump(hero_anchor, 0.10)
-    _camera_impact(0.065)
-    await get_tree().create_timer(0.50).timeout
+    _show_damage_popup(target_anchor, damage)
+    _impact_bump(target_anchor, 0.10)
+    _camera_impact(0.055)
+    await get_tree().create_timer(0.45).timeout
 
     action_locked = false
-    if hero_ready:
-        _set_commands_enabled(true)
     _check_battle_end()
 
 
