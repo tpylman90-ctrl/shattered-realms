@@ -1,6 +1,7 @@
 extends Node3D
 
 const HeroProgressionService = preload("res://scripts/hero_progression.gd")
+const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
 
 const RETURN_SCENE := "res://scenes/AshenreachDemo.tscn"
 const CONTEXT_PATH := "user://battle_context.cfg"
@@ -190,6 +191,7 @@ func _load_progression_profile() -> void:
     hero_level = int(hero_profile.get("level", 1))
     hero_xp = int(hero_profile.get("xp", hero_xp))
     hero_stats = (hero_profile.get("stats", {}) as Dictionary).duplicate(true)
+    hero_stats = HeroEquipmentService.effective_stats(hero_id, hero_stats)
     hero_max_hp = int(hero_stats.get("hp", 100))
     hero_max_mp = int(hero_stats.get("mp", 40))
     hero_mp = hero_max_mp

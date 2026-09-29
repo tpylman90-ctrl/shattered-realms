@@ -1,0 +1,12 @@
+{
+  "hero_tags": {
+    "ignis": ["Fire", "Juggernaut", "ArmorBreak"],
+    "vesper": ["Frost", "Guardian", "Control"]
+  },
+  "items": {
+    "training_blade": {"name": "Training Blade", "slot": "right_hand", "starter": true, "tags": ["Melee"], "stats": {"power": 2}},
+    "field_shield": {"name": "Field Shield", "slot": "left_hand", "starter": true, "tags": ["Guardian"], "stats": {"defense": 2}},
+    "magma_heart_cuirass": {"name": "Magma-Heart Cuirass", "slot": "chest", "tags": ["Fire", "Juggernaut"], "stats": {"hp": 12, "defense": 2}, "synergy_tags": ["Fire", "Juggernaut"], "synergy_stats": {"power": 2}},
+    "vesper_chestplate": {"name": "Frostbinder Chestplate", "slot": "chest", "tags": ["Frost", "Guardian"], "stats": {"hp": 8, "defense": 3}, "synergy_tags": ["Frost", "Guardian"], "synergy_stats": {"resistance": 2}}
+  }
+}
