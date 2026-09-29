@@ -18,7 +18,14 @@
       "resistance",
       "speed",
       "crit"
-    ]
+    ],
+    "tier_point_thresholds": {
+      "1": 0,
+      "2": 2,
+      "3": 5,
+      "4": 8,
+      "5": 12
+    }
   },
   "heroes": {
     "ignis": {
@@ -69,8 +76,12 @@
           "effect": "heavy_hit",
           "tree": "assault",
           "tier": 1,
-          "description": "Applies heavy hit in battle.",
-          "combat_effect": "heavy_hit"
+          "description": "Applies heavy hit in battle. Improves with each rank.",
+          "combat_effect": "heavy_hit",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 5
         },
         {
           "id": "ignis_magma_guard",
@@ -86,8 +97,12 @@
           "effect": "guard_60",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies guard 60 in battle.",
-          "combat_effect": "guard_60"
+          "description": "Applies guard 60 in battle. Improves with each rank.",
+          "combat_effect": "guard_60",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "ignis_cinder_sweep",
@@ -106,8 +121,12 @@
           ],
           "tree": "assault",
           "tier": 2,
-          "description": "Applies burn in battle.",
-          "combat_effect": "burn"
+          "description": "Applies burn in battle. Improves with each rank.",
+          "combat_effect": "burn",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "ignis_molten_core",
@@ -125,14 +144,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "ignis_caldera_break",
           "name": "Caldera Break",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 18,
           "power": 48,
           "scaling": "power_magic",
@@ -140,13 +162,16 @@
           "target": "enemy",
           "effect": "armor_break",
           "requires": [
-            "ignis_assault_pressure",
-            "ignis_guard_mastery"
+            "ignis_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "combat_effect": "sunder",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 9
         },
         {
           "id": "ignis_tactical_focus",
@@ -162,8 +187,12 @@
           "element": "fire",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "ignis_tactical_strike",
@@ -182,8 +211,12 @@
           "requires": [
             "ignis_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "ignis_tactical_instinct",
@@ -201,7 +234,10 @@
           "requires": [
             "ignis_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "ignis_guardian_crest",
@@ -210,7 +246,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -221,7 +257,11 @@
             "ignis_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "ignis_assault_mastery",
@@ -239,7 +279,10 @@
           "requires": [
             "ignis_cinder_sweep"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "ignis_assault_pressure",
@@ -258,8 +301,12 @@
           "requires": [
             "ignis_assault_mastery"
           ],
-          "description": "Burns the enemy for three turns.",
-          "combat_effect": "burn"
+          "description": "Burns the enemy for three turns. Improves with each rank.",
+          "combat_effect": "burn",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "ignis_guard_mastery",
@@ -277,7 +324,10 @@
           "requires": [
             "ignis_molten_core"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "ignis_guard_recovery",
@@ -296,8 +346,12 @@
           "requires": [
             "ignis_guard_mastery"
           ],
-          "description": "Restores health over three enemy turns.",
-          "combat_effect": "regen"
+          "description": "Restores health over three enemy turns. Improves with each rank.",
+          "combat_effect": "regen",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "ignis_tactic_pressure",
@@ -316,8 +370,12 @@
           "requires": [
             "ignis_tactical_instinct"
           ],
-          "description": "Breaks enemy armor for three turns.",
-          "combat_effect": "sunder"
+          "description": "Breaks enemy armor for three turns. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "ignis_tactic_apex",
@@ -326,7 +384,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -337,7 +395,195 @@
             "ignis_tactic_pressure"
           ],
           "description": "Burns the enemy for three turns.",
-          "combat_effect": "burn"
+          "combat_effect": "burn",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "ignis_assault_branch_2",
+          "name": "Eruption Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "ignis_eruption_strike"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignis_assault_branch_3",
+          "name": "Eruption Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "ignis_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignis_assault_branch_4",
+          "name": "Eruption Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "ignis_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignis_guard_branch_2",
+          "name": "Magmaheart Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "ignis_magma_guard"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignis_guard_branch_3",
+          "name": "Magmaheart Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "ignis_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignis_guard_branch_4",
+          "name": "Magmaheart Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "ignis_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignis_tactics_branch_2",
+          "name": "Ashcraft Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "ignis_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignis_tactics_branch_3",
+          "name": "Ashcraft Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "ignis_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignis_tactics_branch_4",
+          "name": "Ashcraft Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "ignis_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -406,8 +652,12 @@
           "effect": "slow",
           "tree": "assault",
           "tier": 1,
-          "description": "Slows the enemy for three turns.",
-          "combat_effect": "slow"
+          "description": "Slows the enemy for three turns. Improves with each rank.",
+          "combat_effect": "slow",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 4
         },
         {
           "id": "vesper_glacial_bastion",
@@ -423,8 +673,12 @@
           "effect": "guard_75",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "description": "Applies guard 75 in battle. Improves with each rank.",
+          "combat_effect": "guard_75",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "vesper_shard_lance",
@@ -440,8 +694,15 @@
           "effect": "pierce",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 6,
+          "requires": [
+            "vesper_frostbind"
+          ]
         },
         {
           "id": "vesper_permafrost",
@@ -451,7 +712,7 @@
           "cost_sp": 1,
           "effect": "ice_resist_control_bonus",
           "requires": [
-            "vesper_frostbind"
+            "vesper_glacial_bastion"
           ],
           "tree": "guard",
           "tier": 2,
@@ -459,14 +720,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "vesper_whiteout",
           "name": "Whiteout",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 18,
           "power": 39,
           "scaling": "magic",
@@ -474,13 +738,16 @@
           "target": "enemy_all",
           "effect": "slow_all",
           "requires": [
-            "vesper_assault_pressure",
-            "vesper_guard_mastery"
+            "vesper_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies slow in battle.",
-          "combat_effect": "slow"
+          "combat_effect": "slow",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 7
         },
         {
           "id": "vesper_tactical_focus",
@@ -496,8 +763,12 @@
           "element": "ice",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "vesper_tactical_strike",
@@ -516,8 +787,12 @@
           "requires": [
             "vesper_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "vesper_tactical_instinct",
@@ -535,7 +810,10 @@
           "requires": [
             "vesper_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "vesper_guardian_crest",
@@ -544,7 +822,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -555,7 +833,11 @@
             "vesper_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "vesper_assault_mastery",
@@ -573,7 +855,10 @@
           "requires": [
             "vesper_shard_lance"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "vesper_assault_pressure",
@@ -592,8 +877,12 @@
           "requires": [
             "vesper_assault_mastery"
           ],
-          "description": "Slows the enemy for three turns.",
-          "combat_effect": "slow"
+          "description": "Slows the enemy for three turns. Improves with each rank.",
+          "combat_effect": "slow",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "vesper_guard_mastery",
@@ -611,7 +900,10 @@
           "requires": [
             "vesper_permafrost"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "vesper_guard_recovery",
@@ -630,8 +922,12 @@
           "requires": [
             "vesper_guard_mastery"
           ],
-          "description": "Reduces the next incoming blow.",
-          "combat_effect": "shield"
+          "description": "Reduces the next incoming blow. Improves with each rank.",
+          "combat_effect": "shield",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "vesper_tactic_pressure",
@@ -650,8 +946,12 @@
           "requires": [
             "vesper_tactical_instinct"
           ],
-          "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "description": "Staggers and delays the enemy. Improves with each rank.",
+          "combat_effect": "stagger",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "vesper_tactic_apex",
@@ -660,7 +960,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -671,7 +971,195 @@
             "vesper_tactic_pressure"
           ],
           "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "combat_effect": "stagger",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "vesper_assault_branch_2",
+          "name": "Wintercraft Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "vesper_frostbind"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "vesper_assault_branch_3",
+          "name": "Wintercraft Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "vesper_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "vesper_assault_branch_4",
+          "name": "Wintercraft Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "vesper_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "vesper_guard_branch_2",
+          "name": "Frostward Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "vesper_glacial_bastion"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "vesper_guard_branch_3",
+          "name": "Frostward Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "vesper_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "vesper_guard_branch_4",
+          "name": "Frostward Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "vesper_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "vesper_tactics_branch_2",
+          "name": "Rime Tactics Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "vesper_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "vesper_tactics_branch_3",
+          "name": "Rime Tactics Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "vesper_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "vesper_tactics_branch_4",
+          "name": "Rime Tactics Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "vesper_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -740,8 +1228,12 @@
           "effect": "multi_hit",
           "tree": "assault",
           "tier": 1,
-          "description": "Applies bleed in battle.",
-          "combat_effect": "bleed"
+          "description": "Applies bleed in battle. Improves with each rank.",
+          "combat_effect": "bleed",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 4
         },
         {
           "id": "lyra_evasive_step",
@@ -757,8 +1249,12 @@
           "effect": "evade",
           "tree": "guard",
           "tier": 1,
-          "description": "Raises evasion for three enemy turns.",
-          "combat_effect": "evade"
+          "description": "Raises evasion for three enemy turns. Improves with each rank.",
+          "combat_effect": "evade",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "lyra_marked_prey",
@@ -774,8 +1270,15 @@
           "effect": "mark",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 3,
+          "requires": [
+            "lyra_phantom_arrows"
+          ]
         },
         {
           "id": "lyra_night_hunter",
@@ -785,7 +1288,7 @@
           "cost_sp": 1,
           "effect": "crit_vs_marked",
           "requires": [
-            "lyra_marked_prey"
+            "lyra_evasive_step"
           ],
           "tree": "guard",
           "tier": 2,
@@ -793,14 +1296,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "lyra_umbral_volley",
           "name": "Umbral Volley",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power",
@@ -808,13 +1314,16 @@
           "target": "enemy_all",
           "effect": "multi_hit",
           "requires": [
-            "lyra_vane_assault_pressure",
-            "lyra_vane_guard_mastery"
+            "lyra_vane_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies bleed in battle.",
-          "combat_effect": "bleed"
+          "combat_effect": "bleed",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
         },
         {
           "id": "lyra_vane_tactical_focus",
@@ -830,8 +1339,12 @@
           "element": "shadow",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "lyra_vane_tactical_strike",
@@ -850,8 +1363,12 @@
           "requires": [
             "lyra_vane_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "lyra_vane_tactical_instinct",
@@ -869,7 +1386,10 @@
           "requires": [
             "lyra_vane_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "lyra_vane_guardian_crest",
@@ -878,7 +1398,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -889,7 +1409,11 @@
             "lyra_vane_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "lyra_vane_assault_mastery",
@@ -907,7 +1431,10 @@
           "requires": [
             "lyra_marked_prey"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "lyra_vane_assault_pressure",
@@ -926,8 +1453,12 @@
           "requires": [
             "lyra_vane_assault_mastery"
           ],
-          "description": "Poisons the enemy for three turns.",
-          "combat_effect": "poison"
+          "description": "Poisons the enemy for three turns. Improves with each rank.",
+          "combat_effect": "poison",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "lyra_vane_guard_mastery",
@@ -945,7 +1476,10 @@
           "requires": [
             "lyra_night_hunter"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "lyra_vane_guard_recovery",
@@ -964,8 +1498,12 @@
           "requires": [
             "lyra_vane_guard_mastery"
           ],
-          "description": "Raises evasion for three enemy turns.",
-          "combat_effect": "evade"
+          "description": "Raises evasion for three enemy turns. Improves with each rank.",
+          "combat_effect": "evade",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "lyra_vane_tactic_pressure",
@@ -984,8 +1522,12 @@
           "requires": [
             "lyra_vane_tactical_instinct"
           ],
-          "description": "Weakens enemy attacks for three turns.",
-          "combat_effect": "weaken"
+          "description": "Weakens enemy attacks for three turns. Improves with each rank.",
+          "combat_effect": "weaken",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "lyra_vane_tactic_apex",
@@ -994,7 +1536,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -1005,7 +1547,195 @@
             "lyra_vane_tactic_pressure"
           ],
           "description": "Poisons the enemy for three turns.",
-          "combat_effect": "poison"
+          "combat_effect": "poison",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "lyra_vane_assault_branch_2",
+          "name": "Shadowshot Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "lyra_phantom_arrows"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "lyra_vane_assault_branch_3",
+          "name": "Shadowshot Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "lyra_vane_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "lyra_vane_assault_branch_4",
+          "name": "Shadowshot Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "lyra_vane_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "lyra_vane_guard_branch_2",
+          "name": "Veilguard Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "lyra_evasive_step"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "lyra_vane_guard_branch_3",
+          "name": "Veilguard Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "lyra_vane_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "lyra_vane_guard_branch_4",
+          "name": "Veilguard Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "lyra_vane_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "lyra_vane_tactics_branch_2",
+          "name": "Nightcraft Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "lyra_vane_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "lyra_vane_tactics_branch_3",
+          "name": "Nightcraft Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "lyra_vane_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "lyra_vane_tactics_branch_4",
+          "name": "Nightcraft Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "lyra_vane_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -1074,8 +1804,12 @@
           "effect": "shock",
           "tree": "assault",
           "tier": 1,
-          "description": "Shocks the enemy and delays its next action.",
-          "combat_effect": "shock"
+          "description": "Shocks the enemy and delays its next action. Improves with each rank.",
+          "combat_effect": "shock",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 5
         },
         {
           "id": "thorvald_forgeguard",
@@ -1091,8 +1825,12 @@
           "effect": "guard_60",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies guard 60 in battle.",
-          "combat_effect": "guard_60"
+          "description": "Applies guard 60 in battle. Improves with each rank.",
+          "combat_effect": "guard_60",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "thorvald_storm_hammer",
@@ -1108,8 +1846,15 @@
           "effect": "stagger",
           "tree": "assault",
           "tier": 2,
-          "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "description": "Staggers and delays the enemy. Improves with each rank.",
+          "combat_effect": "stagger",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 6,
+          "requires": [
+            "thorvald_lightning_smash"
+          ]
         },
         {
           "id": "thorvald_tempered_soul",
@@ -1127,14 +1872,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "thorvald_skybreaker",
           "name": "Skybreaker",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 18,
           "power": 50,
           "scaling": "power",
@@ -1142,13 +1890,16 @@
           "target": "enemy",
           "effect": "shock_break",
           "requires": [
-            "thorvald_assault_pressure",
-            "thorvald_guard_mastery"
+            "thorvald_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies shock in battle.",
-          "combat_effect": "shock"
+          "combat_effect": "shock",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 9
         },
         {
           "id": "thorvald_tactical_focus",
@@ -1164,8 +1915,12 @@
           "element": "lightning",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "thorvald_tactical_strike",
@@ -1184,8 +1939,12 @@
           "requires": [
             "thorvald_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "thorvald_tactical_instinct",
@@ -1203,7 +1962,10 @@
           "requires": [
             "thorvald_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "thorvald_guardian_crest",
@@ -1212,7 +1974,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -1223,7 +1985,11 @@
             "thorvald_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "thorvald_assault_mastery",
@@ -1241,7 +2007,10 @@
           "requires": [
             "thorvald_storm_hammer"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "thorvald_assault_pressure",
@@ -1260,8 +2029,12 @@
           "requires": [
             "thorvald_assault_mastery"
           ],
-          "description": "Shocks the enemy and delays its next action.",
-          "combat_effect": "shock"
+          "description": "Shocks the enemy and delays its next action. Improves with each rank.",
+          "combat_effect": "shock",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "thorvald_guard_mastery",
@@ -1279,7 +2052,10 @@
           "requires": [
             "thorvald_tempered_soul"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "thorvald_guard_recovery",
@@ -1298,8 +2074,12 @@
           "requires": [
             "thorvald_guard_mastery"
           ],
-          "description": "Reduces the next incoming blow.",
-          "combat_effect": "shield"
+          "description": "Reduces the next incoming blow. Improves with each rank.",
+          "combat_effect": "shield",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "thorvald_tactic_pressure",
@@ -1318,8 +2098,12 @@
           "requires": [
             "thorvald_tactical_instinct"
           ],
-          "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "description": "Staggers and delays the enemy. Improves with each rank.",
+          "combat_effect": "stagger",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "thorvald_tactic_apex",
@@ -1328,7 +2112,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -1339,7 +2123,195 @@
             "thorvald_tactic_pressure"
           ],
           "description": "Shocks the enemy and delays its next action.",
-          "combat_effect": "shock"
+          "combat_effect": "shock",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "thorvald_assault_branch_2",
+          "name": "Stormcaller Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "thorvald_lightning_smash"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "thorvald_assault_branch_3",
+          "name": "Stormcaller Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "thorvald_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "thorvald_assault_branch_4",
+          "name": "Stormcaller Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "thorvald_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "thorvald_guard_branch_2",
+          "name": "Forgeguard Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "thorvald_forgeguard"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "thorvald_guard_branch_3",
+          "name": "Forgeguard Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "thorvald_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "thorvald_guard_branch_4",
+          "name": "Forgeguard Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "thorvald_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "thorvald_tactics_branch_2",
+          "name": "Runecraft Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "thorvald_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "thorvald_tactics_branch_3",
+          "name": "Runecraft Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "thorvald_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "thorvald_tactics_branch_4",
+          "name": "Runecraft Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "thorvald_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -1408,8 +2380,12 @@
           "effect": "stagger",
           "tree": "assault",
           "tier": 1,
-          "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "description": "Staggers and delays the enemy. Improves with each rank.",
+          "combat_effect": "stagger",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 5
         },
         {
           "id": "cedric_hold_line",
@@ -1425,8 +2401,12 @@
           "effect": "guard_70",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies guard 70 in battle.",
-          "combat_effect": "guard_70"
+          "description": "Applies guard 70 in battle. Improves with each rank.",
+          "combat_effect": "guard_70",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "cedric_commanders_mark",
@@ -1442,8 +2422,15 @@
           "effect": "vulnerability",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies weaken in battle.",
-          "combat_effect": "weaken"
+          "description": "Applies weaken in battle. Improves with each rank.",
+          "combat_effect": "weaken",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 0,
+          "requires": [
+            "cedric_phalanx_charge"
+          ]
         },
         {
           "id": "cedric_iron_discipline",
@@ -1461,14 +2448,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "cedric_unbroken_advance",
           "name": "Unbroken Advance",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 43,
           "scaling": "power",
@@ -1476,13 +2466,16 @@
           "target": "enemy_all",
           "effect": "team_guard",
           "requires": [
-            "cedric_assault_pressure",
-            "cedric_guard_mastery"
+            "cedric_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies shield in battle.",
-          "combat_effect": "shield"
+          "combat_effect": "shield",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
         },
         {
           "id": "cedric_tactical_focus",
@@ -1498,8 +2491,12 @@
           "element": "physical",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "cedric_tactical_strike",
@@ -1518,8 +2515,12 @@
           "requires": [
             "cedric_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "cedric_tactical_instinct",
@@ -1537,7 +2538,10 @@
           "requires": [
             "cedric_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "cedric_guardian_crest",
@@ -1546,7 +2550,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -1557,7 +2561,11 @@
             "cedric_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "cedric_assault_mastery",
@@ -1575,7 +2583,10 @@
           "requires": [
             "cedric_commanders_mark"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "cedric_assault_pressure",
@@ -1594,8 +2605,12 @@
           "requires": [
             "cedric_assault_mastery"
           ],
-          "description": "Breaks enemy armor for three turns.",
-          "combat_effect": "sunder"
+          "description": "Breaks enemy armor for three turns. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "cedric_guard_mastery",
@@ -1613,7 +2628,10 @@
           "requires": [
             "cedric_iron_discipline"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "cedric_guard_recovery",
@@ -1632,8 +2650,12 @@
           "requires": [
             "cedric_guard_mastery"
           ],
-          "description": "Raises power for three hero turns.",
-          "combat_effect": "rally"
+          "description": "Raises power for three hero turns. Improves with each rank.",
+          "combat_effect": "rally",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "cedric_tactic_pressure",
@@ -1652,8 +2674,12 @@
           "requires": [
             "cedric_tactical_instinct"
           ],
-          "description": "Weakens enemy attacks for three turns.",
-          "combat_effect": "weaken"
+          "description": "Weakens enemy attacks for three turns. Improves with each rank.",
+          "combat_effect": "weaken",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "cedric_tactic_apex",
@@ -1662,7 +2688,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -1673,7 +2699,195 @@
             "cedric_tactic_pressure"
           ],
           "description": "Breaks enemy armor for three turns.",
-          "combat_effect": "sunder"
+          "combat_effect": "sunder",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "cedric_assault_branch_2",
+          "name": "Vanguard Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "cedric_phalanx_charge"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "cedric_assault_branch_3",
+          "name": "Vanguard Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "cedric_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "cedric_assault_branch_4",
+          "name": "Vanguard Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "cedric_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "cedric_guard_branch_2",
+          "name": "Ironwall Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "cedric_hold_line"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "cedric_guard_branch_3",
+          "name": "Ironwall Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "cedric_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "cedric_guard_branch_4",
+          "name": "Ironwall Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "cedric_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "cedric_tactics_branch_2",
+          "name": "Command Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "cedric_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "cedric_tactics_branch_3",
+          "name": "Command Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "cedric_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "cedric_tactics_branch_4",
+          "name": "Command Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "cedric_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -1742,8 +2956,12 @@
           "effect": "poison",
           "tree": "assault",
           "tier": 1,
-          "description": "Poisons the enemy for three turns.",
-          "combat_effect": "poison"
+          "description": "Poisons the enemy for three turns. Improves with each rank.",
+          "combat_effect": "poison",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "morana_bogward",
@@ -1759,8 +2977,12 @@
           "effect": "resist_guard",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies resist guard in battle.",
-          "combat_effect": "resist_guard"
+          "description": "Applies resist guard in battle. Improves with each rank.",
+          "combat_effect": "resist_guard",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "morana_rot_bloom",
@@ -1776,8 +2998,15 @@
           "effect": "decay",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies poison in battle.",
-          "combat_effect": "poison"
+          "description": "Applies poison in battle. Improves with each rank.",
+          "combat_effect": "poison",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 5,
+          "requires": [
+            "morana_venomous_miasma"
+          ]
         },
         {
           "id": "morana_plague_bearer",
@@ -1787,7 +3016,7 @@
           "cost_sp": 1,
           "effect": "poison_duration_bonus",
           "requires": [
-            "morana_venomous_miasma"
+            "morana_bogward"
           ],
           "tree": "guard",
           "tier": 2,
@@ -1795,14 +3024,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "morana_black_marsh",
           "name": "Black Marsh",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 19,
           "power": 38,
           "scaling": "magic",
@@ -1810,13 +3042,16 @@
           "target": "enemy_all",
           "effect": "poison_slow",
           "requires": [
-            "morana_assault_pressure",
-            "morana_guard_mastery"
+            "morana_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies poison in battle.",
-          "combat_effect": "poison"
+          "combat_effect": "poison",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 7
         },
         {
           "id": "morana_tactical_focus",
@@ -1832,8 +3067,12 @@
           "element": "poison",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "morana_tactical_strike",
@@ -1852,8 +3091,12 @@
           "requires": [
             "morana_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "morana_tactical_instinct",
@@ -1871,7 +3114,10 @@
           "requires": [
             "morana_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "morana_guardian_crest",
@@ -1880,7 +3126,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -1891,7 +3137,11 @@
             "morana_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "morana_assault_mastery",
@@ -1909,7 +3159,10 @@
           "requires": [
             "morana_rot_bloom"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "morana_assault_pressure",
@@ -1928,8 +3181,12 @@
           "requires": [
             "morana_assault_mastery"
           ],
-          "description": "Poisons the enemy for three turns.",
-          "combat_effect": "poison"
+          "description": "Poisons the enemy for three turns. Improves with each rank.",
+          "combat_effect": "poison",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "morana_guard_mastery",
@@ -1947,7 +3204,10 @@
           "requires": [
             "morana_plague_bearer"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "morana_guard_recovery",
@@ -1966,8 +3226,12 @@
           "requires": [
             "morana_guard_mastery"
           ],
-          "description": "Strikes and restores health.",
-          "combat_effect": "drain"
+          "description": "Strikes and restores health. Improves with each rank.",
+          "combat_effect": "drain",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 3
         },
         {
           "id": "morana_tactic_pressure",
@@ -1986,8 +3250,12 @@
           "requires": [
             "morana_tactical_instinct"
           ],
-          "description": "Weakens enemy attacks for three turns.",
-          "combat_effect": "weaken"
+          "description": "Weakens enemy attacks for three turns. Improves with each rank.",
+          "combat_effect": "weaken",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "morana_tactic_apex",
@@ -1996,7 +3264,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -2007,7 +3275,195 @@
             "morana_tactic_pressure"
           ],
           "description": "Poisons the enemy for three turns.",
-          "combat_effect": "poison"
+          "combat_effect": "poison",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "morana_assault_branch_2",
+          "name": "Blight Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "morana_venomous_miasma"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "morana_assault_branch_3",
+          "name": "Blight Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "morana_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "morana_assault_branch_4",
+          "name": "Blight Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "morana_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "morana_guard_branch_2",
+          "name": "Bogward Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "morana_bogward"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "morana_guard_branch_3",
+          "name": "Bogward Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "morana_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "morana_guard_branch_4",
+          "name": "Bogward Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "morana_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "morana_tactics_branch_2",
+          "name": "Ritual Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "morana_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "morana_tactics_branch_3",
+          "name": "Ritual Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "morana_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "morana_tactics_branch_4",
+          "name": "Ritual Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "morana_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -2076,8 +3532,12 @@
           "effect": "armor_pierce",
           "tree": "assault",
           "tier": 1,
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 6
         },
         {
           "id": "dareth_scale_guard",
@@ -2093,8 +3553,12 @@
           "effect": "guard_60",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies guard 60 in battle.",
-          "combat_effect": "guard_60"
+          "description": "Applies guard 60 in battle. Improves with each rank.",
+          "combat_effect": "guard_60",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "dareth_wyrmbane",
@@ -2110,8 +3574,15 @@
           "effect": "bonus_vs_large",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 6,
+          "requires": [
+            "dareth_draconic_cleave"
+          ]
         },
         {
           "id": "dareth_dragonhide",
@@ -2129,14 +3600,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "dareth_heartpiercer",
           "name": "Heartpiercer",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 17,
           "power": 53,
           "scaling": "power",
@@ -2144,13 +3618,16 @@
           "target": "enemy",
           "effect": "crit_bonus",
           "requires": [
-            "dareth_assault_pressure",
-            "dareth_guard_mastery"
+            "dareth_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Pierces armor and leaves the target vulnerable for three turns.",
-          "combat_effect": "sunder"
+          "combat_effect": "sunder",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 10
         },
         {
           "id": "dareth_tactical_focus",
@@ -2166,8 +3643,12 @@
           "element": "physical",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "dareth_tactical_strike",
@@ -2186,8 +3667,12 @@
           "requires": [
             "dareth_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "dareth_tactical_instinct",
@@ -2205,7 +3690,10 @@
           "requires": [
             "dareth_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "dareth_guardian_crest",
@@ -2214,7 +3702,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -2225,7 +3713,11 @@
             "dareth_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "dareth_assault_mastery",
@@ -2243,7 +3735,10 @@
           "requires": [
             "dareth_wyrmbane"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "dareth_assault_pressure",
@@ -2262,8 +3757,12 @@
           "requires": [
             "dareth_assault_mastery"
           ],
-          "description": "Breaks enemy armor for three turns.",
-          "combat_effect": "sunder"
+          "description": "Breaks enemy armor for three turns. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "dareth_guard_mastery",
@@ -2281,7 +3780,10 @@
           "requires": [
             "dareth_dragonhide"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "dareth_guard_recovery",
@@ -2300,8 +3802,12 @@
           "requires": [
             "dareth_guard_mastery"
           ],
-          "description": "Reduces the next incoming blow.",
-          "combat_effect": "shield"
+          "description": "Reduces the next incoming blow. Improves with each rank.",
+          "combat_effect": "shield",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "dareth_tactic_pressure",
@@ -2320,8 +3826,12 @@
           "requires": [
             "dareth_tactical_instinct"
           ],
-          "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "description": "Staggers and delays the enemy. Improves with each rank.",
+          "combat_effect": "stagger",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "dareth_tactic_apex",
@@ -2330,7 +3840,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -2341,7 +3851,195 @@
             "dareth_tactic_pressure"
           ],
           "description": "Breaks enemy armor for three turns.",
-          "combat_effect": "sunder"
+          "combat_effect": "sunder",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "dareth_assault_branch_2",
+          "name": "Wyrmbane Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "dareth_draconic_cleave"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "dareth_assault_branch_3",
+          "name": "Wyrmbane Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "dareth_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "dareth_assault_branch_4",
+          "name": "Wyrmbane Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "dareth_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "dareth_guard_branch_2",
+          "name": "Scaleguard Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "dareth_scale_guard"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "dareth_guard_branch_3",
+          "name": "Scaleguard Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "dareth_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "dareth_guard_branch_4",
+          "name": "Scaleguard Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "dareth_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "dareth_tactics_branch_2",
+          "name": "Huntcraft Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "dareth_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "dareth_tactics_branch_3",
+          "name": "Huntcraft Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "dareth_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "dareth_tactics_branch_4",
+          "name": "Huntcraft Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "dareth_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -2410,8 +4108,12 @@
           "effect": "speed_down",
           "tree": "assault",
           "tier": 1,
-          "description": "Applies slow in battle.",
-          "combat_effect": "slow"
+          "description": "Applies slow in battle. Improves with each rank.",
+          "combat_effect": "slow",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 4
         },
         {
           "id": "jora_riposte",
@@ -2427,8 +4129,12 @@
           "effect": "counter",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies shield in battle.",
-          "combat_effect": "shield"
+          "description": "Applies shield in battle. Improves with each rank.",
+          "combat_effect": "shield",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "jora_broadside",
@@ -2444,8 +4150,15 @@
           "effect": "stagger",
           "tree": "assault",
           "tier": 2,
-          "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "description": "Staggers and delays the enemy. Improves with each rank.",
+          "combat_effect": "stagger",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 5,
+          "requires": [
+            "jora_tidal_blade"
+          ]
         },
         {
           "id": "jora_sea_legs",
@@ -2463,14 +4176,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "jora_maelstrom_cut",
           "name": "Maelstrom Cut",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 17,
           "power": 45,
           "scaling": "power",
@@ -2478,13 +4194,16 @@
           "target": "enemy",
           "effect": "multi_hit",
           "requires": [
-            "jora_assault_pressure",
-            "jora_guard_mastery"
+            "jora_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies bleed in battle.",
-          "combat_effect": "bleed"
+          "combat_effect": "bleed",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
         },
         {
           "id": "jora_tactical_focus",
@@ -2500,8 +4219,12 @@
           "element": "water",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "jora_tactical_strike",
@@ -2520,8 +4243,12 @@
           "requires": [
             "jora_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "jora_tactical_instinct",
@@ -2539,7 +4266,10 @@
           "requires": [
             "jora_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "jora_guardian_crest",
@@ -2548,7 +4278,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -2559,7 +4289,11 @@
             "jora_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "jora_assault_mastery",
@@ -2577,7 +4311,10 @@
           "requires": [
             "jora_broadside"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "jora_assault_pressure",
@@ -2596,8 +4333,12 @@
           "requires": [
             "jora_assault_mastery"
           ],
-          "description": "Inflicts bleeding for three turns.",
-          "combat_effect": "bleed"
+          "description": "Inflicts bleeding for three turns. Improves with each rank.",
+          "combat_effect": "bleed",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "jora_guard_mastery",
@@ -2615,7 +4356,10 @@
           "requires": [
             "jora_sea_legs"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "jora_guard_recovery",
@@ -2634,8 +4378,12 @@
           "requires": [
             "jora_guard_mastery"
           ],
-          "description": "Restores health over three enemy turns.",
-          "combat_effect": "regen"
+          "description": "Restores health over three enemy turns. Improves with each rank.",
+          "combat_effect": "regen",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "jora_tactic_pressure",
@@ -2654,8 +4402,12 @@
           "requires": [
             "jora_tactical_instinct"
           ],
-          "description": "Slows the enemy for three turns.",
-          "combat_effect": "slow"
+          "description": "Slows the enemy for three turns. Improves with each rank.",
+          "combat_effect": "slow",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "jora_tactic_apex",
@@ -2664,7 +4416,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -2675,7 +4427,195 @@
             "jora_tactic_pressure"
           ],
           "description": "Inflicts bleeding for three turns.",
-          "combat_effect": "bleed"
+          "combat_effect": "bleed",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "jora_assault_branch_2",
+          "name": "Tideblade Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "jora_tidal_blade"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "jora_assault_branch_3",
+          "name": "Tideblade Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "jora_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "jora_assault_branch_4",
+          "name": "Tideblade Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "jora_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "jora_guard_branch_2",
+          "name": "Sea Ward Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "jora_riposte"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "jora_guard_branch_3",
+          "name": "Sea Ward Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "jora_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "jora_guard_branch_4",
+          "name": "Sea Ward Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "jora_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "jora_tactics_branch_2",
+          "name": "Seamanship Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "jora_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "jora_tactics_branch_3",
+          "name": "Seamanship Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "jora_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "jora_tactics_branch_4",
+          "name": "Seamanship Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "jora_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -2744,8 +4684,12 @@
           "effect": "heal_self",
           "tree": "assault",
           "tier": 1,
-          "description": "Applies drain in battle.",
-          "combat_effect": "drain"
+          "description": "Applies drain in battle. Improves with each rank.",
+          "combat_effect": "drain",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "alistair_shield_oath",
@@ -2761,8 +4705,12 @@
           "effect": "guard_75",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "description": "Applies guard 75 in battle. Improves with each rank.",
+          "combat_effect": "guard_75",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "alistair_smite",
@@ -2778,8 +4726,15 @@
           "effect": "bonus_vs_undead",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 5,
+          "requires": [
+            "alistair_aura_light"
+          ]
         },
         {
           "id": "alistair_beacon",
@@ -2789,7 +4744,7 @@
           "cost_sp": 1,
           "effect": "resistance_regen_bonus",
           "requires": [
-            "alistair_aura_light"
+            "alistair_shield_oath"
           ],
           "tree": "guard",
           "tier": 2,
@@ -2797,14 +4752,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "alistair_last_bastion",
           "name": "Last Bastion",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 18,
           "power": 0,
           "scaling": "none",
@@ -2812,13 +4770,16 @@
           "target": "self",
           "effect": "invulnerable_one_hit",
           "requires": [
-            "alistair_assault_pressure",
-            "alistair_guard_mastery"
+            "alistair_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "alistair_tactical_focus",
@@ -2834,8 +4795,12 @@
           "element": "holy",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "alistair_tactical_strike",
@@ -2854,8 +4819,12 @@
           "requires": [
             "alistair_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "alistair_tactical_instinct",
@@ -2873,7 +4842,10 @@
           "requires": [
             "alistair_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "alistair_guardian_crest",
@@ -2882,7 +4854,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -2893,7 +4865,11 @@
             "alistair_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "alistair_assault_mastery",
@@ -2911,7 +4887,10 @@
           "requires": [
             "alistair_smite"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "alistair_assault_pressure",
@@ -2930,8 +4909,12 @@
           "requires": [
             "alistair_assault_mastery"
           ],
-          "description": "Weakens enemy attacks for three turns.",
-          "combat_effect": "weaken"
+          "description": "Weakens enemy attacks for three turns. Improves with each rank.",
+          "combat_effect": "weaken",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "alistair_guard_mastery",
@@ -2949,7 +4932,10 @@
           "requires": [
             "alistair_beacon"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "alistair_guard_recovery",
@@ -2968,8 +4954,12 @@
           "requires": [
             "alistair_guard_mastery"
           ],
-          "description": "Restores health.",
-          "combat_effect": "heal"
+          "description": "Restores health. Improves with each rank.",
+          "combat_effect": "heal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "alistair_tactic_pressure",
@@ -2988,8 +4978,12 @@
           "requires": [
             "alistair_tactical_instinct"
           ],
-          "description": "Raises power for three hero turns.",
-          "combat_effect": "rally"
+          "description": "Raises power for three hero turns. Improves with each rank.",
+          "combat_effect": "rally",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "alistair_tactic_apex",
@@ -2998,7 +4992,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -3009,7 +5003,195 @@
             "alistair_tactic_pressure"
           ],
           "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "combat_effect": "stagger",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "alistair_assault_branch_2",
+          "name": "Radiance Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "alistair_aura_light"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "alistair_assault_branch_3",
+          "name": "Radiance Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "alistair_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "alistair_assault_branch_4",
+          "name": "Radiance Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "alistair_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "alistair_guard_branch_2",
+          "name": "Sacred Shield Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "alistair_shield_oath"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "alistair_guard_branch_3",
+          "name": "Sacred Shield Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "alistair_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "alistair_guard_branch_4",
+          "name": "Sacred Shield Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "alistair_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "alistair_tactics_branch_2",
+          "name": "Oathcraft Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "alistair_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "alistair_tactics_branch_3",
+          "name": "Oathcraft Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "alistair_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "alistair_tactics_branch_4",
+          "name": "Oathcraft Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "alistair_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -3078,8 +5260,12 @@
           "effect": "haste_evade",
           "tree": "assault",
           "tier": 1,
-          "description": "Applies evade in battle.",
-          "combat_effect": "evade"
+          "description": "Applies evade in battle. Improves with each rank.",
+          "combat_effect": "evade",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "zephyr_whirlwind_cut",
@@ -3095,8 +5281,12 @@
           "effect": "speed_scale",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies slow in battle.",
-          "combat_effect": "slow"
+          "description": "Applies slow in battle. Improves with each rank.",
+          "combat_effect": "slow",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 4
         },
         {
           "id": "zephyr_feint",
@@ -3112,8 +5302,15 @@
           "effect": "accuracy_down",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies weaken in battle.",
-          "combat_effect": "weaken"
+          "description": "Applies weaken in battle. Improves with each rank.",
+          "combat_effect": "weaken",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 3,
+          "requires": [
+            "zephyr_mirage_step"
+          ]
         },
         {
           "id": "zephyr_afterimage",
@@ -3123,7 +5320,7 @@
           "cost_sp": 1,
           "effect": "evasion_after_action",
           "requires": [
-            "zephyr_mirage_step"
+            "zephyr_whirlwind_cut"
           ],
           "tree": "guard",
           "tier": 2,
@@ -3131,14 +5328,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "zephyr_thousand_cuts",
           "name": "Thousand Cuts",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 17,
           "power": 44,
           "scaling": "power",
@@ -3146,13 +5346,16 @@
           "target": "enemy",
           "effect": "multi_hit",
           "requires": [
-            "zephyr_assault_pressure",
-            "zephyr_guard_mastery"
+            "zephyr_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies bleed in battle.",
-          "combat_effect": "bleed"
+          "combat_effect": "bleed",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
         },
         {
           "id": "zephyr_tactical_focus",
@@ -3168,8 +5371,12 @@
           "element": "physical",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "zephyr_tactical_strike",
@@ -3188,8 +5395,12 @@
           "requires": [
             "zephyr_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "zephyr_tactical_instinct",
@@ -3207,7 +5418,10 @@
           "requires": [
             "zephyr_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "zephyr_guardian_crest",
@@ -3216,7 +5430,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -3227,7 +5441,11 @@
             "zephyr_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "zephyr_assault_mastery",
@@ -3245,7 +5463,10 @@
           "requires": [
             "zephyr_feint"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "zephyr_assault_pressure",
@@ -3264,8 +5485,12 @@
           "requires": [
             "zephyr_assault_mastery"
           ],
-          "description": "Inflicts bleeding for three turns.",
-          "combat_effect": "bleed"
+          "description": "Inflicts bleeding for three turns. Improves with each rank.",
+          "combat_effect": "bleed",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "zephyr_guard_mastery",
@@ -3283,7 +5508,10 @@
           "requires": [
             "zephyr_afterimage"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "zephyr_guard_recovery",
@@ -3302,8 +5530,12 @@
           "requires": [
             "zephyr_guard_mastery"
           ],
-          "description": "Raises evasion for three enemy turns.",
-          "combat_effect": "evade"
+          "description": "Raises evasion for three enemy turns. Improves with each rank.",
+          "combat_effect": "evade",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "zephyr_tactic_pressure",
@@ -3322,8 +5554,12 @@
           "requires": [
             "zephyr_tactical_instinct"
           ],
-          "description": "Weakens enemy attacks for three turns.",
-          "combat_effect": "weaken"
+          "description": "Weakens enemy attacks for three turns. Improves with each rank.",
+          "combat_effect": "weaken",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "zephyr_tactic_apex",
@@ -3332,7 +5568,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -3343,7 +5579,195 @@
             "zephyr_tactic_pressure"
           ],
           "description": "Inflicts bleeding for three turns.",
-          "combat_effect": "bleed"
+          "combat_effect": "bleed",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "zephyr_assault_branch_2",
+          "name": "Bladestorm Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "zephyr_mirage_step"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "zephyr_assault_branch_3",
+          "name": "Bladestorm Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "zephyr_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "zephyr_assault_branch_4",
+          "name": "Bladestorm Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "zephyr_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "zephyr_guard_branch_2",
+          "name": "Mirage Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "zephyr_whirlwind_cut"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "zephyr_guard_branch_3",
+          "name": "Mirage Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "zephyr_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "zephyr_guard_branch_4",
+          "name": "Mirage Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "zephyr_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "zephyr_tactics_branch_2",
+          "name": "Sandcraft Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "zephyr_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "zephyr_tactics_branch_3",
+          "name": "Sandcraft Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "zephyr_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "zephyr_tactics_branch_4",
+          "name": "Sandcraft Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "zephyr_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -3412,8 +5836,12 @@
           "effect": "lifesteal",
           "tree": "assault",
           "tier": 1,
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 4
         },
         {
           "id": "malakor_grave_shroud",
@@ -3429,8 +5857,12 @@
           "effect": "resist_guard",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies resist guard in battle.",
-          "combat_effect": "resist_guard"
+          "description": "Applies resist guard in battle. Improves with each rank.",
+          "combat_effect": "resist_guard",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "malakor_spectral_rend",
@@ -3446,8 +5878,15 @@
           "effect": "resistance_break",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 6,
+          "requires": [
+            "malakor_soul_harvest"
+          ]
         },
         {
           "id": "malakor_deathless",
@@ -3465,14 +5904,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "malakor_reaping_field",
           "name": "Reaping Field",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 20,
           "power": 41,
           "scaling": "magic",
@@ -3480,13 +5922,16 @@
           "target": "enemy_all",
           "effect": "lifesteal",
           "requires": [
-            "malakor_assault_pressure",
-            "malakor_guard_mastery"
+            "malakor_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "combat_effect": "lifesteal",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 7
         },
         {
           "id": "malakor_tactical_focus",
@@ -3502,8 +5947,12 @@
           "element": "shadow",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "malakor_tactical_strike",
@@ -3522,8 +5971,12 @@
           "requires": [
             "malakor_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "malakor_tactical_instinct",
@@ -3541,7 +5994,10 @@
           "requires": [
             "malakor_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "malakor_guardian_crest",
@@ -3550,7 +6006,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -3561,7 +6017,11 @@
             "malakor_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "malakor_assault_mastery",
@@ -3579,7 +6039,10 @@
           "requires": [
             "malakor_spectral_rend"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "malakor_assault_pressure",
@@ -3598,8 +6061,12 @@
           "requires": [
             "malakor_assault_mastery"
           ],
-          "description": "Strikes and restores health.",
-          "combat_effect": "drain"
+          "description": "Strikes and restores health. Improves with each rank.",
+          "combat_effect": "drain",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "malakor_guard_mastery",
@@ -3617,7 +6084,10 @@
           "requires": [
             "malakor_deathless"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "malakor_guard_recovery",
@@ -3636,8 +6106,12 @@
           "requires": [
             "malakor_guard_mastery"
           ],
-          "description": "Reduces the next incoming blow.",
-          "combat_effect": "shield"
+          "description": "Reduces the next incoming blow. Improves with each rank.",
+          "combat_effect": "shield",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "malakor_tactic_pressure",
@@ -3656,8 +6130,12 @@
           "requires": [
             "malakor_tactical_instinct"
           ],
-          "description": "Weakens enemy attacks for three turns.",
-          "combat_effect": "weaken"
+          "description": "Weakens enemy attacks for three turns. Improves with each rank.",
+          "combat_effect": "weaken",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 4
         },
         {
           "id": "malakor_tactic_apex",
@@ -3666,7 +6144,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -3677,7 +6155,195 @@
             "malakor_tactic_pressure"
           ],
           "description": "Staggers and delays the enemy.",
-          "combat_effect": "stagger"
+          "combat_effect": "stagger",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "malakor_assault_branch_2",
+          "name": "Soul Reaping Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "malakor_soul_harvest"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "malakor_assault_branch_3",
+          "name": "Soul Reaping Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "malakor_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "malakor_assault_branch_4",
+          "name": "Soul Reaping Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "malakor_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "malakor_guard_branch_2",
+          "name": "Graveguard Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "malakor_grave_shroud"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "malakor_guard_branch_3",
+          "name": "Graveguard Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "malakor_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "malakor_guard_branch_4",
+          "name": "Graveguard Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "malakor_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "malakor_tactics_branch_2",
+          "name": "Necromancy Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "malakor_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "malakor_tactics_branch_3",
+          "name": "Necromancy Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "malakor_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "malakor_tactics_branch_4",
+          "name": "Necromancy Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "malakor_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
@@ -3746,8 +6412,12 @@
           "effect": "burn_chance",
           "tree": "assault",
           "tier": 1,
-          "description": "Applies burn in battle.",
-          "combat_effect": "burn"
+          "description": "Applies burn in battle. Improves with each rank.",
+          "combat_effect": "burn",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 5
         },
         {
           "id": "ignacia_ember_ward",
@@ -3763,8 +6433,12 @@
           "effect": "fire_guard",
           "tree": "guard",
           "tier": 1,
-          "description": "Applies fire guard in battle.",
-          "combat_effect": "fire_guard"
+          "description": "Applies fire guard in battle. Improves with each rank.",
+          "combat_effect": "fire_guard",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 0
         },
         {
           "id": "ignacia_drake_call",
@@ -3780,8 +6454,15 @@
           "effect": "summon_strike",
           "tree": "assault",
           "tier": 2,
-          "description": "Applies stagger in battle.",
-          "combat_effect": "stagger"
+          "description": "Applies stagger in battle. Improves with each rank.",
+          "combat_effect": "stagger",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 6,
+          "requires": [
+            "ignacia_dragon_breath"
+          ]
         },
         {
           "id": "ignacia_bonded_flame",
@@ -3791,7 +6472,7 @@
           "cost_sp": 1,
           "effect": "magic_fire_bonus",
           "requires": [
-            "ignacia_dragon_breath"
+            "ignacia_ember_ward"
           ],
           "tree": "guard",
           "tier": 2,
@@ -3799,14 +6480,17 @@
             "hp": 8,
             "defense": 2
           },
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2
         },
         {
           "id": "ignacia_skyfire",
           "name": "Skyfire",
           "type": "active",
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 20,
           "power": 49,
           "scaling": "magic",
@@ -3814,13 +6498,16 @@
           "target": "enemy_all",
           "effect": "burn",
           "requires": [
-            "ignacia_assault_pressure",
-            "ignacia_guard_mastery"
+            "ignacia_assault_pressure"
           ],
           "tree": "assault",
           "tier": 5,
           "description": "Burns the enemy for three turns.",
-          "combat_effect": "burn"
+          "combat_effect": "burn",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 9
         },
         {
           "id": "ignacia_tactical_focus",
@@ -3836,8 +6523,12 @@
           "element": "fire",
           "target": "enemy",
           "effect": "precision",
-          "description": "Applies sunder in battle.",
-          "combat_effect": "sunder"
+          "description": "Applies sunder in battle. Improves with each rank.",
+          "combat_effect": "sunder",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 0,
+          "power_per_rank": 3
         },
         {
           "id": "ignacia_tactical_strike",
@@ -3856,8 +6547,12 @@
           "requires": [
             "ignacia_tactical_focus"
           ],
-          "description": "Applies lifesteal in battle.",
-          "combat_effect": "lifesteal"
+          "description": "Applies lifesteal in battle. Improves with each rank.",
+          "combat_effect": "lifesteal",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 2,
+          "power_per_rank": 4
         },
         {
           "id": "ignacia_tactical_instinct",
@@ -3875,7 +6570,10 @@
           "requires": [
             "ignacia_tactical_strike"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "ignacia_guardian_crest",
@@ -3884,7 +6582,7 @@
           "tree": "guard",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 15,
           "power": 0,
           "scaling": "none",
@@ -3895,7 +6593,11 @@
             "ignacia_guard_recovery"
           ],
           "description": "Applies guard 75 in battle.",
-          "combat_effect": "guard_75"
+          "combat_effect": "guard_75",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 0
         },
         {
           "id": "ignacia_assault_mastery",
@@ -3913,7 +6615,10 @@
           "requires": [
             "ignacia_drake_call"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "ignacia_assault_pressure",
@@ -3932,8 +6637,12 @@
           "requires": [
             "ignacia_assault_mastery"
           ],
-          "description": "Burns the enemy for three turns.",
-          "combat_effect": "burn"
+          "description": "Burns the enemy for three turns. Improves with each rank.",
+          "combat_effect": "burn",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 5
         },
         {
           "id": "ignacia_guard_mastery",
@@ -3951,7 +6660,10 @@
           "requires": [
             "ignacia_bonded_flame"
           ],
-          "description": "Always active after learning."
+          "description": "Each rank grants the listed stat bonuses.",
+          "max_rank": 5,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 5
         },
         {
           "id": "ignacia_guard_recovery",
@@ -3970,8 +6682,12 @@
           "requires": [
             "ignacia_guard_mastery"
           ],
-          "description": "Restores health over three enemy turns.",
-          "combat_effect": "regen"
+          "description": "Restores health over three enemy turns. Improves with each rank.",
+          "combat_effect": "regen",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "ignacia_tactic_pressure",
@@ -3990,8 +6706,12 @@
           "requires": [
             "ignacia_tactical_instinct"
           ],
-          "description": "Raises power for three hero turns.",
-          "combat_effect": "rally"
+          "description": "Raises power for three hero turns. Improves with each rank.",
+          "combat_effect": "rally",
+          "max_rank": 3,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 8,
+          "power_per_rank": 0
         },
         {
           "id": "ignacia_tactic_apex",
@@ -4000,7 +6720,7 @@
           "tree": "tactics",
           "tier": 5,
           "level_req": 15,
-          "cost_sp": 2,
+          "cost_sp": 1,
           "mp": 16,
           "power": 42,
           "scaling": "power_magic",
@@ -4011,7 +6731,195 @@
             "ignacia_tactic_pressure"
           ],
           "description": "Burns the enemy for three turns.",
-          "combat_effect": "burn"
+          "combat_effect": "burn",
+          "max_rank": 1,
+          "point_cost_per_rank": 1,
+          "tier_spend_required": 12,
+          "power_per_rank": 8
+        },
+        {
+          "id": "ignacia_assault_branch_2",
+          "name": "Dragonfire Tempo",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 1
+          },
+          "requires": [
+            "ignacia_dragon_breath"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignacia_assault_branch_3",
+          "name": "Dragonfire Ferocity",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "magic": 1,
+            "crit": 0.5
+          },
+          "requires": [
+            "ignacia_assault_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignacia_assault_branch_4",
+          "name": "Dragonfire Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 2
+          },
+          "requires": [
+            "ignacia_assault_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignacia_guard_branch_2",
+          "name": "Drakeward Vigor",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 5
+          },
+          "requires": [
+            "ignacia_ember_ward"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignacia_guard_branch_3",
+          "name": "Drakeward Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "defense": 1,
+            "resistance": 1
+          },
+          "requires": [
+            "ignacia_guard_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignacia_guard_branch_4",
+          "name": "Drakeward Fortitude",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 7,
+            "defense": 1
+          },
+          "requires": [
+            "ignacia_guard_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignacia_tactics_branch_2",
+          "name": "Bondcraft Footwork",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 2,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 1
+          },
+          "requires": [
+            "ignacia_tactical_focus"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignacia_tactics_branch_3",
+          "name": "Bondcraft Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 5,
+          "tier_spend_required": 5,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "crit": 0.5,
+            "speed": 1
+          },
+          "requires": [
+            "ignacia_tactics_branch_2"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
+        },
+        {
+          "id": "ignacia_tactics_branch_4",
+          "name": "Bondcraft Cunning",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "point_cost_per_rank": 1,
+          "max_rank": 3,
+          "tier_spend_required": 8,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "resistance": 2
+          },
+          "requires": [
+            "ignacia_tactics_branch_3"
+          ],
+          "description": "Each rank grants the listed stat bonuses."
         }
       ],
       "trees": [
