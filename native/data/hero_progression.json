@@ -68,7 +68,9 @@
           "target": "enemy",
           "effect": "heavy_hit",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies heavy hit in battle.",
+          "combat_effect": "heavy_hit"
         },
         {
           "id": "ignis_magma_guard",
@@ -83,7 +85,9 @@
           "target": "self",
           "effect": "guard_60",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies guard 60 in battle.",
+          "combat_effect": "guard_60"
         },
         {
           "id": "ignis_cinder_sweep",
@@ -101,7 +105,9 @@
             "ignis_eruption_strike"
           ],
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies burn in battle.",
+          "combat_effect": "burn"
         },
         {
           "id": "ignis_molten_core",
@@ -118,13 +124,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "ignis_caldera_break",
           "name": "Caldera Break",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 18,
           "power": 48,
@@ -133,11 +140,13 @@
           "target": "enemy",
           "effect": "armor_break",
           "requires": [
-            "ignis_cinder_sweep",
-            "ignis_molten_core"
+            "ignis_assault_pressure",
+            "ignis_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "ignis_tactical_focus",
@@ -152,7 +161,9 @@
           "scaling": "magic",
           "element": "fire",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "ignis_tactical_strike",
@@ -170,7 +181,9 @@
           "effect": "lifesteal",
           "requires": [
             "ignis_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "ignis_tactical_instinct",
@@ -187,15 +200,16 @@
           },
           "requires": [
             "ignis_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "ignis_guardian_crest",
           "name": "Obsidian Bulwark",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -204,25 +218,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "ignis_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "ignis_assault_mastery",
+          "name": "Furnace Blood",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "ignis_cinder_sweep"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "ignis_assault_pressure",
+          "name": "Lava Rupture",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "burn",
+          "requires": [
+            "ignis_assault_mastery"
+          ],
+          "description": "Burns the enemy for three turns.",
+          "combat_effect": "burn"
+        },
+        {
+          "id": "ignis_guard_mastery",
+          "name": "Basalt Skin",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "ignis_molten_core"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "ignis_guard_recovery",
+          "name": "Phoenix Pulse",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "self",
+          "effect": "regen",
+          "requires": [
+            "ignis_guard_mastery"
+          ],
+          "description": "Restores health over three enemy turns.",
+          "combat_effect": "regen"
+        },
+        {
+          "id": "ignis_tactic_pressure",
+          "name": "Ash Veil",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "sunder",
+          "requires": [
+            "ignis_tactical_instinct"
+          ],
+          "description": "Breaks enemy armor for three turns.",
+          "combat_effect": "sunder"
+        },
+        {
+          "id": "ignis_tactic_apex",
+          "name": "Heart of the Volcano",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "burn",
+          "requires": [
+            "ignis_tactic_pressure"
+          ],
+          "description": "Burns the enemy for three turns.",
+          "combat_effect": "burn"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Eruption",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Magmaheart",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Ashcraft",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -273,7 +405,9 @@
           "target": "enemy",
           "effect": "slow",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Slows the enemy for three turns.",
+          "combat_effect": "slow"
         },
         {
           "id": "vesper_glacial_bastion",
@@ -288,7 +422,9 @@
           "target": "self",
           "effect": "guard_75",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
         },
         {
           "id": "vesper_shard_lance",
@@ -303,7 +439,9 @@
           "target": "enemy",
           "effect": "pierce",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "vesper_permafrost",
@@ -320,13 +458,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "vesper_whiteout",
           "name": "Whiteout",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 18,
           "power": 39,
@@ -335,11 +474,13 @@
           "target": "enemy_all",
           "effect": "slow_all",
           "requires": [
-            "vesper_shard_lance",
-            "vesper_permafrost"
+            "vesper_assault_pressure",
+            "vesper_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies slow in battle.",
+          "combat_effect": "slow"
         },
         {
           "id": "vesper_tactical_focus",
@@ -354,7 +495,9 @@
           "scaling": "magic",
           "element": "ice",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "vesper_tactical_strike",
@@ -372,7 +515,9 @@
           "effect": "lifesteal",
           "requires": [
             "vesper_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "vesper_tactical_instinct",
@@ -389,15 +534,16 @@
           },
           "requires": [
             "vesper_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "vesper_guardian_crest",
           "name": "Frozen Aegis",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -406,25 +552,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "vesper_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "vesper_assault_mastery",
+          "name": "Biting Cold",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "vesper_shard_lance"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "vesper_assault_pressure",
+          "name": "Glacial Spear",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "ice",
+          "target": "enemy",
+          "effect": "slow",
+          "requires": [
+            "vesper_assault_mastery"
+          ],
+          "description": "Slows the enemy for three turns.",
+          "combat_effect": "slow"
+        },
+        {
+          "id": "vesper_guard_mastery",
+          "name": "Icebound Resolve",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "vesper_permafrost"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "vesper_guard_recovery",
+          "name": "Crystal Shelter",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "ice",
+          "target": "self",
+          "effect": "shield",
+          "requires": [
+            "vesper_guard_mastery"
+          ],
+          "description": "Reduces the next incoming blow.",
+          "combat_effect": "shield"
+        },
+        {
+          "id": "vesper_tactic_pressure",
+          "name": "Snowblind",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "ice",
+          "target": "enemy",
+          "effect": "stagger",
+          "requires": [
+            "vesper_tactical_instinct"
+          ],
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
+        },
+        {
+          "id": "vesper_tactic_apex",
+          "name": "Absolute Zero",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "ice",
+          "target": "enemy",
+          "effect": "stagger",
+          "requires": [
+            "vesper_tactic_pressure"
+          ],
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Wintercraft",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Frostward",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Rime Tactics",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -475,7 +739,9 @@
           "target": "enemy",
           "effect": "multi_hit",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies bleed in battle.",
+          "combat_effect": "bleed"
         },
         {
           "id": "lyra_evasive_step",
@@ -490,7 +756,9 @@
           "target": "self",
           "effect": "evade",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Raises evasion for three enemy turns.",
+          "combat_effect": "evade"
         },
         {
           "id": "lyra_marked_prey",
@@ -505,7 +773,9 @@
           "target": "enemy",
           "effect": "mark",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "lyra_night_hunter",
@@ -522,13 +792,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "lyra_umbral_volley",
           "name": "Umbral Volley",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 16,
           "power": 42,
@@ -537,11 +808,13 @@
           "target": "enemy_all",
           "effect": "multi_hit",
           "requires": [
-            "lyra_phantom_arrows",
-            "lyra_night_hunter"
+            "lyra_vane_assault_pressure",
+            "lyra_vane_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies bleed in battle.",
+          "combat_effect": "bleed"
         },
         {
           "id": "lyra_vane_tactical_focus",
@@ -556,7 +829,9 @@
           "scaling": "magic",
           "element": "shadow",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "lyra_vane_tactical_strike",
@@ -574,7 +849,9 @@
           "effect": "lifesteal",
           "requires": [
             "lyra_vane_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "lyra_vane_tactical_instinct",
@@ -591,15 +868,16 @@
           },
           "requires": [
             "lyra_vane_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "lyra_vane_guardian_crest",
           "name": "Phantom Refuge",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -608,25 +886,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "lyra_vane_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "lyra_vane_assault_mastery",
+          "name": "Keen Eye",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "lyra_marked_prey"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "lyra_vane_assault_pressure",
+          "name": "Venom Arrow",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "poison",
+          "requires": [
+            "lyra_vane_assault_mastery"
+          ],
+          "description": "Poisons the enemy for three turns.",
+          "combat_effect": "poison"
+        },
+        {
+          "id": "lyra_vane_guard_mastery",
+          "name": "Ghostwalk",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "lyra_night_hunter"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "lyra_vane_guard_recovery",
+          "name": "Shadow Mend",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "self",
+          "effect": "evade",
+          "requires": [
+            "lyra_vane_guard_mastery"
+          ],
+          "description": "Raises evasion for three enemy turns.",
+          "combat_effect": "evade"
+        },
+        {
+          "id": "lyra_vane_tactic_pressure",
+          "name": "Marked Ambush",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "weaken",
+          "requires": [
+            "lyra_vane_tactical_instinct"
+          ],
+          "description": "Weakens enemy attacks for three turns.",
+          "combat_effect": "weaken"
+        },
+        {
+          "id": "lyra_vane_tactic_apex",
+          "name": "Midnight Execution",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "poison",
+          "requires": [
+            "lyra_vane_tactic_pressure"
+          ],
+          "description": "Poisons the enemy for three turns.",
+          "combat_effect": "poison"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Shadowshot",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Veilguard",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Nightcraft",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -677,7 +1073,9 @@
           "target": "enemy",
           "effect": "shock",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Shocks the enemy and delays its next action.",
+          "combat_effect": "shock"
         },
         {
           "id": "thorvald_forgeguard",
@@ -692,7 +1090,9 @@
           "target": "self",
           "effect": "guard_60",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies guard 60 in battle.",
+          "combat_effect": "guard_60"
         },
         {
           "id": "thorvald_storm_hammer",
@@ -707,7 +1107,9 @@
           "target": "enemy",
           "effect": "stagger",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
         },
         {
           "id": "thorvald_tempered_soul",
@@ -724,13 +1126,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "thorvald_skybreaker",
           "name": "Skybreaker",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 18,
           "power": 50,
@@ -739,11 +1142,13 @@
           "target": "enemy",
           "effect": "shock_break",
           "requires": [
-            "thorvald_storm_hammer",
-            "thorvald_tempered_soul"
+            "thorvald_assault_pressure",
+            "thorvald_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies shock in battle.",
+          "combat_effect": "shock"
         },
         {
           "id": "thorvald_tactical_focus",
@@ -758,7 +1163,9 @@
           "scaling": "magic",
           "element": "lightning",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "thorvald_tactical_strike",
@@ -776,7 +1183,9 @@
           "effect": "lifesteal",
           "requires": [
             "thorvald_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "thorvald_tactical_instinct",
@@ -793,15 +1202,16 @@
           },
           "requires": [
             "thorvald_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "thorvald_guardian_crest",
           "name": "Anvil Ward",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -810,25 +1220,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "thorvald_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "thorvald_assault_mastery",
+          "name": "Thunderblood",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "thorvald_storm_hammer"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "thorvald_assault_pressure",
+          "name": "Chain Bolt",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "lightning",
+          "target": "enemy",
+          "effect": "shock",
+          "requires": [
+            "thorvald_assault_mastery"
+          ],
+          "description": "Shocks the enemy and delays its next action.",
+          "combat_effect": "shock"
+        },
+        {
+          "id": "thorvald_guard_mastery",
+          "name": "Forged Endurance",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "thorvald_tempered_soul"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "thorvald_guard_recovery",
+          "name": "Runic Barrier",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "lightning",
+          "target": "self",
+          "effect": "shield",
+          "requires": [
+            "thorvald_guard_mastery"
+          ],
+          "description": "Reduces the next incoming blow.",
+          "combat_effect": "shield"
+        },
+        {
+          "id": "thorvald_tactic_pressure",
+          "name": "Static Charge",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "lightning",
+          "target": "enemy",
+          "effect": "stagger",
+          "requires": [
+            "thorvald_tactical_instinct"
+          ],
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
+        },
+        {
+          "id": "thorvald_tactic_apex",
+          "name": "Stormfall",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "lightning",
+          "target": "enemy",
+          "effect": "shock",
+          "requires": [
+            "thorvald_tactic_pressure"
+          ],
+          "description": "Shocks the enemy and delays its next action.",
+          "combat_effect": "shock"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Stormcaller",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Forgeguard",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Runecraft",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -879,7 +1407,9 @@
           "target": "enemy",
           "effect": "stagger",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
         },
         {
           "id": "cedric_hold_line",
@@ -894,7 +1424,9 @@
           "target": "self",
           "effect": "guard_70",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies guard 70 in battle.",
+          "combat_effect": "guard_70"
         },
         {
           "id": "cedric_commanders_mark",
@@ -909,7 +1441,9 @@
           "target": "enemy",
           "effect": "vulnerability",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies weaken in battle.",
+          "combat_effect": "weaken"
         },
         {
           "id": "cedric_iron_discipline",
@@ -926,13 +1460,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "cedric_unbroken_advance",
           "name": "Unbroken Advance",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 43,
@@ -941,11 +1476,13 @@
           "target": "enemy_all",
           "effect": "team_guard",
           "requires": [
-            "cedric_phalanx_charge",
-            "cedric_iron_discipline"
+            "cedric_assault_pressure",
+            "cedric_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies shield in battle.",
+          "combat_effect": "shield"
         },
         {
           "id": "cedric_tactical_focus",
@@ -960,7 +1497,9 @@
           "scaling": "magic",
           "element": "physical",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "cedric_tactical_strike",
@@ -978,7 +1517,9 @@
           "effect": "lifesteal",
           "requires": [
             "cedric_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "cedric_tactical_instinct",
@@ -995,15 +1536,16 @@
           },
           "requires": [
             "cedric_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "cedric_guardian_crest",
           "name": "Last Stand",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -1012,25 +1554,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "cedric_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "cedric_assault_mastery",
+          "name": "Battle Doctrine",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "cedric_commanders_mark"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "cedric_assault_pressure",
+          "name": "Sundering Charge",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "none",
+          "target": "enemy",
+          "effect": "sunder",
+          "requires": [
+            "cedric_assault_mastery"
+          ],
+          "description": "Breaks enemy armor for three turns.",
+          "combat_effect": "sunder"
+        },
+        {
+          "id": "cedric_guard_mastery",
+          "name": "Shieldwall Veteran",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "cedric_iron_discipline"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "cedric_guard_recovery",
+          "name": "Field Rally",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "none",
+          "target": "self",
+          "effect": "rally",
+          "requires": [
+            "cedric_guard_mastery"
+          ],
+          "description": "Raises power for three hero turns.",
+          "combat_effect": "rally"
+        },
+        {
+          "id": "cedric_tactic_pressure",
+          "name": "Tactical Order",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "none",
+          "target": "enemy",
+          "effect": "weaken",
+          "requires": [
+            "cedric_tactical_instinct"
+          ],
+          "description": "Weakens enemy attacks for three turns.",
+          "combat_effect": "weaken"
+        },
+        {
+          "id": "cedric_tactic_apex",
+          "name": "Crown of Iron",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "none",
+          "target": "enemy",
+          "effect": "sunder",
+          "requires": [
+            "cedric_tactic_pressure"
+          ],
+          "description": "Breaks enemy armor for three turns.",
+          "combat_effect": "sunder"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Vanguard",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Ironwall",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Command",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -1081,7 +1741,9 @@
           "target": "enemy_all",
           "effect": "poison",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Poisons the enemy for three turns.",
+          "combat_effect": "poison"
         },
         {
           "id": "morana_bogward",
@@ -1096,7 +1758,9 @@
           "target": "self",
           "effect": "resist_guard",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies resist guard in battle.",
+          "combat_effect": "resist_guard"
         },
         {
           "id": "morana_rot_bloom",
@@ -1111,7 +1775,9 @@
           "target": "enemy",
           "effect": "decay",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies poison in battle.",
+          "combat_effect": "poison"
         },
         {
           "id": "morana_plague_bearer",
@@ -1128,13 +1794,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "morana_black_marsh",
           "name": "Black Marsh",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 19,
           "power": 38,
@@ -1143,11 +1810,13 @@
           "target": "enemy_all",
           "effect": "poison_slow",
           "requires": [
-            "morana_rot_bloom",
-            "morana_plague_bearer"
+            "morana_assault_pressure",
+            "morana_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies poison in battle.",
+          "combat_effect": "poison"
         },
         {
           "id": "morana_tactical_focus",
@@ -1162,7 +1831,9 @@
           "scaling": "magic",
           "element": "poison",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "morana_tactical_strike",
@@ -1180,7 +1851,9 @@
           "effect": "lifesteal",
           "requires": [
             "morana_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "morana_tactical_instinct",
@@ -1197,15 +1870,16 @@
           },
           "requires": [
             "morana_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "morana_guardian_crest",
           "name": "Marsh Sanctuary",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -1214,25 +1888,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "morana_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "morana_assault_mastery",
+          "name": "Virulent Blood",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "morana_rot_bloom"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "morana_assault_pressure",
+          "name": "Rot Cascade",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "poison",
+          "target": "enemy",
+          "effect": "poison",
+          "requires": [
+            "morana_assault_mastery"
+          ],
+          "description": "Poisons the enemy for three turns.",
+          "combat_effect": "poison"
+        },
+        {
+          "id": "morana_guard_mastery",
+          "name": "Bogborn",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "morana_plague_bearer"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "morana_guard_recovery",
+          "name": "Leeching Ward",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 18,
+          "scaling": "power_magic",
+          "element": "poison",
+          "target": "enemy",
+          "effect": "drain",
+          "requires": [
+            "morana_guard_mastery"
+          ],
+          "description": "Strikes and restores health.",
+          "combat_effect": "drain"
+        },
+        {
+          "id": "morana_tactic_pressure",
+          "name": "Hex of Frailty",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "poison",
+          "target": "enemy",
+          "effect": "weaken",
+          "requires": [
+            "morana_tactical_instinct"
+          ],
+          "description": "Weakens enemy attacks for three turns.",
+          "combat_effect": "weaken"
+        },
+        {
+          "id": "morana_tactic_apex",
+          "name": "Plague Dominion",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "poison",
+          "target": "enemy",
+          "effect": "poison",
+          "requires": [
+            "morana_tactic_pressure"
+          ],
+          "description": "Poisons the enemy for three turns.",
+          "combat_effect": "poison"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Blight",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Bogward",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Ritual",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -1283,7 +2075,9 @@
           "target": "enemy",
           "effect": "armor_pierce",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "dareth_scale_guard",
@@ -1298,7 +2092,9 @@
           "target": "self",
           "effect": "guard_60",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies guard 60 in battle.",
+          "combat_effect": "guard_60"
         },
         {
           "id": "dareth_wyrmbane",
@@ -1313,7 +2109,9 @@
           "target": "enemy",
           "effect": "bonus_vs_large",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "dareth_dragonhide",
@@ -1330,13 +2128,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "dareth_heartpiercer",
           "name": "Heartpiercer",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 17,
           "power": 53,
@@ -1345,11 +2144,13 @@
           "target": "enemy",
           "effect": "crit_bonus",
           "requires": [
-            "dareth_wyrmbane",
-            "dareth_dragonhide"
+            "dareth_assault_pressure",
+            "dareth_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Pierces armor and leaves the target vulnerable for three turns.",
+          "combat_effect": "sunder"
         },
         {
           "id": "dareth_tactical_focus",
@@ -1364,7 +2165,9 @@
           "scaling": "magic",
           "element": "physical",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "dareth_tactical_strike",
@@ -1382,7 +2185,9 @@
           "effect": "lifesteal",
           "requires": [
             "dareth_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "dareth_tactical_instinct",
@@ -1399,15 +2204,16 @@
           },
           "requires": [
             "dareth_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "dareth_guardian_crest",
           "name": "Dragonwall",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -1416,25 +2222,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "dareth_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "dareth_assault_mastery",
+          "name": "Wyrmslayer",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "dareth_wyrmbane"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "dareth_assault_pressure",
+          "name": "Scale Splitter",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "none",
+          "target": "enemy",
+          "effect": "sunder",
+          "requires": [
+            "dareth_assault_mastery"
+          ],
+          "description": "Breaks enemy armor for three turns.",
+          "combat_effect": "sunder"
+        },
+        {
+          "id": "dareth_guard_mastery",
+          "name": "Dragonhide Veteran",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "dareth_dragonhide"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "dareth_guard_recovery",
+          "name": "Drakeguard",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "none",
+          "target": "self",
+          "effect": "shield",
+          "requires": [
+            "dareth_guard_mastery"
+          ],
+          "description": "Reduces the next incoming blow.",
+          "combat_effect": "shield"
+        },
+        {
+          "id": "dareth_tactic_pressure",
+          "name": "Hunter Snare",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "none",
+          "target": "enemy",
+          "effect": "stagger",
+          "requires": [
+            "dareth_tactical_instinct"
+          ],
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
+        },
+        {
+          "id": "dareth_tactic_apex",
+          "name": "Dragonfall",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "none",
+          "target": "enemy",
+          "effect": "sunder",
+          "requires": [
+            "dareth_tactic_pressure"
+          ],
+          "description": "Breaks enemy armor for three turns.",
+          "combat_effect": "sunder"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Wyrmbane",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Scaleguard",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Huntcraft",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -1485,7 +2409,9 @@
           "target": "enemy",
           "effect": "speed_down",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies slow in battle.",
+          "combat_effect": "slow"
         },
         {
           "id": "jora_riposte",
@@ -1500,7 +2426,9 @@
           "target": "self",
           "effect": "counter",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies shield in battle.",
+          "combat_effect": "shield"
         },
         {
           "id": "jora_broadside",
@@ -1515,7 +2443,9 @@
           "target": "enemy_all",
           "effect": "stagger",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
         },
         {
           "id": "jora_sea_legs",
@@ -1532,13 +2462,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "jora_maelstrom_cut",
           "name": "Maelstrom Cut",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 17,
           "power": 45,
@@ -1547,11 +2478,13 @@
           "target": "enemy",
           "effect": "multi_hit",
           "requires": [
-            "jora_broadside",
-            "jora_sea_legs"
+            "jora_assault_pressure",
+            "jora_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies bleed in battle.",
+          "combat_effect": "bleed"
         },
         {
           "id": "jora_tactical_focus",
@@ -1566,7 +2499,9 @@
           "scaling": "magic",
           "element": "water",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "jora_tactical_strike",
@@ -1584,7 +2519,9 @@
           "effect": "lifesteal",
           "requires": [
             "jora_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "jora_tactical_instinct",
@@ -1601,15 +2538,16 @@
           },
           "requires": [
             "jora_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "jora_guardian_crest",
           "name": "Tidal Refuge",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -1618,25 +2556,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "jora_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "jora_assault_mastery",
+          "name": "Cutlass Mastery",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "jora_broadside"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "jora_assault_pressure",
+          "name": "Riptide Slash",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "water",
+          "target": "enemy",
+          "effect": "bleed",
+          "requires": [
+            "jora_assault_mastery"
+          ],
+          "description": "Inflicts bleeding for three turns.",
+          "combat_effect": "bleed"
+        },
+        {
+          "id": "jora_guard_mastery",
+          "name": "Saltblood",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "jora_sea_legs"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "jora_guard_recovery",
+          "name": "Sea Breeze",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "water",
+          "target": "self",
+          "effect": "regen",
+          "requires": [
+            "jora_guard_mastery"
+          ],
+          "description": "Restores health over three enemy turns.",
+          "combat_effect": "regen"
+        },
+        {
+          "id": "jora_tactic_pressure",
+          "name": "Undertow",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "water",
+          "target": "enemy",
+          "effect": "slow",
+          "requires": [
+            "jora_tactical_instinct"
+          ],
+          "description": "Slows the enemy for three turns.",
+          "combat_effect": "slow"
+        },
+        {
+          "id": "jora_tactic_apex",
+          "name": "Maelstrom",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "water",
+          "target": "enemy",
+          "effect": "bleed",
+          "requires": [
+            "jora_tactic_pressure"
+          ],
+          "description": "Inflicts bleeding for three turns.",
+          "combat_effect": "bleed"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Tideblade",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Sea Ward",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Seamanship",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -1687,7 +2743,9 @@
           "target": "enemy",
           "effect": "heal_self",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies drain in battle.",
+          "combat_effect": "drain"
         },
         {
           "id": "alistair_shield_oath",
@@ -1702,7 +2760,9 @@
           "target": "self",
           "effect": "guard_75",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
         },
         {
           "id": "alistair_smite",
@@ -1717,7 +2777,9 @@
           "target": "enemy",
           "effect": "bonus_vs_undead",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "alistair_beacon",
@@ -1734,13 +2796,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "alistair_last_bastion",
           "name": "Last Bastion",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 18,
           "power": 0,
@@ -1749,11 +2812,13 @@
           "target": "self",
           "effect": "invulnerable_one_hit",
           "requires": [
-            "alistair_shield_oath",
-            "alistair_beacon"
+            "alistair_assault_pressure",
+            "alistair_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
         },
         {
           "id": "alistair_tactical_focus",
@@ -1768,7 +2833,9 @@
           "scaling": "magic",
           "element": "holy",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "alistair_tactical_strike",
@@ -1786,7 +2853,9 @@
           "effect": "lifesteal",
           "requires": [
             "alistair_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "alistair_tactical_instinct",
@@ -1803,15 +2872,16 @@
           },
           "requires": [
             "alistair_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "alistair_guardian_crest",
           "name": "Sanctuary",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -1820,25 +2890,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "alistair_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "alistair_assault_mastery",
+          "name": "Consecrated Steel",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "alistair_smite"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "alistair_assault_pressure",
+          "name": "Judgment Ray",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "holy",
+          "target": "enemy",
+          "effect": "weaken",
+          "requires": [
+            "alistair_assault_mastery"
+          ],
+          "description": "Weakens enemy attacks for three turns.",
+          "combat_effect": "weaken"
+        },
+        {
+          "id": "alistair_guard_mastery",
+          "name": "Living Bulwark",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "alistair_beacon"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "alistair_guard_recovery",
+          "name": "Divine Renewal",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "holy",
+          "target": "self",
+          "effect": "heal",
+          "requires": [
+            "alistair_guard_mastery"
+          ],
+          "description": "Restores health.",
+          "combat_effect": "heal"
+        },
+        {
+          "id": "alistair_tactic_pressure",
+          "name": "Beacon of Hope",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "holy",
+          "target": "self",
+          "effect": "rally",
+          "requires": [
+            "alistair_tactical_instinct"
+          ],
+          "description": "Raises power for three hero turns.",
+          "combat_effect": "rally"
+        },
+        {
+          "id": "alistair_tactic_apex",
+          "name": "Dawnbringer",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "holy",
+          "target": "enemy",
+          "effect": "stagger",
+          "requires": [
+            "alistair_tactic_pressure"
+          ],
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Radiance",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Sacred Shield",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Oathcraft",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -1889,7 +3077,9 @@
           "target": "self",
           "effect": "haste_evade",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies evade in battle.",
+          "combat_effect": "evade"
         },
         {
           "id": "zephyr_whirlwind_cut",
@@ -1904,7 +3094,9 @@
           "target": "enemy",
           "effect": "speed_scale",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies slow in battle.",
+          "combat_effect": "slow"
         },
         {
           "id": "zephyr_feint",
@@ -1919,7 +3111,9 @@
           "target": "enemy",
           "effect": "accuracy_down",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies weaken in battle.",
+          "combat_effect": "weaken"
         },
         {
           "id": "zephyr_afterimage",
@@ -1936,13 +3130,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "zephyr_thousand_cuts",
           "name": "Thousand Cuts",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 17,
           "power": 44,
@@ -1951,11 +3146,13 @@
           "target": "enemy",
           "effect": "multi_hit",
           "requires": [
-            "zephyr_feint",
-            "zephyr_afterimage"
+            "zephyr_assault_pressure",
+            "zephyr_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies bleed in battle.",
+          "combat_effect": "bleed"
         },
         {
           "id": "zephyr_tactical_focus",
@@ -1970,7 +3167,9 @@
           "scaling": "magic",
           "element": "physical",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "zephyr_tactical_strike",
@@ -1988,7 +3187,9 @@
           "effect": "lifesteal",
           "requires": [
             "zephyr_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "zephyr_tactical_instinct",
@@ -2005,15 +3206,16 @@
           },
           "requires": [
             "zephyr_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "zephyr_guardian_crest",
           "name": "Mirage Bastion",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -2022,25 +3224,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "zephyr_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "zephyr_assault_mastery",
+          "name": "Dune Dancer",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "zephyr_feint"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "zephyr_assault_pressure",
+          "name": "Whirling Blades",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "wind",
+          "target": "enemy",
+          "effect": "bleed",
+          "requires": [
+            "zephyr_assault_mastery"
+          ],
+          "description": "Inflicts bleeding for three turns.",
+          "combat_effect": "bleed"
+        },
+        {
+          "id": "zephyr_guard_mastery",
+          "name": "Mirage Skin",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "zephyr_afterimage"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "zephyr_guard_recovery",
+          "name": "Vanishing Step",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "wind",
+          "target": "self",
+          "effect": "evade",
+          "requires": [
+            "zephyr_guard_mastery"
+          ],
+          "description": "Raises evasion for three enemy turns.",
+          "combat_effect": "evade"
+        },
+        {
+          "id": "zephyr_tactic_pressure",
+          "name": "Sandstorm Feint",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "wind",
+          "target": "enemy",
+          "effect": "weaken",
+          "requires": [
+            "zephyr_tactical_instinct"
+          ],
+          "description": "Weakens enemy attacks for three turns.",
+          "combat_effect": "weaken"
+        },
+        {
+          "id": "zephyr_tactic_apex",
+          "name": "Thousandfold Mirage",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "wind",
+          "target": "enemy",
+          "effect": "bleed",
+          "requires": [
+            "zephyr_tactic_pressure"
+          ],
+          "description": "Inflicts bleeding for three turns.",
+          "combat_effect": "bleed"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Bladestorm",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Mirage",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Sandcraft",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -2091,7 +3411,9 @@
           "target": "enemy",
           "effect": "lifesteal",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "malakor_grave_shroud",
@@ -2106,7 +3428,9 @@
           "target": "self",
           "effect": "resist_guard",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies resist guard in battle.",
+          "combat_effect": "resist_guard"
         },
         {
           "id": "malakor_spectral_rend",
@@ -2121,7 +3445,9 @@
           "target": "enemy",
           "effect": "resistance_break",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "malakor_deathless",
@@ -2138,13 +3464,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "malakor_reaping_field",
           "name": "Reaping Field",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 20,
           "power": 41,
@@ -2153,11 +3480,13 @@
           "target": "enemy_all",
           "effect": "lifesteal",
           "requires": [
-            "malakor_spectral_rend",
-            "malakor_deathless"
+            "malakor_assault_pressure",
+            "malakor_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "malakor_tactical_focus",
@@ -2172,7 +3501,9 @@
           "scaling": "magic",
           "element": "shadow",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "malakor_tactical_strike",
@@ -2190,7 +3521,9 @@
           "effect": "lifesteal",
           "requires": [
             "malakor_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "malakor_tactical_instinct",
@@ -2207,15 +3540,16 @@
           },
           "requires": [
             "malakor_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "malakor_guardian_crest",
           "name": "Deathward",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -2224,25 +3558,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "malakor_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "malakor_assault_mastery",
+          "name": "Soul Hunger",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "malakor_spectral_rend"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "malakor_assault_pressure",
+          "name": "Grave Rend",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "drain",
+          "requires": [
+            "malakor_assault_mastery"
+          ],
+          "description": "Strikes and restores health.",
+          "combat_effect": "drain"
+        },
+        {
+          "id": "malakor_guard_mastery",
+          "name": "Undying Flesh",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "malakor_deathless"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "malakor_guard_recovery",
+          "name": "Soul Ward",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "self",
+          "effect": "shield",
+          "requires": [
+            "malakor_guard_mastery"
+          ],
+          "description": "Reduces the next incoming blow.",
+          "combat_effect": "shield"
+        },
+        {
+          "id": "malakor_tactic_pressure",
+          "name": "Death Mark",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 20,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "weaken",
+          "requires": [
+            "malakor_tactical_instinct"
+          ],
+          "description": "Weakens enemy attacks for three turns.",
+          "combat_effect": "weaken"
+        },
+        {
+          "id": "malakor_tactic_apex",
+          "name": "Reaper Ascendant",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "stagger",
+          "requires": [
+            "malakor_tactic_pressure"
+          ],
+          "description": "Staggers and delays the enemy.",
+          "combat_effect": "stagger"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Soul Reaping",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Graveguard",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Necromancy",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     },
@@ -2293,7 +3745,9 @@
           "target": "enemy_all",
           "effect": "burn_chance",
           "tree": "assault",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies burn in battle.",
+          "combat_effect": "burn"
         },
         {
           "id": "ignacia_ember_ward",
@@ -2308,7 +3762,9 @@
           "target": "self",
           "effect": "fire_guard",
           "tree": "guard",
-          "tier": 1
+          "tier": 1,
+          "description": "Applies fire guard in battle.",
+          "combat_effect": "fire_guard"
         },
         {
           "id": "ignacia_drake_call",
@@ -2323,7 +3779,9 @@
           "target": "enemy",
           "effect": "summon_strike",
           "tree": "assault",
-          "tier": 2
+          "tier": 2,
+          "description": "Applies stagger in battle.",
+          "combat_effect": "stagger"
         },
         {
           "id": "ignacia_bonded_flame",
@@ -2340,13 +3798,14 @@
           "stat_bonus": {
             "hp": 8,
             "defense": 2
-          }
+          },
+          "description": "Always active after learning."
         },
         {
           "id": "ignacia_skyfire",
           "name": "Skyfire",
           "type": "active",
-          "level_req": 10,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 20,
           "power": 49,
@@ -2355,11 +3814,13 @@
           "target": "enemy_all",
           "effect": "burn",
           "requires": [
-            "ignacia_drake_call",
-            "ignacia_bonded_flame"
+            "ignacia_assault_pressure",
+            "ignacia_guard_mastery"
           ],
           "tree": "assault",
-          "tier": 3
+          "tier": 5,
+          "description": "Burns the enemy for three turns.",
+          "combat_effect": "burn"
         },
         {
           "id": "ignacia_tactical_focus",
@@ -2374,7 +3835,9 @@
           "scaling": "magic",
           "element": "fire",
           "target": "enemy",
-          "effect": "precision"
+          "effect": "precision",
+          "description": "Applies sunder in battle.",
+          "combat_effect": "sunder"
         },
         {
           "id": "ignacia_tactical_strike",
@@ -2392,7 +3855,9 @@
           "effect": "lifesteal",
           "requires": [
             "ignacia_tactical_focus"
-          ]
+          ],
+          "description": "Applies lifesteal in battle.",
+          "combat_effect": "lifesteal"
         },
         {
           "id": "ignacia_tactical_instinct",
@@ -2409,15 +3874,16 @@
           },
           "requires": [
             "ignacia_tactical_strike"
-          ]
+          ],
+          "description": "Always active after learning."
         },
         {
           "id": "ignacia_guardian_crest",
           "name": "Drake Aegis",
           "type": "active",
           "tree": "guard",
-          "tier": 3,
-          "level_req": 10,
+          "tier": 5,
+          "level_req": 15,
           "cost_sp": 2,
           "mp": 15,
           "power": 0,
@@ -2426,25 +3892,143 @@
           "target": "self",
           "effect": "guard_75",
           "requires": [
+            "ignacia_guard_recovery"
+          ],
+          "description": "Applies guard 75 in battle.",
+          "combat_effect": "guard_75"
+        },
+        {
+          "id": "ignacia_assault_mastery",
+          "name": "Dragonblood",
+          "type": "passive",
+          "tree": "assault",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "power": 3,
+            "magic": 2
+          },
+          "requires": [
+            "ignacia_drake_call"
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "ignacia_assault_pressure",
+          "name": "Inferno Wings",
+          "type": "active",
+          "tree": "assault",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 26,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "burn",
+          "requires": [
+            "ignacia_assault_mastery"
+          ],
+          "description": "Burns the enemy for three turns.",
+          "combat_effect": "burn"
+        },
+        {
+          "id": "ignacia_guard_mastery",
+          "name": "Drakehide",
+          "type": "passive",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "hp": 14,
+            "resistance": 3
+          },
+          "requires": [
             "ignacia_bonded_flame"
-          ]
+          ],
+          "description": "Always active after learning."
+        },
+        {
+          "id": "ignacia_guard_recovery",
+          "name": "Ember Renewal",
+          "type": "active",
+          "tree": "guard",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "self",
+          "effect": "regen",
+          "requires": [
+            "ignacia_guard_mastery"
+          ],
+          "description": "Restores health over three enemy turns.",
+          "combat_effect": "regen"
+        },
+        {
+          "id": "ignacia_tactic_pressure",
+          "name": "Bonded Strike",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 4,
+          "level_req": 10,
+          "cost_sp": 1,
+          "mp": 14,
+          "power": 0,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "self",
+          "effect": "rally",
+          "requires": [
+            "ignacia_tactical_instinct"
+          ],
+          "description": "Raises power for three hero turns.",
+          "combat_effect": "rally"
+        },
+        {
+          "id": "ignacia_tactic_apex",
+          "name": "Dragon Queen",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 5,
+          "level_req": 15,
+          "cost_sp": 2,
+          "mp": 16,
+          "power": 42,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "burn",
+          "requires": [
+            "ignacia_tactic_pressure"
+          ],
+          "description": "Burns the enemy for three turns.",
+          "combat_effect": "burn"
         }
       ],
       "trees": [
         {
           "id": "assault",
           "name": "Dragonfire",
-          "theme": "Offense and pressure"
+          "theme": "Damage and pressure"
         },
         {
           "id": "guard",
           "name": "Drakeward",
-          "theme": "Survival and protection"
+          "theme": "Survival and recovery"
         },
         {
           "id": "tactics",
           "name": "Bondcraft",
-          "theme": "Adaptation and control"
+          "theme": "Control and adaptability"
         }
       ]
     }

@@ -26,6 +26,8 @@ var hero_mp := 0
 var hero_max_mp := 0
 var hero_stats: Dictionary = {}
 var hero_profile: Dictionary = {}
+var enemy_effects: Dictionary = {}
+var hero_effects: Dictionary = {}
 var enemy_hp := 70
 var enemy_max_hp := 70
 var enemy_attack := 10
@@ -129,7 +131,8 @@ func _process(delta: float) -> void:
             _begin_actor_turn("army_%d" % i)
             return
 
-    enemy_atb = minf(1.0, enemy_atb + delta * (0.20 + float(danger) * 0.025))
+    var slow_factor := 0.65 if enemy_effects.has("slow") else 1.0
+    enemy_atb = minf(1.0, enemy_atb + delta * (0.20 + float(danger) * 0.025) * slow_factor)
     if enemy_atb >= 1.0:
         enemy_atb = 0.0
         _enemy_turn()
@@ -779,6 +782,7 @@ func _update_command_ring_position() -> void:
 
 func _consume_active_turn() -> void:
     if active_actor_id == "hero":
+        _tick_effects(hero_effects)
         hero_ready = false
         hero_atb = 0.0
     elif active_actor_id.begins_with("army_"):
@@ -943,9 +947,15 @@ func _refresh_ui() -> void:
     hero_atb_bar.max_value = 100.0
     enemy_atb_bar.max_value = 100.0
 
-    hero_hp_label.text = "%s  LV %d  •  HP %d/%d" % [hero_name, hero_level, hero_hp, hero_max_hp]
+    var hero_status := ""
+    for effect in hero_effects.keys():
+        hero_status += " • %s %d" % [str(effect).to_upper(), int(hero_effects[effect])]
+    hero_hp_label.text = "%s  LV %d  •  HP %d/%d%s" % [hero_name, hero_level, hero_hp, hero_max_hp, hero_status]
     hero_mp_label.text = "MP %d/%d  •  SP %d" % [hero_mp, hero_max_mp, int(hero_profile.get("skill_points", 0))]
-    enemy_hp_label.text = "%s  HP %d/%d" % [enemy_name, enemy_hp, enemy_max_hp]
+    var enemy_status := ""
+    for effect in enemy_effects.keys():
+        enemy_status += " • %s %d" % [str(effect).to_upper(), int(enemy_effects[effect])]
+    enemy_hp_label.text = "%s  HP %d/%d%s" % [enemy_name, enemy_hp, enemy_max_hp, enemy_status]
 
     var hero_ratio := float(hero_hp) / float(maxi(1, hero_max_hp))
     if hero_ratio <= 0.30:
@@ -980,6 +990,10 @@ func _on_attack() -> void:
 
     _consume_active_turn()
     var damage := 6 + int(round(float(power) * 0.72)) + randi_range(0, 4)
+    if enemy_effects.has("sunder"):
+        damage = int(round(float(damage) * 1.25))
+    if actor_id == "hero" and hero_effects.has("rally"):
+        damage = int(round(float(damage) * 1.20))
     message_label.text = "%s attacks for %d damage!" % [actor_name, damage]
 
     await _lunge(actor_anchor, 0.34)
@@ -1102,6 +1116,8 @@ func _use_army_ability() -> void:
     var power := int(slot.get("power", 10))
     var bonus := int(slot.get("ability_bonus", 8))
     var damage := bonus + int(round(float(power) * 0.90)) + randi_range(0, 4)
+    if enemy_effects.has("sunder"):
+        damage = int(round(float(damage) * 1.25))
 
     _consume_active_turn()
     message_label.text = "%s uses %s! %d damage." % [name, ability_name, damage]
@@ -1121,7 +1137,7 @@ func _use_skill(skill_id: String) -> void:
         return
 
     var skill := HeroProgressionService.skill_by_id(hero_id, skill_id)
-    if skill.is_empty():
+    if skill.is_empty() or not hero_profile.get("equipped_skills", []).has(skill_id):
         return
 
     var mp_cost := int(skill.get("mp", 0))
@@ -1134,7 +1150,7 @@ func _use_skill(skill_id: String) -> void:
     hero_mp -= mp_cost
     _consume_hero_turn()
 
-    var effect := str(skill.get("effect", ""))
+    var effect := str(skill.get("combat_effect", skill.get("effect", "")))
     var skill_name := str(skill.get("name", "Skill"))
     var base_power := int(skill.get("power", 0))
     var scaling := str(skill.get("scaling", "power"))
@@ -1149,9 +1165,9 @@ func _use_skill(skill_id: String) -> void:
     else:
         scale_stat = float(hero_stats.get("power", 15))
 
-    if effect.begins_with("guard_") or effect == "resist_guard" or effect == "fire_guard":
+    if effect.begins_with("guard_") or effect == "resist_guard" or effect == "fire_guard" or effect == "shield":
         defending = true
-        if effect == "guard_75":
+        if effect == "guard_75" or effect == "shield":
             guard_multiplier = 0.25
         elif effect == "guard_70":
             guard_multiplier = 0.30
@@ -1161,8 +1177,22 @@ func _use_skill(skill_id: String) -> void:
             guard_multiplier = 0.38
         message_label.text = "%s uses %s." % [hero_name, skill_name]
         await _ability_flash()
+    elif effect == "heal" or effect == "regen" or effect == "evade" or effect == "rally":
+        if effect == "heal":
+            var restored := mini(hero_max_hp - hero_hp, 18 + int(round(float(hero_stats.get("magic", 15)) * 0.7)))
+            hero_hp += restored
+            _show_damage_popup(hero_anchor, restored, true)
+            message_label.text = "%s restores %d HP." % [hero_name, restored]
+        else:
+            hero_effects[effect] = 3
+            message_label.text = "%s gains %s for three turns." % [hero_name, effect]
+        await _ability_flash()
     else:
         var damage := maxi(1, base_power + int(round(scale_stat * 0.55)) + randi_range(-2, 4))
+        if enemy_effects.has("sunder"):
+            damage = int(round(float(damage) * 1.25))
+        if hero_effects.has("rally"):
+            damage = int(round(float(damage) * 1.20))
         enemy_hp = maxi(0, enemy_hp - damage)
         message_label.text = "%s uses %s! %d damage." % [hero_name, skill_name, damage]
         await _ability_flash()
@@ -1170,7 +1200,12 @@ func _use_skill(skill_id: String) -> void:
         _impact_bump(enemy_anchor, 0.17)
         _camera_impact(0.12)
 
-        if effect == "lifesteal" or effect == "heal_self":
+        if ["burn", "poison", "bleed", "shock", "sunder", "slow", "stagger", "weaken"].has(effect):
+            enemy_effects[effect] = 3
+            if effect == "shock" or effect == "stagger":
+                enemy_atb *= 0.30
+            message_label.text += " %s applied." % effect.capitalize()
+        if effect == "lifesteal" or effect == "heal_self" or effect == "drain":
             var healed := mini(hero_max_hp - hero_hp, maxi(1, int(round(float(damage) * 0.30))))
             hero_hp += healed
             if healed > 0:
@@ -1227,6 +1262,20 @@ func _enemy_turn() -> void:
     if battle_over:
         return
 
+    var damage_over_time := 0
+    for effect in ["burn", "poison", "bleed"]:
+        if enemy_effects.has(effect):
+            damage_over_time += maxi(2, int(round(float(hero_stats.get("magic", 15)) * 0.16)))
+    if damage_over_time > 0:
+        enemy_hp = maxi(0, enemy_hp - damage_over_time)
+        _show_damage_popup(enemy_anchor, damage_over_time)
+    if hero_effects.has("regen"):
+        hero_hp = mini(hero_max_hp, hero_hp + maxi(3, int(round(float(hero_stats.get("magic", 15)) * 0.20))))
+    if enemy_hp <= 0:
+        _refresh_ui()
+        _finish_battle(true)
+        return
+
     action_locked = true
     _set_commands_enabled(false)
 
@@ -1262,6 +1311,10 @@ func _enemy_turn() -> void:
 
     var damage := enemy_attack + randi_range(-2, 3) - int(round(float(defense) * 0.18))
     damage = maxi(1, damage)
+    if enemy_effects.has("weaken"):
+        damage = maxi(1, int(round(float(damage) * 0.72)))
+    if target_id == "hero" and hero_effects.has("evade") and randf() < 0.35:
+        damage = 0
     if guarded:
         damage = maxi(1, int(round(float(damage) * guard)))
 
@@ -1279,6 +1332,7 @@ func _enemy_turn() -> void:
         army_slots[index]["guard_multiplier"] = 0.50
 
     _refresh_ui()
+    _tick_effects(enemy_effects)
     _show_damage_popup(target_anchor, damage)
     _impact_bump(target_anchor, 0.10)
     _camera_impact(0.055)
@@ -1286,6 +1340,13 @@ func _enemy_turn() -> void:
 
     action_locked = false
     _check_battle_end()
+
+
+func _tick_effects(effects: Dictionary) -> void:
+    for key in effects.keys():
+        effects[key] = int(effects[key]) - 1
+        if int(effects[key]) <= 0:
+            effects.erase(key)
 
 
 func _lunge(actor: Node3D, amount: float) -> void:
