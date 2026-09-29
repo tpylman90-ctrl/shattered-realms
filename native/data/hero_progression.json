@@ -46,11 +46,13 @@
       },
       "starting_skills": [
         "ignis_eruption_strike",
-        "ignis_magma_guard"
+        "ignis_magma_guard",
+        "ignis_tactical_focus"
       ],
       "starting_equipped": [
         "ignis_eruption_strike",
-        "ignis_magma_guard"
+        "ignis_magma_guard",
+        "ignis_tactical_focus"
       ],
       "skills": [
         {
@@ -64,7 +66,9 @@
           "scaling": "power",
           "element": "fire",
           "target": "enemy",
-          "effect": "heavy_hit"
+          "effect": "heavy_hit",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "ignis_magma_guard",
@@ -77,7 +81,9 @@
           "scaling": "none",
           "element": "fire",
           "target": "self",
-          "effect": "guard_60"
+          "effect": "guard_60",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "ignis_cinder_sweep",
@@ -93,7 +99,9 @@
           "effect": "burn_chance",
           "requires": [
             "ignis_eruption_strike"
-          ]
+          ],
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "ignis_molten_core",
@@ -104,7 +112,13 @@
           "effect": "hp_power_bonus",
           "requires": [
             "ignis_magma_guard"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "ignis_caldera_break",
@@ -121,7 +135,94 @@
           "requires": [
             "ignis_cinder_sweep",
             "ignis_molten_core"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "ignis_tactical_focus",
+          "name": "Cinder Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "ignis_tactical_strike",
+          "name": "Scorching Advance",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "ignis_tactical_focus"
           ]
+        },
+        {
+          "id": "ignis_tactical_instinct",
+          "name": "Ashen Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "ignis_tactical_strike"
+          ]
+        },
+        {
+          "id": "ignis_guardian_crest",
+          "name": "Obsidian Bulwark",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "fire",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "ignis_molten_core"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Eruption",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Magmaheart",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Ashcraft",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -150,11 +251,13 @@
       },
       "starting_skills": [
         "vesper_frostbind",
-        "vesper_glacial_bastion"
+        "vesper_glacial_bastion",
+        "vesper_tactical_focus"
       ],
       "starting_equipped": [
         "vesper_frostbind",
-        "vesper_glacial_bastion"
+        "vesper_glacial_bastion",
+        "vesper_tactical_focus"
       ],
       "skills": [
         {
@@ -168,7 +271,9 @@
           "scaling": "magic",
           "element": "ice",
           "target": "enemy",
-          "effect": "slow"
+          "effect": "slow",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "vesper_glacial_bastion",
@@ -181,7 +286,9 @@
           "scaling": "none",
           "element": "ice",
           "target": "self",
-          "effect": "guard_75"
+          "effect": "guard_75",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "vesper_shard_lance",
@@ -194,7 +301,9 @@
           "scaling": "magic",
           "element": "ice",
           "target": "enemy",
-          "effect": "pierce"
+          "effect": "pierce",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "vesper_permafrost",
@@ -205,7 +314,13 @@
           "effect": "ice_resist_control_bonus",
           "requires": [
             "vesper_frostbind"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "vesper_whiteout",
@@ -222,7 +337,94 @@
           "requires": [
             "vesper_shard_lance",
             "vesper_permafrost"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "vesper_tactical_focus",
+          "name": "Rime Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "ice",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "vesper_tactical_strike",
+          "name": "Shatterpoint",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "ice",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "vesper_tactical_focus"
           ]
+        },
+        {
+          "id": "vesper_tactical_instinct",
+          "name": "Winter Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "vesper_tactical_strike"
+          ]
+        },
+        {
+          "id": "vesper_guardian_crest",
+          "name": "Frozen Aegis",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "ice",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "vesper_permafrost"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Wintercraft",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Frostward",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Rime Tactics",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -251,11 +453,13 @@
       },
       "starting_skills": [
         "lyra_phantom_arrows",
-        "lyra_evasive_step"
+        "lyra_evasive_step",
+        "lyra_vane_tactical_focus"
       ],
       "starting_equipped": [
         "lyra_phantom_arrows",
-        "lyra_evasive_step"
+        "lyra_evasive_step",
+        "lyra_vane_tactical_focus"
       ],
       "skills": [
         {
@@ -269,7 +473,9 @@
           "scaling": "power",
           "element": "shadow",
           "target": "enemy",
-          "effect": "multi_hit"
+          "effect": "multi_hit",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "lyra_evasive_step",
@@ -282,7 +488,9 @@
           "scaling": "none",
           "element": "none",
           "target": "self",
-          "effect": "evade"
+          "effect": "evade",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "lyra_marked_prey",
@@ -295,7 +503,9 @@
           "scaling": "power",
           "element": "none",
           "target": "enemy",
-          "effect": "mark"
+          "effect": "mark",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "lyra_night_hunter",
@@ -306,7 +516,13 @@
           "effect": "crit_vs_marked",
           "requires": [
             "lyra_marked_prey"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "lyra_umbral_volley",
@@ -323,7 +539,94 @@
           "requires": [
             "lyra_phantom_arrows",
             "lyra_night_hunter"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "lyra_vane_tactical_focus",
+          "name": "Veil Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "lyra_vane_tactical_strike",
+          "name": "Predator Strike",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "lyra_vane_tactical_focus"
           ]
+        },
+        {
+          "id": "lyra_vane_tactical_instinct",
+          "name": "Night Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "lyra_vane_tactical_strike"
+          ]
+        },
+        {
+          "id": "lyra_vane_guardian_crest",
+          "name": "Phantom Refuge",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "shadow",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "lyra_night_hunter"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Shadowshot",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Veilguard",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Nightcraft",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -352,11 +655,13 @@
       },
       "starting_skills": [
         "thorvald_lightning_smash",
-        "thorvald_forgeguard"
+        "thorvald_forgeguard",
+        "thorvald_tactical_focus"
       ],
       "starting_equipped": [
         "thorvald_lightning_smash",
-        "thorvald_forgeguard"
+        "thorvald_forgeguard",
+        "thorvald_tactical_focus"
       ],
       "skills": [
         {
@@ -370,7 +675,9 @@
           "scaling": "power",
           "element": "lightning",
           "target": "enemy",
-          "effect": "shock"
+          "effect": "shock",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "thorvald_forgeguard",
@@ -383,7 +690,9 @@
           "scaling": "none",
           "element": "none",
           "target": "self",
-          "effect": "guard_60"
+          "effect": "guard_60",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "thorvald_storm_hammer",
@@ -396,7 +705,9 @@
           "scaling": "power",
           "element": "lightning",
           "target": "enemy",
-          "effect": "stagger"
+          "effect": "stagger",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "thorvald_tempered_soul",
@@ -407,7 +718,13 @@
           "effect": "defense_shock_resist",
           "requires": [
             "thorvald_forgeguard"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "thorvald_skybreaker",
@@ -424,7 +741,94 @@
           "requires": [
             "thorvald_storm_hammer",
             "thorvald_tempered_soul"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "thorvald_tactical_focus",
+          "name": "Rune Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "lightning",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "thorvald_tactical_strike",
+          "name": "Thunder Feint",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "lightning",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "thorvald_tactical_focus"
           ]
+        },
+        {
+          "id": "thorvald_tactical_instinct",
+          "name": "Runic Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "thorvald_tactical_strike"
+          ]
+        },
+        {
+          "id": "thorvald_guardian_crest",
+          "name": "Anvil Ward",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "lightning",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "thorvald_tempered_soul"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Stormcaller",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Forgeguard",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Runecraft",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -453,11 +857,13 @@
       },
       "starting_skills": [
         "cedric_phalanx_charge",
-        "cedric_hold_line"
+        "cedric_hold_line",
+        "cedric_tactical_focus"
       ],
       "starting_equipped": [
         "cedric_phalanx_charge",
-        "cedric_hold_line"
+        "cedric_hold_line",
+        "cedric_tactical_focus"
       ],
       "skills": [
         {
@@ -471,7 +877,9 @@
           "scaling": "power",
           "element": "none",
           "target": "enemy",
-          "effect": "stagger"
+          "effect": "stagger",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "cedric_hold_line",
@@ -484,7 +892,9 @@
           "scaling": "none",
           "element": "none",
           "target": "self",
-          "effect": "guard_70"
+          "effect": "guard_70",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "cedric_commanders_mark",
@@ -497,7 +907,9 @@
           "scaling": "none",
           "element": "none",
           "target": "enemy",
-          "effect": "vulnerability"
+          "effect": "vulnerability",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "cedric_iron_discipline",
@@ -508,7 +920,13 @@
           "effect": "defense_status_resist",
           "requires": [
             "cedric_hold_line"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "cedric_unbroken_advance",
@@ -525,7 +943,94 @@
           "requires": [
             "cedric_phalanx_charge",
             "cedric_iron_discipline"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "cedric_tactical_focus",
+          "name": "Rallying Call",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "physical",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "cedric_tactical_strike",
+          "name": "Precise Order",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "physical",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "cedric_tactical_focus"
           ]
+        },
+        {
+          "id": "cedric_tactical_instinct",
+          "name": "Command Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "cedric_tactical_strike"
+          ]
+        },
+        {
+          "id": "cedric_guardian_crest",
+          "name": "Last Stand",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "physical",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "cedric_iron_discipline"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Vanguard",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Ironwall",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Command",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -554,11 +1059,13 @@
       },
       "starting_skills": [
         "morana_venomous_miasma",
-        "morana_bogward"
+        "morana_bogward",
+        "morana_tactical_focus"
       ],
       "starting_equipped": [
         "morana_venomous_miasma",
-        "morana_bogward"
+        "morana_bogward",
+        "morana_tactical_focus"
       ],
       "skills": [
         {
@@ -572,7 +1079,9 @@
           "scaling": "magic",
           "element": "poison",
           "target": "enemy_all",
-          "effect": "poison"
+          "effect": "poison",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "morana_bogward",
@@ -585,7 +1094,9 @@
           "scaling": "none",
           "element": "poison",
           "target": "self",
-          "effect": "resist_guard"
+          "effect": "resist_guard",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "morana_rot_bloom",
@@ -598,7 +1109,9 @@
           "scaling": "magic",
           "element": "poison",
           "target": "enemy",
-          "effect": "decay"
+          "effect": "decay",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "morana_plague_bearer",
@@ -609,7 +1122,13 @@
           "effect": "poison_duration_bonus",
           "requires": [
             "morana_venomous_miasma"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "morana_black_marsh",
@@ -626,7 +1145,94 @@
           "requires": [
             "morana_rot_bloom",
             "morana_plague_bearer"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "morana_tactical_focus",
+          "name": "Ritual Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "poison",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "morana_tactical_strike",
+          "name": "Wasting Touch",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "poison",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "morana_tactical_focus"
           ]
+        },
+        {
+          "id": "morana_tactical_instinct",
+          "name": "Ritual Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "morana_tactical_strike"
+          ]
+        },
+        {
+          "id": "morana_guardian_crest",
+          "name": "Marsh Sanctuary",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "poison",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "morana_plague_bearer"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Blight",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Bogward",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Ritual",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -655,11 +1261,13 @@
       },
       "starting_skills": [
         "dareth_draconic_cleave",
-        "dareth_scale_guard"
+        "dareth_scale_guard",
+        "dareth_tactical_focus"
       ],
       "starting_equipped": [
         "dareth_draconic_cleave",
-        "dareth_scale_guard"
+        "dareth_scale_guard",
+        "dareth_tactical_focus"
       ],
       "skills": [
         {
@@ -673,7 +1281,9 @@
           "scaling": "power",
           "element": "none",
           "target": "enemy",
-          "effect": "armor_pierce"
+          "effect": "armor_pierce",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "dareth_scale_guard",
@@ -686,7 +1296,9 @@
           "scaling": "none",
           "element": "none",
           "target": "self",
-          "effect": "guard_60"
+          "effect": "guard_60",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "dareth_wyrmbane",
@@ -699,7 +1311,9 @@
           "scaling": "power",
           "element": "none",
           "target": "enemy",
-          "effect": "bonus_vs_large"
+          "effect": "bonus_vs_large",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "dareth_dragonhide",
@@ -710,7 +1324,13 @@
           "effect": "fire_defense_bonus",
           "requires": [
             "dareth_scale_guard"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "dareth_heartpiercer",
@@ -727,7 +1347,94 @@
           "requires": [
             "dareth_wyrmbane",
             "dareth_dragonhide"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "dareth_tactical_focus",
+          "name": "Hunter Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "physical",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "dareth_tactical_strike",
+          "name": "Drake Pursuit",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "physical",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "dareth_tactical_focus"
           ]
+        },
+        {
+          "id": "dareth_tactical_instinct",
+          "name": "Hunter Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "dareth_tactical_strike"
+          ]
+        },
+        {
+          "id": "dareth_guardian_crest",
+          "name": "Dragonwall",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "physical",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "dareth_dragonhide"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Wyrmbane",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Scaleguard",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Huntcraft",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -756,11 +1463,13 @@
       },
       "starting_skills": [
         "jora_tidal_blade",
-        "jora_riposte"
+        "jora_riposte",
+        "jora_tactical_focus"
       ],
       "starting_equipped": [
         "jora_tidal_blade",
-        "jora_riposte"
+        "jora_riposte",
+        "jora_tactical_focus"
       ],
       "skills": [
         {
@@ -774,7 +1483,9 @@
           "scaling": "power",
           "element": "water",
           "target": "enemy",
-          "effect": "speed_down"
+          "effect": "speed_down",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "jora_riposte",
@@ -787,7 +1498,9 @@
           "scaling": "none",
           "element": "none",
           "target": "self",
-          "effect": "counter"
+          "effect": "counter",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "jora_broadside",
@@ -800,7 +1513,9 @@
           "scaling": "power",
           "element": "water",
           "target": "enemy_all",
-          "effect": "stagger"
+          "effect": "stagger",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "jora_sea_legs",
@@ -811,7 +1526,13 @@
           "effect": "speed_evasion_bonus",
           "requires": [
             "jora_riposte"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "jora_maelstrom_cut",
@@ -828,7 +1549,94 @@
           "requires": [
             "jora_broadside",
             "jora_sea_legs"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "jora_tactical_focus",
+          "name": "Navigator Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "water",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "jora_tactical_strike",
+          "name": "Corsair Strike",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "water",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "jora_tactical_focus"
           ]
+        },
+        {
+          "id": "jora_tactical_instinct",
+          "name": "Sea Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "jora_tactical_strike"
+          ]
+        },
+        {
+          "id": "jora_guardian_crest",
+          "name": "Tidal Refuge",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "water",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "jora_sea_legs"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Tideblade",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Sea Ward",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Seamanship",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -857,11 +1665,13 @@
       },
       "starting_skills": [
         "alistair_aura_light",
-        "alistair_shield_oath"
+        "alistair_shield_oath",
+        "alistair_tactical_focus"
       ],
       "starting_equipped": [
         "alistair_aura_light",
-        "alistair_shield_oath"
+        "alistair_shield_oath",
+        "alistair_tactical_focus"
       ],
       "skills": [
         {
@@ -875,7 +1685,9 @@
           "scaling": "magic",
           "element": "holy",
           "target": "enemy",
-          "effect": "heal_self"
+          "effect": "heal_self",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "alistair_shield_oath",
@@ -888,7 +1700,9 @@
           "scaling": "none",
           "element": "holy",
           "target": "self",
-          "effect": "guard_75"
+          "effect": "guard_75",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "alistair_smite",
@@ -901,7 +1715,9 @@
           "scaling": "power_magic",
           "element": "holy",
           "target": "enemy",
-          "effect": "bonus_vs_undead"
+          "effect": "bonus_vs_undead",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "alistair_beacon",
@@ -912,7 +1728,13 @@
           "effect": "resistance_regen_bonus",
           "requires": [
             "alistair_aura_light"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "alistair_last_bastion",
@@ -929,7 +1751,94 @@
           "requires": [
             "alistair_shield_oath",
             "alistair_beacon"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "alistair_tactical_focus",
+          "name": "Oath Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "holy",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "alistair_tactical_strike",
+          "name": "Judgment",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "holy",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "alistair_tactical_focus"
           ]
+        },
+        {
+          "id": "alistair_tactical_instinct",
+          "name": "Oath Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "alistair_tactical_strike"
+          ]
+        },
+        {
+          "id": "alistair_guardian_crest",
+          "name": "Sanctuary",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "holy",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "alistair_beacon"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Radiance",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Sacred Shield",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Oathcraft",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -958,11 +1867,13 @@
       },
       "starting_skills": [
         "zephyr_mirage_step",
-        "zephyr_whirlwind_cut"
+        "zephyr_whirlwind_cut",
+        "zephyr_tactical_focus"
       ],
       "starting_equipped": [
         "zephyr_mirage_step",
-        "zephyr_whirlwind_cut"
+        "zephyr_whirlwind_cut",
+        "zephyr_tactical_focus"
       ],
       "skills": [
         {
@@ -976,7 +1887,9 @@
           "scaling": "none",
           "element": "wind",
           "target": "self",
-          "effect": "haste_evade"
+          "effect": "haste_evade",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "zephyr_whirlwind_cut",
@@ -989,7 +1902,9 @@
           "scaling": "power",
           "element": "wind",
           "target": "enemy",
-          "effect": "speed_scale"
+          "effect": "speed_scale",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "zephyr_feint",
@@ -1002,7 +1917,9 @@
           "scaling": "power",
           "element": "wind",
           "target": "enemy",
-          "effect": "accuracy_down"
+          "effect": "accuracy_down",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "zephyr_afterimage",
@@ -1013,7 +1930,13 @@
           "effect": "evasion_after_action",
           "requires": [
             "zephyr_mirage_step"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "zephyr_thousand_cuts",
@@ -1030,7 +1953,94 @@
           "requires": [
             "zephyr_feint",
             "zephyr_afterimage"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "zephyr_tactical_focus",
+          "name": "Sand Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "physical",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "zephyr_tactical_strike",
+          "name": "Dune Strike",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "physical",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "zephyr_tactical_focus"
           ]
+        },
+        {
+          "id": "zephyr_tactical_instinct",
+          "name": "Sand Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "zephyr_tactical_strike"
+          ]
+        },
+        {
+          "id": "zephyr_guardian_crest",
+          "name": "Mirage Bastion",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "physical",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "zephyr_afterimage"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Bladestorm",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Mirage",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Sandcraft",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -1059,11 +2069,13 @@
       },
       "starting_skills": [
         "malakor_soul_harvest",
-        "malakor_grave_shroud"
+        "malakor_grave_shroud",
+        "malakor_tactical_focus"
       ],
       "starting_equipped": [
         "malakor_soul_harvest",
-        "malakor_grave_shroud"
+        "malakor_grave_shroud",
+        "malakor_tactical_focus"
       ],
       "skills": [
         {
@@ -1077,7 +2089,9 @@
           "scaling": "magic",
           "element": "shadow",
           "target": "enemy",
-          "effect": "lifesteal"
+          "effect": "lifesteal",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "malakor_grave_shroud",
@@ -1090,7 +2104,9 @@
           "scaling": "none",
           "element": "shadow",
           "target": "self",
-          "effect": "resist_guard"
+          "effect": "resist_guard",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "malakor_spectral_rend",
@@ -1103,7 +2119,9 @@
           "scaling": "magic",
           "element": "shadow",
           "target": "enemy",
-          "effect": "resistance_break"
+          "effect": "resistance_break",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "malakor_deathless",
@@ -1114,7 +2132,13 @@
           "effect": "survive_lethal_once",
           "requires": [
             "malakor_grave_shroud"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "malakor_reaping_field",
@@ -1131,7 +2155,94 @@
           "requires": [
             "malakor_spectral_rend",
             "malakor_deathless"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "malakor_tactical_focus",
+          "name": "Grave Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "malakor_tactical_strike",
+          "name": "Soul Rend",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "shadow",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "malakor_tactical_focus"
           ]
+        },
+        {
+          "id": "malakor_tactical_instinct",
+          "name": "Death Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "malakor_tactical_strike"
+          ]
+        },
+        {
+          "id": "malakor_guardian_crest",
+          "name": "Deathward",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "shadow",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "malakor_deathless"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Soul Reaping",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Graveguard",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Necromancy",
+          "theme": "Adaptation and control"
         }
       ]
     },
@@ -1160,11 +2271,13 @@
       },
       "starting_skills": [
         "ignacia_dragon_breath",
-        "ignacia_ember_ward"
+        "ignacia_ember_ward",
+        "ignacia_tactical_focus"
       ],
       "starting_equipped": [
         "ignacia_dragon_breath",
-        "ignacia_ember_ward"
+        "ignacia_ember_ward",
+        "ignacia_tactical_focus"
       ],
       "skills": [
         {
@@ -1178,7 +2291,9 @@
           "scaling": "magic",
           "element": "fire",
           "target": "enemy_all",
-          "effect": "burn_chance"
+          "effect": "burn_chance",
+          "tree": "assault",
+          "tier": 1
         },
         {
           "id": "ignacia_ember_ward",
@@ -1191,7 +2306,9 @@
           "scaling": "none",
           "element": "fire",
           "target": "self",
-          "effect": "fire_guard"
+          "effect": "fire_guard",
+          "tree": "guard",
+          "tier": 1
         },
         {
           "id": "ignacia_drake_call",
@@ -1204,7 +2321,9 @@
           "scaling": "magic",
           "element": "fire",
           "target": "enemy",
-          "effect": "summon_strike"
+          "effect": "summon_strike",
+          "tree": "assault",
+          "tier": 2
         },
         {
           "id": "ignacia_bonded_flame",
@@ -1215,7 +2334,13 @@
           "effect": "magic_fire_bonus",
           "requires": [
             "ignacia_dragon_breath"
-          ]
+          ],
+          "tree": "guard",
+          "tier": 2,
+          "stat_bonus": {
+            "hp": 8,
+            "defense": 2
+          }
         },
         {
           "id": "ignacia_skyfire",
@@ -1232,7 +2357,94 @@
           "requires": [
             "ignacia_drake_call",
             "ignacia_bonded_flame"
+          ],
+          "tree": "assault",
+          "tier": 3
+        },
+        {
+          "id": "ignacia_tactical_focus",
+          "name": "Bonded Focus",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 1,
+          "level_req": 1,
+          "cost_sp": 0,
+          "mp": 5,
+          "power": 10,
+          "scaling": "magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "precision"
+        },
+        {
+          "id": "ignacia_tactical_strike",
+          "name": "Flame Talon",
+          "type": "active",
+          "tree": "tactics",
+          "tier": 2,
+          "level_req": 3,
+          "cost_sp": 1,
+          "mp": 9,
+          "power": 22,
+          "scaling": "power_magic",
+          "element": "fire",
+          "target": "enemy",
+          "effect": "lifesteal",
+          "requires": [
+            "ignacia_tactical_focus"
           ]
+        },
+        {
+          "id": "ignacia_tactical_instinct",
+          "name": "Bonded Instinct",
+          "type": "passive",
+          "tree": "tactics",
+          "tier": 3,
+          "level_req": 6,
+          "cost_sp": 1,
+          "effect": "stat_bonus",
+          "stat_bonus": {
+            "speed": 2,
+            "crit": 1
+          },
+          "requires": [
+            "ignacia_tactical_strike"
+          ]
+        },
+        {
+          "id": "ignacia_guardian_crest",
+          "name": "Drake Aegis",
+          "type": "active",
+          "tree": "guard",
+          "tier": 3,
+          "level_req": 10,
+          "cost_sp": 2,
+          "mp": 15,
+          "power": 0,
+          "scaling": "none",
+          "element": "fire",
+          "target": "self",
+          "effect": "guard_75",
+          "requires": [
+            "ignacia_bonded_flame"
+          ]
+        }
+      ],
+      "trees": [
+        {
+          "id": "assault",
+          "name": "Dragonfire",
+          "theme": "Offense and pressure"
+        },
+        {
+          "id": "guard",
+          "name": "Drakeward",
+          "theme": "Survival and protection"
+        },
+        {
+          "id": "tactics",
+          "name": "Bondcraft",
+          "theme": "Adaptation and control"
         }
       ]
     }
