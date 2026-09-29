@@ -124,6 +124,13 @@ var progression_skill_list: HBoxContainer
 var equipment_panel: PanelContainer
 var equipment_list: VBoxContainer
 var equipment_info: Label
+var equipment_stats_box: VBoxContainer
+var equipment_hero_picker: OptionButton
+var equipment_preview_viewport: SubViewport
+var equipment_preview_stage: Node3D
+var equipment_preview_model: Node3D
+var equipment_view_hero_id := ""
+var equipment_preview_hero_id := ""
 var progression_button: Button
 
 const MIN_ZOOM := 16.0
@@ -765,40 +772,160 @@ func _build_equipment_panel() -> void:
     equipment_panel.name = "EquipmentPanel"
     equipment_panel.visible = false
     equipment_panel.set_anchors_preset(Control.PRESET_CENTER)
-    var panel_size := get_viewport().get_visible_rect().size
-    var half_width := minf(295.0, panel_size.x * 0.46)
-    var half_height := minf(250.0, panel_size.y * 0.42)
+    var screen := get_viewport().get_visible_rect().size
+    var half_width := screen.x * 0.47
+    var half_height := screen.y * 0.45
     equipment_panel.offset_left = -half_width
     equipment_panel.offset_top = -half_height
     equipment_panel.offset_right = half_width
     equipment_panel.offset_bottom = half_height
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color(0.025, 0.035, 0.045, 0.98)
+    panel_style.border_color = Color(0.53, 0.40, 0.22)
+    panel_style.set_border_width_all(2)
+    panel_style.set_corner_radius_all(10)
+    equipment_panel.add_theme_stylebox_override("panel", panel_style)
     ui_root.add_child(equipment_panel)
+
     var margin := MarginContainer.new()
-    margin.add_theme_constant_override("margin_left", 16)
-    margin.add_theme_constant_override("margin_right", 16)
-    margin.add_theme_constant_override("margin_top", 12)
-    margin.add_theme_constant_override("margin_bottom", 12)
+    margin.add_theme_constant_override("margin_left", 18)
+    margin.add_theme_constant_override("margin_right", 18)
+    margin.add_theme_constant_override("margin_top", 14)
+    margin.add_theme_constant_override("margin_bottom", 14)
     equipment_panel.add_child(margin)
-    var box := VBoxContainer.new()
-    margin.add_child(box)
-    var title := Label.new()
-    title.text = "HERO EQUIPMENT"
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.add_theme_font_size_override("font_size", 20)
-    box.add_child(title)
-    equipment_info = Label.new()
-    box.add_child(equipment_info)
-    var scroll := ScrollContainer.new()
-    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    box.add_child(scroll)
-    equipment_list = VBoxContainer.new()
-    equipment_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    scroll.add_child(equipment_list)
+    var page := VBoxContainer.new()
+    page.add_theme_constant_override("separation", 10)
+    margin.add_child(page)
+
+    var header := HBoxContainer.new()
+    header.add_theme_constant_override("separation", 10)
+    page.add_child(header)
+    var heading := Label.new()
+    heading.text = "LOADOUT"
+    heading.add_theme_font_size_override("font_size", 23)
+    heading.modulate = Color(0.93, 0.73, 0.42)
+    heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    header.add_child(heading)
+    equipment_hero_picker = OptionButton.new()
+    equipment_hero_picker.custom_minimum_size.x = 215
+    equipment_hero_picker.item_selected.connect(_select_equipment_hero)
+    header.add_child(equipment_hero_picker)
     var close := Button.new()
     close.text = "CLOSE"
-    close.custom_minimum_size.y = 42
+    close.custom_minimum_size = Vector2(90, 42)
     close.pressed.connect(_close_equipment_panel)
-    box.add_child(close)
+    header.add_child(close)
+
+    var body := HBoxContainer.new()
+    body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    body.add_theme_constant_override("separation", 12)
+    page.add_child(body)
+
+    var stats_panel := PanelContainer.new()
+    stats_panel.custom_minimum_size.x = 220
+    stats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    stats_panel.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.07, 0.09, 0.11)))
+    body.add_child(stats_panel)
+    var stats_margin := MarginContainer.new()
+    stats_margin.add_theme_constant_override("margin_left", 12)
+    stats_margin.add_theme_constant_override("margin_right", 12)
+    stats_margin.add_theme_constant_override("margin_top", 12)
+    stats_panel.add_child(stats_margin)
+    var stats_scroll := ScrollContainer.new()
+    stats_margin.add_child(stats_scroll)
+    equipment_stats_box = VBoxContainer.new()
+    equipment_stats_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    equipment_stats_box.add_theme_constant_override("separation", 8)
+    stats_scroll.add_child(equipment_stats_box)
+    equipment_info = Label.new()
+    equipment_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    equipment_info.add_theme_font_size_override("font_size", 16)
+    equipment_info.modulate = Color(0.98, 0.84, 0.61)
+    equipment_stats_box.add_child(equipment_info)
+
+    var portrait := PanelContainer.new()
+    portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    portrait.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.08, 0.085, 0.09)))
+    body.add_child(portrait)
+    var portrait_box := VBoxContainer.new()
+    portrait.add_child(portrait_box)
+    var hero_label_line := Label.new()
+    hero_label_line.name = "PreviewCaption"
+    hero_label_line.text = "HERO PREVIEW"
+    hero_label_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    hero_label_line.modulate = Color(0.88, 0.69, 0.40)
+    portrait_box.add_child(hero_label_line)
+    var preview_container := SubViewportContainer.new()
+    preview_container.stretch = true
+    preview_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    preview_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    portrait_box.add_child(preview_container)
+    equipment_preview_viewport = SubViewport.new()
+    equipment_preview_viewport.size = Vector2i(420, 500)
+    equipment_preview_viewport.transparent_bg = true
+    equipment_preview_viewport.own_world_3d = true
+    equipment_preview_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+    preview_container.add_child(equipment_preview_viewport)
+    equipment_preview_stage = Node3D.new()
+    equipment_preview_viewport.add_child(equipment_preview_stage)
+    var camera := Camera3D.new()
+    camera.position = Vector3(0.0, 0.0, 5.4)
+    camera.fov = 42.0
+    camera.current = true
+    equipment_preview_stage.add_child(camera)
+    var light := DirectionalLight3D.new()
+    light.rotation_degrees = Vector3(-35.0, -30.0, 0.0)
+    light.light_energy = 2.2
+    equipment_preview_stage.add_child(light)
+    var fill := OmniLight3D.new()
+    fill.position = Vector3(-2.0, 1.5, 2.0)
+    fill.light_color = Color(1.0, 0.64, 0.34)
+    fill.light_energy = 2.3
+    equipment_preview_stage.add_child(fill)
+    var controls := HBoxContainer.new()
+    controls.alignment = BoxContainer.ALIGNMENT_CENTER
+    portrait_box.add_child(controls)
+    for direction in [-1, 1]:
+        var rotate := Button.new()
+        rotate.text = "◀ ROTATE" if direction < 0 else "ROTATE ▶"
+        rotate.custom_minimum_size = Vector2(112, 40)
+        rotate.pressed.connect(_rotate_equipment_preview.bind(direction))
+        controls.add_child(rotate)
+
+    var slots_panel := PanelContainer.new()
+    slots_panel.custom_minimum_size.x = 330
+    slots_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    slots_panel.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.07, 0.09, 0.11)))
+    body.add_child(slots_panel)
+    var slots_margin := MarginContainer.new()
+    slots_margin.add_theme_constant_override("margin_left", 10)
+    slots_margin.add_theme_constant_override("margin_right", 10)
+    slots_margin.add_theme_constant_override("margin_top", 10)
+    slots_panel.add_child(slots_margin)
+    var slots_page := VBoxContainer.new()
+    slots_margin.add_child(slots_page)
+    var slots_title := Label.new()
+    slots_title.text = "EQUIPPED GEAR"
+    slots_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    slots_title.modulate = Color(0.93, 0.73, 0.42)
+    slots_page.add_child(slots_title)
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    slots_page.add_child(scroll)
+    equipment_list = VBoxContainer.new()
+    equipment_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    equipment_list.add_theme_constant_override("separation", 6)
+    scroll.add_child(equipment_list)
+
+
+func _equipment_column_style(color: Color) -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = color
+    style.border_color = Color(0.22, 0.29, 0.32)
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(6)
+    return style
 
 
 func _open_equipment_panel() -> void:
@@ -806,37 +933,76 @@ func _open_equipment_panel() -> void:
     _close_poi_panel()
     _close_progression_panel()
     hero_select_panel.visible = false
+    equipment_view_hero_id = selected_hero_id
     _refresh_equipment_panel()
+    equipment_preview_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
     equipment_panel.visible = true
 
 
 func _close_equipment_panel() -> void:
     if equipment_panel:
         equipment_panel.visible = false
+    if equipment_preview_viewport:
+        equipment_preview_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+
+func _select_equipment_hero(index: int) -> void:
+    if index < 0 or index >= equipment_hero_picker.item_count:
+        return
+    var hero_id := str(equipment_hero_picker.get_item_metadata(index))
+    if unlocked_heroes.has(hero_id):
+        equipment_view_hero_id = hero_id
+        _refresh_equipment_panel()
 
 
 func _refresh_equipment_panel() -> void:
-    if not equipment_list:
+    if not equipment_list or not hero_catalog.has(equipment_view_hero_id):
         return
-    var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
-    var stats := HeroEquipmentService.effective_stats(selected_hero_id, profile.get("stats", {}))
-    equipment_info.text = "%s  •  HP %d  POW %d  DEF %d  RES %d" % [
-        str(hero_catalog.get(selected_hero_id, {}).get("name", selected_hero_id)),
-        int(stats.get("hp", 0)), int(stats.get("power", 0)),
-        int(stats.get("defense", 0)), int(stats.get("resistance", 0))]
+    equipment_hero_picker.clear()
+    for hero_id in unlocked_heroes:
+        if not hero_catalog.has(hero_id):
+            continue
+        var name := str(hero_catalog[hero_id].get("name", hero_id)).split(",")[0]
+        equipment_hero_picker.add_item(name)
+        equipment_hero_picker.set_item_metadata(equipment_hero_picker.item_count - 1, hero_id)
+        if hero_id == equipment_view_hero_id:
+            equipment_hero_picker.select(equipment_hero_picker.item_count - 1)
+
+    var profile := HeroProgressionService.ensure_profile(equipment_view_hero_id)
+    var base_stats: Dictionary = profile.get("stats", {})
+    var stats := HeroEquipmentService.effective_stats(equipment_view_hero_id, base_stats)
+    var data: Dictionary = hero_catalog[equipment_view_hero_id]
+    equipment_info.text = "%s\n%s\nLevel %d" % [str(data.get("name", equipment_view_hero_id)), str(data.get("class", "Hero")), int(profile.get("level", 1))]
+    for child in equipment_stats_box.get_children():
+        if child != equipment_info:
+            child.queue_free()
+    for stat in ["hp", "mp", "power", "magic", "defense", "resistance", "speed", "crit"]:
+        _equipment_stat_row(stat, float(stats.get(stat, 0)), float(base_stats.get(stat, 0)))
+
+    if equipment_preview_hero_id != equipment_view_hero_id:
+        _load_equipment_preview(data)
+        equipment_preview_hero_id = equipment_view_hero_id
+    var caption := equipment_panel.find_child("PreviewCaption", true, false) as Label
+    if caption:
+        caption.text = str(data.get("name", equipment_view_hero_id)).to_upper()
+
     for child in equipment_list.get_children():
         child.queue_free()
-    var loadout := HeroEquipmentService.loadout(selected_hero_id)
+    var loadout := HeroEquipmentService.loadout(equipment_view_hero_id)
     for slot in HeroEquipmentService.SLOTS:
-        var row := HBoxContainer.new()
-        equipment_list.add_child(row)
-        var label := Label.new()
-        label.text = str(slot).replace("_", " ").capitalize()
-        label.custom_minimum_size.x = 120
-        row.add_child(label)
+        var card := PanelContainer.new()
+        card.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.11, 0.13, 0.15)))
+        equipment_list.add_child(card)
+        var content := VBoxContainer.new()
+        card.add_child(content)
+        var slot_label := Label.new()
+        slot_label.text = str(slot).replace("_", " ").capitalize()
+        slot_label.add_theme_font_size_override("font_size", 11)
+        slot_label.modulate = Color(0.72, 0.80, 0.82)
+        content.add_child(slot_label)
         var picker := OptionButton.new()
         picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        picker.add_item("Empty")
+        picker.add_item("Unequipped")
         var selected_index := 0
         for item_id in HeroEquipmentService.items().keys():
             var item: Dictionary = HeroEquipmentService.items()[item_id]
@@ -848,15 +1014,108 @@ func _refresh_equipment_panel() -> void:
                 selected_index = picker.item_count - 1
         picker.select(selected_index)
         picker.item_selected.connect(_choose_equipment.bind(str(slot), picker))
-        row.add_child(picker)
+        content.add_child(picker)
+        var equipped_id := str(loadout.get(slot, ""))
+        if equipped_id != "":
+            var item: Dictionary = HeroEquipmentService.items().get(equipped_id, {})
+            var bonuses: PackedStringArray = []
+            for stat in item.get("stats", {}).keys():
+                bonuses.append("%s +%s" % [str(stat).to_upper(), str(item["stats"][stat])])
+            var hero_tags: Array = HeroEquipmentService.catalog().get("hero_tags", {}).get(equipment_view_hero_id, [])
+            for tag in item.get("synergy_tags", []):
+                if hero_tags.has(tag):
+                    for stat in item.get("synergy_stats", {}).keys():
+                        bonuses.append("Synergy %s +%s" % [str(stat).to_upper(), str(item["synergy_stats"][stat])])
+                    break
+            var bonus_label := Label.new()
+            bonus_label.text = ", ".join(bonuses)
+            bonus_label.add_theme_font_size_override("font_size", 10)
+            bonus_label.modulate = Color(0.81, 0.68, 0.46)
+            content.add_child(bonus_label)
+
+
+func _equipment_stat_row(stat: String, value: float, base: float) -> void:
+    var row := VBoxContainer.new()
+    equipment_stats_box.add_child(row)
+    var label := Label.new()
+    var shown := "%.1f" % value if stat == "crit" else str(int(round(value)))
+    var gain := "%.1f" % (value - base) if stat == "crit" else str(int(round(value - base)))
+    label.text = "%s  %s%s" % [stat.to_upper(), shown, "  (+%s)" % gain if value > base else ""]
+    label.add_theme_font_size_override("font_size", 11)
+    row.add_child(label)
+    var bar := ProgressBar.new()
+    bar.show_percentage = false
+    bar.custom_minimum_size.y = 9
+    bar.max_value = maxf(value * 1.25, 100.0) if stat == "hp" else maxf(value * 1.25, 30.0)
+    bar.value = value
+    row.add_child(bar)
+
+
+func _load_equipment_preview(data: Dictionary) -> void:
+    if equipment_preview_model and is_instance_valid(equipment_preview_model):
+        equipment_preview_model.queue_free()
+        equipment_preview_model = null
+    var model := Node3D.new()
+    model.name = "PreviewHero"
+    equipment_preview_stage.add_child(model)
+    equipment_preview_model = model
+    var asset_path := str(data.get("piece_asset", ""))
+    if asset_path != "" and ResourceLoader.exists(asset_path):
+        var packed := load(asset_path) as PackedScene
+        if packed:
+            var instance := packed.instantiate()
+            if instance is Node3D:
+                model.add_child(instance)
+                _fit_equipment_preview(model)
+                return
+            instance.queue_free()
+    # A readable stand-in while a hero's clean single-character GLB is pending.
+    var body := MeshInstance3D.new()
+    var mesh := CapsuleMesh.new()
+    mesh.radius = 0.45
+    mesh.height = 2.7
+    body.mesh = mesh
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color(0.28, 0.48, 0.54)
+    material.metallic = 0.55
+    body.material_override = material
+    model.add_child(body)
+
+
+func _fit_equipment_preview(model: Node3D) -> void:
+    var minimum := Vector3(1000000, 1000000, 1000000)
+    var maximum := Vector3(-1000000, -1000000, -1000000)
+    var found := false
+    for node in model.find_children("*", "MeshInstance3D", true, false):
+        var mesh_node := node as MeshInstance3D
+        if not mesh_node.mesh:
+            continue
+        var box := mesh_node.mesh.get_aabb()
+        for corner_index in range(8):
+            var point := mesh_node.global_transform * box.get_endpoint(corner_index)
+            minimum = Vector3(minf(minimum.x, point.x), minf(minimum.y, point.y), minf(minimum.z, point.z))
+            maximum = Vector3(maxf(maximum.x, point.x), maxf(maximum.y, point.y), maxf(maximum.z, point.z))
+            found = true
+    if not found:
+        return
+    var center := (minimum + maximum) * 0.5
+    var extent := maximum - minimum
+    var scale_value := minf(3.4 / maxf(extent.y, 0.01), 2.4 / maxf(maxf(extent.x, extent.z), 0.01))
+    model.scale = Vector3.ONE * scale_value
+    model.position = -center * scale_value
+
+
+func _rotate_equipment_preview(direction: int) -> void:
+    if equipment_preview_model:
+        equipment_preview_model.rotation_degrees.y += float(direction) * 30.0
 
 
 func _choose_equipment(index: int, slot: String, picker: OptionButton) -> void:
     var item_id := "" if index == 0 else str(picker.get_item_metadata(index))
-    if HeroEquipmentService.equip(selected_hero_id, slot, item_id, owned_collectibles):
+    if HeroEquipmentService.equip(equipment_view_hero_id, slot, item_id, owned_collectibles):
         _refresh_equipment_panel()
-        _refresh_game_hud()
-
+        if equipment_view_hero_id == selected_hero_id:
+            _refresh_game_hud()
 
 func _open_hero_select() -> void:
     _cancel_unit_move()
