@@ -268,10 +268,10 @@ func _build_army_formation() -> void:
     army_anchors.clear()
 
     var definitions := [
-        {"name":"Vanguard I","hp":72,"max_hp":72,"power":11,"defense":8,"speed_scale":1.02},
-        {"name":"Vanguard II","hp":72,"max_hp":72,"power":11,"defense":8,"speed_scale":0.98},
-        {"name":"Ranger I","hp":60,"max_hp":60,"power":13,"defense":6,"speed_scale":1.10},
-        {"name":"Ranger II","hp":60,"max_hp":60,"power":13,"defense":6,"speed_scale":1.06},
+        {"name":"Vanguard I","hp":72,"max_hp":72,"power":11,"defense":8,"speed_scale":1.02,"ability_name":"Shield Bash","ability_bonus":8},
+        {"name":"Vanguard II","hp":72,"max_hp":72,"power":11,"defense":8,"speed_scale":0.98,"ability_name":"Shield Bash","ability_bonus":8},
+        {"name":"Ranger I","hp":60,"max_hp":60,"power":13,"defense":6,"speed_scale":1.10,"ability_name":"Aimed Shot","ability_bonus":12},
+        {"name":"Ranger II","hp":60,"max_hp":60,"power":13,"defense":6,"speed_scale":1.06,"ability_name":"Aimed Shot","ability_bonus":12},
     ]
 
     var positions := [
@@ -542,37 +542,26 @@ func _build_ui() -> void:
     enemy_atb_bar.show_percentage = false
     enemy_box.add_child(enemy_atb_bar)
 
-    # Compact combat log: keeps the battlefield visible instead of covering the
-    # entire lower third of the screen.
-    var bottom := PanelContainer.new()
-    bottom.anchor_left = 0.0
-    bottom.anchor_top = 1.0
-    bottom.anchor_right = 0.0
-    bottom.anchor_bottom = 1.0
-    bottom.offset_left = 22.0
-    bottom.offset_top = -118.0
-    bottom.offset_right = 455.0
-    bottom.offset_bottom = -18.0
-    battle_ui_layer.add_child(bottom)
-
-    var bottom_margin := MarginContainer.new()
-    bottom_margin.add_theme_constant_override("margin_left", 14)
-    bottom_margin.add_theme_constant_override("margin_top", 10)
-    bottom_margin.add_theme_constant_override("margin_right", 14)
-    bottom_margin.add_theme_constant_override("margin_bottom", 10)
-    var bottom_style := StyleBoxFlat.new()
-    bottom_style.bg_color = Color(0.025, 0.018, 0.02, 0.88)
-    bottom_style.corner_radius_top_left = 12
-    bottom_style.corner_radius_top_right = 12
-    bottom_style.corner_radius_bottom_left = 12
-    bottom_style.corner_radius_bottom_right = 12
-    bottom.add_theme_stylebox_override("panel", bottom_style)
-    bottom.add_child(bottom_margin)
-
+    # Lightweight battle feed: no blocking panel over the battlefield.
     message_label = Label.new()
+    message_label.anchor_left = 0.5
+    message_label.anchor_top = 0.0
+    message_label.anchor_right = 0.5
+    message_label.anchor_bottom = 0.0
+    message_label.offset_left = -300.0
+    message_label.offset_top = 108.0
+    message_label.offset_right = 300.0
+    message_label.offset_bottom = 142.0
+    message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    message_label.add_theme_font_size_override("font_size", 15)
-    bottom_margin.add_child(message_label)
+    message_label.add_theme_font_size_override("font_size", 14)
+    message_label.add_theme_color_override("font_color", Color(0.96, 0.90, 0.82, 0.94))
+    message_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.92))
+    message_label.add_theme_constant_override("shadow_offset_x", 2)
+    message_label.add_theme_constant_override("shadow_offset_y", 2)
+    message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    battle_ui_layer.add_child(message_label)
 
     # Radial command wheel inspired by classic console RPG input, but with
     # Shattered Realms' own four-command layout and visual treatment.
@@ -584,6 +573,7 @@ func _build_ui() -> void:
     command_box.anchor_bottom = 0.0
     command_box.position = Vector2.ZERO
     command_box.size = Vector2(360.0, 275.0)
+    command_box.pivot_offset = Vector2(180.0, 137.5)
     command_box.visible = false
     battle_ui_layer.add_child(command_box)
 
@@ -592,7 +582,7 @@ func _build_ui() -> void:
     ring.size = Vector2(152.0, 152.0)
     ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
     var ring_style := StyleBoxFlat.new()
-    ring_style.bg_color = Color(0.035, 0.03, 0.04, 0.72)
+    ring_style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
     ring_style.border_width_left = 4
     ring_style.border_width_top = 4
     ring_style.border_width_right = 4
@@ -610,7 +600,7 @@ func _build_ui() -> void:
     center.size = Vector2(96.0, 96.0)
     center.mouse_filter = Control.MOUSE_FILTER_IGNORE
     var center_style := StyleBoxFlat.new()
-    center_style.bg_color = Color(0.08, 0.055, 0.045, 0.96)
+    center_style.bg_color = Color(0.0, 0.0, 0.0, 0.0)
     center_style.border_width_left = 3
     center_style.border_width_top = 3
     center_style.border_width_right = 3
@@ -720,25 +710,43 @@ func _begin_actor_turn(actor_id: String) -> void:
         message_label.text = "%s is ready." % hero_name
     else:
         hero_ready = false
-        skills_button.text = "ABILITY"
         item_button.text = "HOLD"
         var index := int(actor_id.trim_prefix("army_"))
         var slot: Dictionary = army_slots[index]
+        skills_button.text = str(slot.get("ability_name", "ABILITY")).to_upper()
         message_label.text = "%s is ready." % str(slot.get("name", "Unit"))
 
     _configure_commands_for_active_actor()
     _update_command_ring_position()
+    _animate_command_ring_open()
     _refresh_gauges()
 
 
 func _configure_commands_for_active_actor() -> void:
     var is_hero := active_actor_id == "hero"
     attack_button.text = "ATTACK"
-    skills_button.text = "SKILLS" if is_hero else "ABILITY"
+    if is_hero:
+        skills_button.text = "SKILLS"
+    else:
+        var index := int(active_actor_id.trim_prefix("army_"))
+        skills_button.text = str(army_slots[index].get("ability_name", "ABILITY")).to_upper()
     defend_button.text = "DEFEND"
     item_button.text = "ITEM" if is_hero else "HOLD"
     skills_button.disabled = false
     item_button.disabled = item_used if is_hero else false
+
+
+func _animate_command_ring_open() -> void:
+    if not command_box:
+        return
+    command_box.scale = Vector2(0.86, 0.86)
+    command_box.modulate.a = 0.0
+    var tween := create_tween()
+    tween.set_parallel(true)
+    tween.set_trans(Tween.TRANS_BACK)
+    tween.set_ease(Tween.EASE_OUT)
+    tween.tween_property(command_box, "scale", Vector2.ONE, 0.16)
+    tween.tween_property(command_box, "modulate:a", 1.0, 0.12)
 
 
 func _active_actor_anchor() -> Node3D:
@@ -883,7 +891,8 @@ func _set_commands_enabled(enabled: bool) -> void:
     item_button.disabled = not enabled or item_used
     if command_box:
         command_box.visible = enabled and active_actor_id != ""
-        command_box.modulate.a = 1.0
+        if not enabled:
+            command_box.modulate.a = 0.0
     if command_center_label:
         command_center_label.text = "READY" if enabled else "WAIT"
         command_center_label.modulate = Color(1.0, 0.72, 0.45) if enabled else Color(0.62, 0.64, 0.68)
@@ -899,12 +908,29 @@ func _refresh_gauges() -> void:
         army_slot_atb_bars[i].value = float(slot.get("atb", 0.0)) * 100.0
         army_slot_hp_bars[i].max_value = int(slot.get("max_hp", 1))
         army_slot_hp_bars[i].value = int(slot.get("hp", 0))
-        army_slot_labels[i].text = "%s  %d/%d" % [
+        var hp_now := int(slot.get("hp", 0))
+        var hp_max := int(slot.get("max_hp", 1))
+        var state_suffix := "  DEF" if bool(slot.get("defending", false)) else ""
+        army_slot_labels[i].text = "%s  %d/%d%s" % [
             str(slot.get("name", "Unit")),
-            int(slot.get("hp", 0)),
-            int(slot.get("max_hp", 1))
+            hp_now,
+            hp_max,
+            state_suffix
         ]
-        army_slot_panels[i].modulate = Color.WHITE if int(slot.get("hp", 0)) > 0 else Color(0.45, 0.45, 0.45, 0.65)
+
+        var actor_match := active_actor_id == "army_%d" % i
+        if hp_now <= 0:
+            army_slot_panels[i].modulate = Color(0.38, 0.38, 0.38, 0.58)
+            army_slot_labels[i].modulate = Color(0.60, 0.60, 0.60)
+        elif actor_match:
+            army_slot_panels[i].modulate = Color(1.18, 0.86, 0.48, 1.0)
+            army_slot_labels[i].modulate = Color(1.0, 0.82, 0.45)
+        elif float(hp_now) / float(maxi(1, hp_max)) <= 0.30:
+            army_slot_panels[i].modulate = Color(1.0, 0.62, 0.62, 1.0)
+            army_slot_labels[i].modulate = Color(1.0, 0.48, 0.42)
+        else:
+            army_slot_panels[i].modulate = Color.WHITE
+            army_slot_labels[i].modulate = Color.WHITE
 
 
 func _refresh_ui() -> void:
@@ -918,6 +944,15 @@ func _refresh_ui() -> void:
     hero_hp_label.text = "%s  LV %d  •  HP %d/%d" % [hero_name, hero_level, hero_hp, hero_max_hp]
     hero_mp_label.text = "MP %d/%d  •  SP %d" % [hero_mp, hero_max_mp, int(hero_profile.get("skill_points", 0))]
     enemy_hp_label.text = "%s  HP %d/%d" % [enemy_name, enemy_hp, enemy_max_hp]
+
+    var hero_ratio := float(hero_hp) / float(maxi(1, hero_max_hp))
+    if hero_ratio <= 0.30:
+        hero_hp_label.modulate = Color(1.0, 0.42, 0.36)
+    elif active_actor_id == "hero":
+        hero_hp_label.modulate = Color(1.0, 0.78, 0.42)
+    else:
+        hero_hp_label.modulate = Color.WHITE
+
     _refresh_gauges()
 
 
@@ -1061,11 +1096,13 @@ func _use_army_ability() -> void:
     var slot: Dictionary = army_slots[index]
     var anchor := army_anchors[index]
     var name := str(slot.get("name", "Unit"))
+    var ability_name := str(slot.get("ability_name", "Formation Strike"))
     var power := int(slot.get("power", 10))
-    var damage := 10 + int(round(float(power) * 0.90)) + randi_range(0, 4)
+    var bonus := int(slot.get("ability_bonus", 8))
+    var damage := bonus + int(round(float(power) * 0.90)) + randi_range(0, 4)
 
     _consume_active_turn()
-    message_label.text = "%s uses formation strike! %d damage." % [name, damage]
+    message_label.text = "%s uses %s! %d damage." % [name, ability_name, damage]
     await _lunge(anchor, 0.42)
     enemy_hp = maxi(0, enemy_hp - damage)
     _show_damage_popup(enemy_anchor, damage)
