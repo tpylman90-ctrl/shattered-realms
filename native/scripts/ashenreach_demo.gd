@@ -553,6 +553,12 @@ func _build_progression_panel() -> void:
     progression_skill_list.add_theme_constant_override("separation", 12)
     scroll.add_child(progression_skill_list)
 
+    var reset_points := Button.new()
+    reset_points.text = "RESET SPENT POINTS"
+    reset_points.custom_minimum_size.y = 38
+    reset_points.pressed.connect(_respec_hero_skills)
+    box.add_child(reset_points)
+
     var close := Button.new()
     close.text = "CLOSE"
     close.custom_minimum_size = Vector2(0, 42)
@@ -592,7 +598,7 @@ func _refresh_progression_panel() -> void:
     var stats: Dictionary = HeroEquipmentService.effective_stats(selected_hero_id, profile.get("stats", {}))
     var learned: Array = profile.get("learned_skills", [])
 
-    progression_info.text = "%s\nLevel %d  •  XP %d/%d  •  Skill Points %d\nEquipped gear is included in these stats.\nHP %d  MP %d  POW %d  MAG %d  DEF %d  RES %d  SPD %d" % [
+    progression_info.text = "%s\nLevel %d  •  XP %d/%d  •  Unspent Points %d\nHP %d  MP %d  POW %d  MAG %d  DEF %d  RES %d  SPD %d" % [
         str(definition.get("name", selected_hero_id)),
         level,
         xp,
@@ -611,6 +617,7 @@ func _refresh_progression_panel() -> void:
         child.queue_free()
 
     var equipped_now: Array = profile.get("equipped_skills", [])
+    var ranks: Dictionary = profile.get("skill_ranks", {})
     for tree_variant in definition.get("trees", []):
         var tree: Dictionary = tree_variant
         var branch := VBoxContainer.new()
@@ -629,7 +636,21 @@ func _refresh_progression_panel() -> void:
         theme_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         branch.add_child(theme_label)
 
+        var tree_spent := 0
+        for node in definition.get("skills", []):
+            if str(node.get("tree", "")) == str(tree.get("id", "")):
+                var node_id := str(node.get("id", ""))
+                var free_rank := 1 if definition.get("starting_skills", []).has(node_id) else 0
+                tree_spent += maxi(0, int(ranks.get(node_id, 0)) - free_rank)
+        var spent_label := Label.new()
+        spent_label.text = "%d POINTS IN PATH" % tree_spent
+        spent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        branch.add_child(spent_label)
+
         for tier in range(1, 6):
+            var row := HBoxContainer.new()
+            row.add_theme_constant_override("separation", 6)
+            branch.add_child(row)
             for skill_variant in definition.get("skills", []):
                 if not skill_variant is Dictionary:
                     continue
@@ -637,61 +658,71 @@ func _refresh_progression_panel() -> void:
                 if str(skill.get("tree", "")) != str(tree.get("id", "")) or int(skill.get("tier", 0)) != tier:
                     continue
                 var skill_id := str(skill.get("id", ""))
-                var learned_now := learned.has(skill_id)
-                var can_learn := HeroProgressionService.can_learn(selected_hero_id, skill_id)
-                var requirements: Array = skill.get("requires", [])
-                var required_names: PackedStringArray = []
-                for required_id in requirements:
-                    var required_skill := HeroProgressionService.skill_by_id(selected_hero_id, str(required_id))
-                    required_names.append(str(required_skill.get("name", required_id)))
-                var state_text := ("EQUIPPED" if equipped_now.has(skill_id) else "LEARNED") if learned_now else ("READY" if can_learn else "LOCKED")
+                var rank := int(ranks.get(skill_id, 0))
+                var max_rank := int(skill.get("max_rank", 1))
+                var can_rank := HeroProgressionService.can_learn(selected_hero_id, skill_id)
+                var is_active := str(skill.get("type", "active")) == "active"
                 var card := PanelContainer.new()
-                branch.add_child(card)
+                card.custom_minimum_size = Vector2(156, 142)
+                var style := StyleBoxFlat.new()
+                style.bg_color = Color(0.06, 0.16, 0.20, 0.97) if rank > 0 else Color(0.08, 0.09, 0.11, 0.97)
+                style.border_width_left = 2
+                style.border_width_right = 2
+                style.border_width_top = 2
+                style.border_width_bottom = 2
+                style.border_color = Color(0.24, 0.86, 0.93) if rank > 0 else (Color(0.67, 0.54, 0.31) if can_rank else Color(0.25, 0.28, 0.31))
+                style.corner_radius_top_left = 8
+                style.corner_radius_top_right = 8
+                style.corner_radius_bottom_left = 8
+                style.corner_radius_bottom_right = 8
+                card.add_theme_stylebox_override("panel", style)
+                row.add_child(card)
                 var content := VBoxContainer.new()
-                content.add_theme_constant_override("separation", 4)
                 card.add_child(content)
                 var label := Label.new()
-                label.text = "TIER %d  •  %s\n%s • Level %d • %d SP\n%s" % [
-                    tier, str(skill.get("name", skill_id)),
-                    str(skill.get("type", "active")).capitalize(),
-                    int(skill.get("level_req", 1)), int(skill.get("cost_sp", 0)), state_text]
-                if not required_names.is_empty():
-                    label.text += "\nRequires: %s" % ", ".join(required_names)
+                label.text = "%s  •  %d/%d\n%s" % ["ABILITY" if is_active else "PASSIVE", rank, max_rank, str(skill.get("name", skill_id))]
+                label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+                label.add_theme_font_size_override("font_size", 12)
+                content.add_child(label)
+                var description := Label.new()
+                description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+                description.add_theme_font_size_override("font_size", 10)
+                description.modulate = Color(0.78, 0.81, 0.81)
                 if skill.has("stat_bonus"):
                     var bonuses: PackedStringArray = []
                     for stat in skill["stat_bonus"].keys():
-                        bonuses.append("%s +%s" % [str(stat).to_upper(), str(skill["stat_bonus"][stat])])
-                    label.text += "\n" + ", ".join(bonuses)
+                        bonuses.append("%s +%s/rank" % [str(stat).to_upper(), str(skill["stat_bonus"][stat])])
+                    description.text = ", ".join(bonuses)
                 else:
-                    label.text += "\n" + str(skill.get("description", ""))
-                label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-                content.add_child(label)
-                var actions := HBoxContainer.new()
-                content.add_child(actions)
-                if not learned_now:
-                    var learn_button := Button.new()
-                    learn_button.text = "Learn" if can_learn else "Locked"
-                    learn_button.disabled = not can_learn
-                    if can_learn:
-                        learn_button.pressed.connect(_learn_hero_skill.bind(skill_id))
-                    actions.add_child(learn_button)
-                elif str(skill.get("type", "active")) == "active":
+                    description.text = str(skill.get("description", ""))
+                content.add_child(description)
+                var controls := HBoxContainer.new()
+                content.add_child(controls)
+                var plus := Button.new()
+                plus.text = "+" if can_rank else ("MAX" if rank == max_rank else "LOCK")
+                plus.disabled = not can_rank
+                plus.custom_minimum_size.x = 48
+                if can_rank:
+                    plus.pressed.connect(_learn_hero_skill.bind(skill_id))
+                controls.add_child(plus)
+                if is_active and rank > 0:
                     var equip_button := Button.new()
-                    equip_button.text = "Remove" if equipped_now.has(skill_id) else "Equip"
+                    equip_button.text = "On" if equipped_now.has(skill_id) else "Equip"
+                    equip_button.custom_minimum_size.x = 72
                     equip_button.pressed.connect(_toggle_hero_skill.bind(skill_id))
-                    actions.add_child(equip_button)
-                else:
-                    var passive_label := Label.new()
-                    passive_label.text = "Passive active"
-                    actions.add_child(passive_label)
-                if tier < 5:
-                    var link := Label.new()
-                    link.text = "↓"
-                    link.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-                    branch.add_child(link)
+                    controls.add_child(equip_button)
+            if tier < 5:
+                var gate := Label.new()
+                var next_threshold := int(HeroProgressionService.data().get("rules", {}).get("tier_point_thresholds", {}).get(str(tier + 1), 0))
+                gate.text = "↓  TIER %d  •  %d/%d PATH POINTS" % [tier + 1, tree_spent, next_threshold]
+                gate.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+                gate.modulate = Color(0.53, 0.86, 0.88) if tree_spent >= next_threshold else Color(0.53, 0.54, 0.55)
+                branch.add_child(gate)
 
 
 func _learn_hero_skill(skill_id: String) -> void:
+    var before := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    var was_unlearned := int(before.get("skill_ranks", {}).get(skill_id, 0)) == 0
     if HeroProgressionService.learn_skill(selected_hero_id, skill_id):
         var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
         var equipped: Array[String] = []
@@ -701,11 +732,18 @@ func _learn_hero_skill(skill_id: String) -> void:
         # Newly learned active skills automatically fill an empty battle slot.
         var skill := HeroProgressionService.skill_by_id(selected_hero_id, skill_id)
         var limit := int(HeroProgressionService.data().get("rules", {}).get("equipped_active_limit", 6))
-        if str(skill.get("type", "active")) == "active" and equipped.size() < limit:
+        if was_unlearned and str(skill.get("type", "active")) == "active" and equipped.size() < limit:
             equipped.append(skill_id)
             HeroProgressionService.set_equipped_skills(selected_hero_id, equipped)
 
-        status_label.text = "%s learned." % str(skill.get("name", skill_id))
+        status_label.text = "%s rank %d/%d." % [str(skill.get("name", skill_id)), int(profile.get("skill_ranks", {}).get(skill_id, 0)), int(skill.get("max_rank", 1))]
+        _refresh_progression_panel()
+        _refresh_game_hud()
+
+
+func _respec_hero_skills() -> void:
+    if HeroProgressionService.respec(selected_hero_id):
+        status_label.text = "Skill points returned. Starting abilities retained."
         _refresh_progression_panel()
         _refresh_game_hud()
 

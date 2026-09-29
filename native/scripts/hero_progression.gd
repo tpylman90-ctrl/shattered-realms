@@ -102,15 +102,27 @@ static func ensure_profile(hero_id: String, legacy_xp: int = 0) -> Dictionary:
     var starting_skills: Array = definition.get("starting_skills", [])
     var starting_equipped: Array = definition.get("starting_equipped", [])
 
+    # Migrate older saves: every previously learned node starts at rank one.
+    var ranks: Dictionary = {}
+    var saved_ranks: Variant = cfg.get_value(section, "skill_ranks", {})
+    if saved_ranks is Dictionary and not (saved_ranks as Dictionary).is_empty():
+        for raw_id in (saved_ranks as Dictionary).keys():
+            var id := str(raw_id)
+            var skill := skill_by_id(hero_id, id)
+            if not skill.is_empty():
+                ranks[id] = clampi(int(saved_ranks[raw_id]), 0, int(skill.get("max_rank", 1)))
+    else:
+        for raw_id in cfg.get_value(section, "learned_skills", starting_skills):
+            var id := str(raw_id)
+            if not skill_by_id(hero_id, id).is_empty():
+                ranks[id] = 1
+    for raw_id in starting_skills:
+        ranks[str(raw_id)] = maxi(1, int(ranks.get(str(raw_id), 0)))
+
     var learned: Array[String] = []
-    for id_variant in cfg.get_value(section, "learned_skills", starting_skills):
-        var id := str(id_variant)
-        if not learned.has(id):
-            learned.append(id)
-    for id_variant in starting_skills:
-        var id := str(id_variant)
-        if not learned.has(id):
-            learned.append(id)
+    for id in ranks.keys():
+        if int(ranks[id]) > 0:
+            learned.append(str(id))
 
     var equipped: Array[String] = []
     for id_variant in cfg.get_value(section, "equipped_skills", starting_equipped):
@@ -121,14 +133,15 @@ static func ensure_profile(hero_id: String, legacy_xp: int = 0) -> Dictionary:
     var points_earned := maxi(0, current_level - 1) * int(data().get("rules", {}).get("skill_points_per_level", 1))
     var spent_points := 0
     for skill_id in learned:
-        var skill := skill_by_id(hero_id, skill_id)
-        spent_points += int(skill.get("cost_sp", 0))
+        var paid_ranks := int(ranks.get(skill_id, 0)) - (1 if starting_skills.has(skill_id) else 0)
+        spent_points += maxi(0, paid_ranks)
     var skill_points := maxi(0, points_earned - spent_points)
 
     cfg.set_value(section, "xp", xp)
     cfg.set_value(section, "level", current_level)
     cfg.set_value(section, "skill_points", skill_points)
     cfg.set_value(section, "learned_skills", learned)
+    cfg.set_value(section, "skill_ranks", ranks)
     cfg.set_value(section, "equipped_skills", equipped)
     cfg.save(SAVE_PATH)
 
@@ -138,7 +151,7 @@ static func ensure_profile(hero_id: String, legacy_xp: int = 0) -> Dictionary:
         if str(passive.get("type", "active")) != "passive":
             continue
         for stat in passive.get("stat_bonus", {}).keys():
-            effective_stats[stat] = float(effective_stats.get(stat, 0)) + float(passive["stat_bonus"][stat])
+            effective_stats[stat] = float(effective_stats.get(stat, 0)) + float(passive["stat_bonus"][stat]) * float(ranks.get(skill_id, 0))
     for stat in effective_stats.keys():
         if stat != "crit":
             effective_stats[stat] = int(round(float(effective_stats[stat])))
@@ -149,6 +162,7 @@ static func ensure_profile(hero_id: String, legacy_xp: int = 0) -> Dictionary:
         "level": current_level,
         "skill_points": skill_points,
         "learned_skills": learned,
+        "skill_ranks": ranks,
         "equipped_skills": equipped,
         "stats": effective_stats
     }
@@ -179,16 +193,26 @@ static func can_learn(hero_id: String, skill_id: String) -> bool:
     if profile.is_empty() or skill.is_empty():
         return false
 
-    var learned: Array = profile.get("learned_skills", [])
-    if learned.has(skill_id):
+    var ranks: Dictionary = profile.get("skill_ranks", {})
+    if int(ranks.get(skill_id, 0)) >= int(skill.get("max_rank", 1)):
         return false
     if int(profile.get("level", 1)) < int(skill.get("level_req", 1)):
         return false
-    if int(profile.get("skill_points", 0)) < int(skill.get("cost_sp", 0)):
+    if int(profile.get("skill_points", 0)) < int(skill.get("point_cost_per_rank", 1)):
+        return false
+
+    var tree_spent := 0
+    var definition := hero_definition(hero_id)
+    for node in definition.get("skills", []):
+        if str(node.get("tree", "")) == str(skill.get("tree", "")):
+            var node_id := str(node.get("id", ""))
+            var free_rank := 1 if definition.get("starting_skills", []).has(node_id) else 0
+            tree_spent += maxi(0, int(ranks.get(node_id, 0)) - free_rank)
+    if tree_spent < int(skill.get("tier_spend_required", 0)):
         return false
 
     for required_variant in skill.get("requires", []):
-        if not learned.has(str(required_variant)):
+        if int(ranks.get(str(required_variant), 0)) < 1:
             return false
     return true
 
@@ -198,14 +222,37 @@ static func learn_skill(hero_id: String, skill_id: String) -> bool:
         return false
 
     var profile := ensure_profile(hero_id)
-    var learned: Array = profile.get("learned_skills", []).duplicate()
-    learned.append(skill_id)
+    var ranks: Dictionary = profile.get("skill_ranks", {}).duplicate(true)
+    ranks[skill_id] = int(ranks.get(skill_id, 0)) + 1
 
     var cfg := ConfigFile.new()
     cfg.load(SAVE_PATH)
     var section := "hero:%s" % hero_id
-    cfg.set_value(section, "learned_skills", learned)
+    cfg.set_value(section, "skill_ranks", ranks)
     cfg.save(SAVE_PATH)
+    ensure_profile(hero_id)
+    return true
+
+
+static func respec(hero_id: String) -> bool:
+    var definition := hero_definition(hero_id)
+    if definition.is_empty():
+        return false
+    var ranks: Dictionary = {}
+    var equipped: Array[String] = []
+    for raw_id in definition.get("starting_skills", []):
+        var id := str(raw_id)
+        ranks[id] = 1
+        if str(skill_by_id(hero_id, id).get("type", "active")) == "active":
+            equipped.append(id)
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var section := "hero:%s" % hero_id
+    cfg.set_value(section, "skill_ranks", ranks)
+    cfg.set_value(section, "learned_skills", ranks.keys())
+    cfg.set_value(section, "equipped_skills", equipped)
+    if cfg.save(SAVE_PATH) != OK:
+        return false
     ensure_profile(hero_id)
     return true
 
