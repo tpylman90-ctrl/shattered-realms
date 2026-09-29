@@ -629,7 +629,7 @@ func _refresh_progression_panel() -> void:
         theme_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         branch.add_child(theme_label)
 
-        for tier in range(1, 4):
+        for tier in range(1, 6):
             for skill_variant in definition.get("skills", []):
                 if not skill_variant is Dictionary:
                     continue
@@ -658,7 +658,12 @@ func _refresh_progression_panel() -> void:
                 if not required_names.is_empty():
                     label.text += "\nRequires: %s" % ", ".join(required_names)
                 if skill.has("stat_bonus"):
-                    label.text += "\nPassive stat bonuses"
+                    var bonuses: PackedStringArray = []
+                    for stat in skill["stat_bonus"].keys():
+                        bonuses.append("%s +%s" % [str(stat).to_upper(), str(skill["stat_bonus"][stat])])
+                    label.text += "\n" + ", ".join(bonuses)
+                else:
+                    label.text += "\n" + str(skill.get("description", ""))
                 label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
                 content.add_child(label)
                 var actions := HBoxContainer.new()
@@ -679,7 +684,7 @@ func _refresh_progression_panel() -> void:
                     var passive_label := Label.new()
                     passive_label.text = "Passive active"
                     actions.add_child(passive_label)
-                if tier < 3:
+                if tier < 5:
                     var link := Label.new()
                     link.text = "↓"
                     link.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
