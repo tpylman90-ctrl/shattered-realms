@@ -132,6 +132,17 @@ static func ensure_profile(hero_id: String, legacy_xp: int = 0) -> Dictionary:
     cfg.set_value(section, "equipped_skills", equipped)
     cfg.save(SAVE_PATH)
 
+    var effective_stats := stats_for(hero_id, current_level)
+    for skill_id in learned:
+        var passive := skill_by_id(hero_id, skill_id)
+        if str(passive.get("type", "active")) != "passive":
+            continue
+        for stat in passive.get("stat_bonus", {}).keys():
+            effective_stats[stat] = float(effective_stats.get(stat, 0)) + float(passive["stat_bonus"][stat])
+    for stat in effective_stats.keys():
+        if stat != "crit":
+            effective_stats[stat] = int(round(float(effective_stats[stat])))
+
     return {
         "hero_id": hero_id,
         "xp": xp,
@@ -139,7 +150,7 @@ static func ensure_profile(hero_id: String, legacy_xp: int = 0) -> Dictionary:
         "skill_points": skill_points,
         "learned_skills": learned,
         "equipped_skills": equipped,
-        "stats": stats_for(hero_id, current_level)
+        "stats": effective_stats
     }
 
 

@@ -120,7 +120,7 @@ var nav_edit_info: Label
 var nav_selected_hex := ""
 var progression_panel: PanelContainer
 var progression_info: Label
-var progression_skill_list: VBoxContainer
+var progression_skill_list: HBoxContainer
 var equipment_panel: PanelContainer
 var equipment_list: VBoxContainer
 var equipment_info: Label
@@ -514,8 +514,8 @@ func _build_progression_panel() -> void:
     progression_panel.anchor_right = 0.5
     progression_panel.anchor_bottom = 0.5
     var panel_size := get_viewport().get_visible_rect().size
-    var half_width := minf(310.0, panel_size.x * 0.46)
-    var half_height := minf(260.0, panel_size.y * 0.42)
+    var half_width := panel_size.x * 0.47
+    var half_height := panel_size.y * 0.45
     progression_panel.offset_left = -half_width
     progression_panel.offset_top = -half_height
     progression_panel.offset_right = half_width
@@ -534,7 +534,7 @@ func _build_progression_panel() -> void:
     margin.add_child(box)
 
     var title := Label.new()
-    title.text = "HERO PROGRESSION"
+    title.text = "HERO SKILL TREES"
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title.add_theme_font_size_override("font_size", 20)
     box.add_child(title)
@@ -544,13 +544,13 @@ func _build_progression_panel() -> void:
     box.add_child(progression_info)
 
     var scroll := ScrollContainer.new()
-    scroll.custom_minimum_size = Vector2(0.0, minf(330.0, panel_size.y * 0.48))
+    scroll.custom_minimum_size = Vector2(0.0, panel_size.y * 0.58)
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     box.add_child(scroll)
 
-    progression_skill_list = VBoxContainer.new()
+    progression_skill_list = HBoxContainer.new()
     progression_skill_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    progression_skill_list.add_theme_constant_override("separation", 6)
+    progression_skill_list.add_theme_constant_override("separation", 12)
     scroll.add_child(progression_skill_list)
 
     var close := Button.new()
@@ -610,50 +610,80 @@ func _refresh_progression_panel() -> void:
     for child in progression_skill_list.get_children():
         child.queue_free()
 
-    for skill_variant in definition.get("skills", []):
-        if not skill_variant is Dictionary:
-            continue
-        var skill: Dictionary = skill_variant
-        var skill_id := str(skill.get("id", ""))
-        var learned_now := learned.has(skill_id)
-        var can_learn := HeroProgressionService.can_learn(selected_hero_id, skill_id)
-        var required_level := int(skill.get("level_req", 1))
-        var cost := int(skill.get("cost_sp", 0))
+    var equipped_now: Array = profile.get("equipped_skills", [])
+    for tree_variant in definition.get("trees", []):
+        var tree: Dictionary = tree_variant
+        var branch := VBoxContainer.new()
+        branch.custom_minimum_size.x = 300
+        branch.add_theme_constant_override("separation", 8)
+        progression_skill_list.add_child(branch)
 
-        var row := HBoxContainer.new()
-        row.add_theme_constant_override("separation", 8)
-        progression_skill_list.add_child(row)
+        var heading := Label.new()
+        heading.text = str(tree.get("name", "Path")).to_upper()
+        heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        heading.add_theme_font_size_override("font_size", 18)
+        heading.modulate = Color(1.0, 0.76, 0.42)
+        branch.add_child(heading)
+        var theme_label := Label.new()
+        theme_label.text = str(tree.get("theme", ""))
+        theme_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        branch.add_child(theme_label)
 
-        var label := Label.new()
-        label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        var equipped_now: Array = profile.get("equipped_skills", [])
-        var state_text := ("EQUIPPED" if equipped_now.has(skill_id) else "LEARNED") if learned_now else ("AVAILABLE" if can_learn else "LOCKED")
-        var requirements: Array = skill.get("requires", [])
-        var prerequisite := " • Requires %s" % ", ".join(PackedStringArray(requirements)) if not requirements.is_empty() else ""
-        label.text = "%s\n%s • Lv %d • %d SP • %s%s" % [
-            str(skill.get("name", skill_id)),
-            str(skill.get("type", "active")).capitalize(),
-            required_level,
-            cost,
-            state_text,
-            prerequisite
-        ]
-        label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        row.add_child(label)
-
-        var learn_button := Button.new()
-        learn_button.text = "Learn" if not learned_now else "Learned"
-        learn_button.custom_minimum_size = Vector2(92.0, 46.0)
-        learn_button.disabled = not can_learn
-        if can_learn:
-            learn_button.pressed.connect(_learn_hero_skill.bind(skill_id))
-        row.add_child(learn_button)
-        if learned_now and str(skill.get("type", "active")) == "active":
-            var equip_button := Button.new()
-            equip_button.text = "Remove" if equipped_now.has(skill_id) else "Equip"
-            equip_button.custom_minimum_size = Vector2(82, 46)
-            equip_button.pressed.connect(_toggle_hero_skill.bind(skill_id))
-            row.add_child(equip_button)
+        for tier in range(1, 4):
+            for skill_variant in definition.get("skills", []):
+                if not skill_variant is Dictionary:
+                    continue
+                var skill: Dictionary = skill_variant
+                if str(skill.get("tree", "")) != str(tree.get("id", "")) or int(skill.get("tier", 0)) != tier:
+                    continue
+                var skill_id := str(skill.get("id", ""))
+                var learned_now := learned.has(skill_id)
+                var can_learn := HeroProgressionService.can_learn(selected_hero_id, skill_id)
+                var requirements: Array = skill.get("requires", [])
+                var required_names: PackedStringArray = []
+                for required_id in requirements:
+                    var required_skill := HeroProgressionService.skill_by_id(selected_hero_id, str(required_id))
+                    required_names.append(str(required_skill.get("name", required_id)))
+                var state_text := ("EQUIPPED" if equipped_now.has(skill_id) else "LEARNED") if learned_now else ("READY" if can_learn else "LOCKED")
+                var card := PanelContainer.new()
+                branch.add_child(card)
+                var content := VBoxContainer.new()
+                content.add_theme_constant_override("separation", 4)
+                card.add_child(content)
+                var label := Label.new()
+                label.text = "TIER %d  •  %s\n%s • Level %d • %d SP\n%s" % [
+                    tier, str(skill.get("name", skill_id)),
+                    str(skill.get("type", "active")).capitalize(),
+                    int(skill.get("level_req", 1)), int(skill.get("cost_sp", 0)), state_text]
+                if not required_names.is_empty():
+                    label.text += "\nRequires: %s" % ", ".join(required_names)
+                if skill.has("stat_bonus"):
+                    label.text += "\nPassive stat bonuses"
+                label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+                content.add_child(label)
+                var actions := HBoxContainer.new()
+                content.add_child(actions)
+                if not learned_now:
+                    var learn_button := Button.new()
+                    learn_button.text = "Learn" if can_learn else "Locked"
+                    learn_button.disabled = not can_learn
+                    if can_learn:
+                        learn_button.pressed.connect(_learn_hero_skill.bind(skill_id))
+                    actions.add_child(learn_button)
+                elif str(skill.get("type", "active")) == "active":
+                    var equip_button := Button.new()
+                    equip_button.text = "Remove" if equipped_now.has(skill_id) else "Equip"
+                    equip_button.pressed.connect(_toggle_hero_skill.bind(skill_id))
+                    actions.add_child(equip_button)
+                else:
+                    var passive_label := Label.new()
+                    passive_label.text = "Passive active"
+                    actions.add_child(passive_label)
+                if tier < 3:
+                    var link := Label.new()
+                    link.text = "↓"
+                    link.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+                    branch.add_child(link)
 
 
 func _learn_hero_skill(skill_id: String) -> void:
