@@ -55,7 +55,8 @@ var enemy_hp_bar: ProgressBar
 var hero_atb_bar: ProgressBar
 var enemy_atb_bar: ProgressBar
 var message_label: Label
-var command_box: VBoxContainer
+var command_box: Control
+var command_center_label: Label
 var attack_button: Button
 var skills_button: Button
 var defend_button: Button
@@ -447,56 +448,102 @@ func _build_ui() -> void:
     enemy_atb_bar.show_percentage = false
     enemy_box.add_child(enemy_atb_bar)
 
+    # Compact combat log: keeps the battlefield visible instead of covering the
+    # entire lower third of the screen.
     var bottom := PanelContainer.new()
     bottom.anchor_left = 0.0
     bottom.anchor_top = 1.0
-    bottom.anchor_right = 1.0
+    bottom.anchor_right = 0.0
     bottom.anchor_bottom = 1.0
     bottom.offset_left = 22.0
-    bottom.offset_top = -190.0
-    bottom.offset_right = -22.0
+    bottom.offset_top = -118.0
+    bottom.offset_right = 455.0
     bottom.offset_bottom = -18.0
     battle_ui_layer.add_child(bottom)
 
     var bottom_margin := MarginContainer.new()
-    bottom_margin.add_theme_constant_override("margin_left", 16)
-    bottom_margin.add_theme_constant_override("margin_top", 12)
-    bottom_margin.add_theme_constant_override("margin_right", 16)
-    bottom_margin.add_theme_constant_override("margin_bottom", 12)
+    bottom_margin.add_theme_constant_override("margin_left", 14)
+    bottom_margin.add_theme_constant_override("margin_top", 10)
+    bottom_margin.add_theme_constant_override("margin_right", 14)
+    bottom_margin.add_theme_constant_override("margin_bottom", 10)
     var bottom_style := StyleBoxFlat.new()
     bottom_style.bg_color = Color(0.025, 0.018, 0.02, 0.88)
-    bottom_style.corner_radius_top_left = 8
-    bottom_style.corner_radius_top_right = 8
-    bottom_style.corner_radius_bottom_left = 8
-    bottom_style.corner_radius_bottom_right = 8
+    bottom_style.corner_radius_top_left = 12
+    bottom_style.corner_radius_top_right = 12
+    bottom_style.corner_radius_bottom_left = 12
+    bottom_style.corner_radius_bottom_right = 12
     bottom.add_theme_stylebox_override("panel", bottom_style)
     bottom.add_child(bottom_margin)
 
-    var row := HBoxContainer.new()
-    row.add_theme_constant_override("separation", 16)
-    bottom_margin.add_child(row)
-
     message_label = Label.new()
-    message_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    message_label.add_theme_font_size_override("font_size", 16)
-    row.add_child(message_label)
+    message_label.add_theme_font_size_override("font_size", 15)
+    bottom_margin.add_child(message_label)
 
-    command_box = VBoxContainer.new()
-    command_box.custom_minimum_size = Vector2(250.0, 0.0)
-    command_box.add_theme_constant_override("separation", 5)
-    row.add_child(command_box)
+    # Radial command wheel inspired by classic console RPG input, but with
+    # Shattered Realms' own four-command layout and visual treatment.
+    command_box = Control.new()
+    command_box.name = "CommandWheel"
+    command_box.anchor_left = 0.0
+    command_box.anchor_top = 1.0
+    command_box.anchor_right = 0.0
+    command_box.anchor_bottom = 1.0
+    command_box.offset_left = 360.0
+    command_box.offset_top = -300.0
+    command_box.offset_right = 720.0
+    command_box.offset_bottom = -25.0
+    battle_ui_layer.add_child(command_box)
 
-    var command_label := Label.new()
-    command_label.text = "COMMAND"
-    command_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    command_label.modulate = Color(1.0, 0.72, 0.45)
-    command_box.add_child(command_label)
+    var ring := Panel.new()
+    ring.position = Vector2(104.0, 58.0)
+    ring.size = Vector2(152.0, 152.0)
+    ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var ring_style := StyleBoxFlat.new()
+    ring_style.bg_color = Color(0.035, 0.03, 0.04, 0.72)
+    ring_style.border_width_left = 4
+    ring_style.border_width_top = 4
+    ring_style.border_width_right = 4
+    ring_style.border_width_bottom = 4
+    ring_style.border_color = Color(0.45, 0.50, 0.56, 0.88)
+    ring_style.corner_radius_top_left = 76
+    ring_style.corner_radius_top_right = 76
+    ring_style.corner_radius_bottom_left = 76
+    ring_style.corner_radius_bottom_right = 76
+    ring.add_theme_stylebox_override("panel", ring_style)
+    command_box.add_child(ring)
 
-    attack_button = _make_command_button("ATTACK", _on_attack)
-    skills_button = _make_command_button("SKILLS", _open_skill_panel)
-    defend_button = _make_command_button("DEFEND", _on_defend)
-    item_button = _make_command_button("ITEM", _on_item)
+    var center := Panel.new()
+    center.position = Vector2(132.0, 86.0)
+    center.size = Vector2(96.0, 96.0)
+    center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var center_style := StyleBoxFlat.new()
+    center_style.bg_color = Color(0.08, 0.055, 0.045, 0.96)
+    center_style.border_width_left = 3
+    center_style.border_width_top = 3
+    center_style.border_width_right = 3
+    center_style.border_width_bottom = 3
+    center_style.border_color = Color(0.95, 0.42, 0.16, 0.92)
+    center_style.corner_radius_top_left = 48
+    center_style.corner_radius_top_right = 48
+    center_style.corner_radius_bottom_left = 48
+    center_style.corner_radius_bottom_right = 48
+    center.add_theme_stylebox_override("panel", center_style)
+    command_box.add_child(center)
+
+    command_center_label = Label.new()
+    command_center_label.position = Vector2(0.0, 26.0)
+    command_center_label.size = Vector2(96.0, 44.0)
+    command_center_label.text = "WAIT"
+    command_center_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    command_center_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    command_center_label.add_theme_font_size_override("font_size", 14)
+    command_center_label.modulate = Color(1.0, 0.72, 0.45)
+    center.add_child(command_center_label)
+
+    skills_button = _make_radial_button("SKILLS", Vector2(126.0, 4.0), _open_skill_panel)
+    attack_button = _make_radial_button("ATTACK", Vector2(246.0, 109.0), _on_attack)
+    defend_button = _make_radial_button("DEFEND", Vector2(126.0, 214.0), _on_defend)
+    item_button = _make_radial_button("ITEM", Vector2(6.0, 109.0), _on_item)
 
     _build_skill_panel()
     _set_commands_enabled(false)
@@ -562,14 +609,43 @@ func _camera_impact(strength: float = 0.08) -> void:
     await tween.finished
 
 
-func _make_command_button(label_text: String, callback: Callable) -> Button:
+func _make_radial_button(label_text: String, position: Vector2, callback: Callable) -> Button:
     var button := Button.new()
     button.text = label_text
-    button.custom_minimum_size = Vector2(0.0, 34.0)
+    button.position = position
+    button.size = Vector2(108.0, 50.0)
+    button.add_theme_font_size_override("font_size", 14)
+
+    var normal := StyleBoxFlat.new()
+    normal.bg_color = Color(0.045, 0.04, 0.05, 0.94)
+    normal.border_width_left = 2
+    normal.border_width_top = 2
+    normal.border_width_right = 2
+    normal.border_width_bottom = 2
+    normal.border_color = Color(0.40, 0.44, 0.50, 0.92)
+    normal.corner_radius_top_left = 25
+    normal.corner_radius_top_right = 25
+    normal.corner_radius_bottom_left = 25
+    normal.corner_radius_bottom_right = 25
+
+    var hover := normal.duplicate() as StyleBoxFlat
+    hover.bg_color = Color(0.18, 0.075, 0.04, 0.98)
+    hover.border_color = Color(1.0, 0.48, 0.18, 1.0)
+
+    var pressed := hover.duplicate() as StyleBoxFlat
+    pressed.bg_color = Color(0.30, 0.10, 0.035, 1.0)
+
+    var disabled := normal.duplicate() as StyleBoxFlat
+    disabled.bg_color = Color(0.025, 0.025, 0.03, 0.70)
+    disabled.border_color = Color(0.23, 0.25, 0.28, 0.70)
+
+    button.add_theme_stylebox_override("normal", normal)
+    button.add_theme_stylebox_override("hover", hover)
+    button.add_theme_stylebox_override("pressed", pressed)
+    button.add_theme_stylebox_override("disabled", disabled)
     button.pressed.connect(callback)
     command_box.add_child(button)
     return button
-
 
 func _set_commands_enabled(enabled: bool) -> void:
     if not attack_button:
@@ -578,6 +654,11 @@ func _set_commands_enabled(enabled: bool) -> void:
     skills_button.disabled = not enabled
     defend_button.disabled = not enabled
     item_button.disabled = not enabled or item_used
+    if command_box:
+        command_box.modulate.a = 1.0 if enabled else 0.52
+    if command_center_label:
+        command_center_label.text = "READY" if enabled else "WAIT"
+        command_center_label.modulate = Color(1.0, 0.72, 0.45) if enabled else Color(0.62, 0.64, 0.68)
 
 
 func _refresh_gauges() -> void:
@@ -628,14 +709,27 @@ func _on_attack() -> void:
 func _build_skill_panel() -> void:
     skill_panel = PanelContainer.new()
     skill_panel.visible = false
-    skill_panel.anchor_left = 0.5
-    skill_panel.anchor_top = 0.5
-    skill_panel.anchor_right = 0.5
-    skill_panel.anchor_bottom = 0.5
-    skill_panel.offset_left = -255.0
-    skill_panel.offset_top = -185.0
-    skill_panel.offset_right = 255.0
-    skill_panel.offset_bottom = 185.0
+    skill_panel.anchor_left = 0.0
+    skill_panel.anchor_top = 1.0
+    skill_panel.anchor_right = 0.0
+    skill_panel.anchor_bottom = 1.0
+    skill_panel.offset_left = 735.0
+    skill_panel.offset_top = -365.0
+    skill_panel.offset_right = 1165.0
+    skill_panel.offset_bottom = -55.0
+
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color(0.025, 0.02, 0.025, 0.94)
+    panel_style.border_width_left = 2
+    panel_style.border_width_top = 2
+    panel_style.border_width_right = 2
+    panel_style.border_width_bottom = 2
+    panel_style.border_color = Color(0.68, 0.30, 0.14, 0.92)
+    panel_style.corner_radius_top_left = 14
+    panel_style.corner_radius_top_right = 14
+    panel_style.corner_radius_bottom_left = 14
+    panel_style.corner_radius_bottom_right = 14
+    skill_panel.add_theme_stylebox_override("panel", panel_style)
     battle_ui_layer.add_child(skill_panel)
 
     var margin := MarginContainer.new()
@@ -683,7 +777,8 @@ func _refresh_skill_list() -> void:
 
         var button := Button.new()
         var mp_cost := int(skill.get("mp", 0))
-        button.text = "%s   MP %d" % [str(skill.get("name", skill_id)).to_upper(), mp_cost]
+        button.text = "%s   •   MP %d" % [str(skill.get("name", skill_id)).to_upper(), mp_cost]
+        button.custom_minimum_size = Vector2(0.0, 48.0)
         button.disabled = hero_mp < mp_cost
         button.tooltip_text = "Power %d • %s" % [int(skill.get("power", 0)), str(skill.get("element", "none")).capitalize()]
         button.pressed.connect(_use_skill.bind(skill_id))
