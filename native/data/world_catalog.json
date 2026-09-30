@@ -56,8 +56,7 @@
     },
     "veiled_sea": {
       "name": "The Veiled Sea",
-      "stronghold": "Silverkeep / Westhaven",
-      "hero": "jora"
+      "status": "future_ocean_expansion"
     },
     "golden_expanse": {
       "name": "The Golden Expanse",
@@ -65,7 +64,8 @@
     },
     "devouring_deep": {
       "name": "The Devouring Deep",
-      "stronghold": "The Drowned Spire"
+      "stronghold": "The Drowned Spire",
+      "status": "future_ocean_expansion"
     },
     "ember_coast": {
       "name": "The Ember Coast",
@@ -78,11 +78,18 @@
     },
     "broken_sea": {
       "name": "The Broken Sea",
-      "stronghold": "The Drowned Spire"
+      "stronghold": "The Drowned Spire",
+      "status": "future_ocean_expansion"
     },
     "stormreach_ocean": {
       "name": "The Stormreach Ocean",
-      "stronghold": "Uncharted sea routes"
+      "stronghold": "Uncharted sea routes",
+      "status": "future_ocean_expansion"
+    },
+    "westhaven_coast": {
+      "name": "Westhaven Coast",
+      "stronghold": "Silverkeep / Westhaven",
+      "hero": "jora"
     }
   },
   "heroes": {
@@ -180,7 +187,7 @@
     "jora": {
       "name": "Captain Jora Stormtide",
       "class": "Naval Commander / Swashbuckler",
-      "origin_territory": "veiled_sea",
+      "origin_territory": "westhaven_coast",
       "signature_ability": "Tidal Blade",
       "movement_points": 3,
       "unlock_item": "jora_relic",

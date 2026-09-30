@@ -15,14 +15,17 @@ const REGIONS := {
     "stormcrown_mountains": Vector2(0.518, 0.251),
     "iron_plains": Vector2(0.421, 0.339),
     "drakeshard_range": Vector2(0.771, 0.37),
-    "veiled_sea": Vector2(0.148, 0.267),
+    "westhaven_coast": Vector2(0.174, 0.457),
     "golden_expanse": Vector2(0.693, 0.589),
-    "devouring_deep": Vector2(0.779, 0.698),
     "ember_coast": Vector2(0.330, 0.807),
-    "hollow_isles": Vector2(0.744, 0.928),
-    "broken_sea": Vector2(0.945, 0.414),
-    "stormreach_ocean": Vector2(0.252, 0.917)
+    "hollow_isles": Vector2(0.744, 0.928)
 }
+const OCEAN_LABELS := [
+    Rect2(0.09, 0.235, 0.105, 0.105), # Veiled Sea
+    Rect2(0.91, 0.355, 0.09, 0.12), # Broken Sea
+    Rect2(0.18, 0.875, 0.18, 0.10), # Stormreach Ocean
+    Rect2(0.73, 0.67, 0.14, 0.09) # Devouring Deep
+]
 # Names, city icons, passes and lairs printed on the atlas all lead to their
 # containing region. Coordinates use the source image, not the screen size.
 const LANDMARKS := {
@@ -36,9 +39,8 @@ const LANDMARKS := {
     "stormcrown_mountains": [Vector2(0.525, 0.267)],
     "iron_plains": [Vector2(0.434, 0.364), Vector2(0.495, 0.484)],
     "drakeshard_range": [Vector2(0.697, 0.424), Vector2(0.838, 0.468)],
-    "veiled_sea": [Vector2(0.186, 0.385), Vector2(0.166, 0.523)],
+    "westhaven_coast": [Vector2(0.186, 0.385), Vector2(0.166, 0.523)],
     "golden_expanse": [Vector2(0.687, 0.645)],
-    "devouring_deep": [Vector2(0.909, 0.57)],
     "ember_coast": [Vector2(0.418, 0.817), Vector2(0.577, 0.812)]
 }
 
@@ -83,9 +85,13 @@ func select_at(position_on_map: Vector2) -> void:
     var picture := atlas_rect()
     if not picture.has_point(position_on_map):
         return
+    var image_point := (position_on_map - picture.position) / picture.size
+    for ocean in OCEAN_LABELS:
+        if ocean.has_point(image_point):
+            return
     var nearest := ""
     var nearest_point := Vector2.ZERO
-    var distance := INF
+    var distance := clampf(picture.size.x * 0.085, 56.0, 92.0)
     for region_id in REGIONS:
         var positions: Array = [REGIONS[region_id]]
         positions.append_array(LANDMARKS.get(region_id, []))
