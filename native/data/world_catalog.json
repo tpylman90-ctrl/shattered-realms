@@ -28,6 +28,44 @@
       "name": "Dragon's Rest",
       "hero": "ignacia",
       "legendary_monster": "ignis_rex"
+    },
+    "ravenwood": {
+      "name": "Ravenwood",
+      "stronghold": "Blackthorn",
+      "hero": "lyra_vane"
+    },
+    "frostpeaks": {
+      "name": "Frostpeaks",
+      "stronghold": "Icehelm",
+      "hero": "vesper"
+    },
+    "stormcrown_mountains": {
+      "name": "Stormcrown Mountains",
+      "stronghold": "Stormcrown Keep",
+      "hero": "thorvald"
+    },
+    "iron_plains": {
+      "name": "The Iron Plains",
+      "stronghold": "Harrowstead",
+      "hero": "cedric"
+    },
+    "drakeshard_range": {
+      "name": "Drakeshard Range",
+      "stronghold": "Ironhold",
+      "hero": "dareth"
+    },
+    "veiled_sea": {
+      "name": "The Veiled Sea",
+      "stronghold": "Silverkeep / Westhaven",
+      "hero": "jora"
+    },
+    "golden_expanse": {
+      "name": "The Golden Expanse",
+      "stronghold": "Sunspire"
+    },
+    "devouring_deep": {
+      "name": "The Devouring Deep",
+      "stronghold": "The Drowned Spire"
     }
   },
   "heroes": {
@@ -70,7 +108,7 @@
     "lyra_vane": {
       "name": "Lyra Vane, The Shadow Stalker",
       "class": "Ranger / Assassin",
-      "origin_territory": "shadowfen_forest",
+      "origin_territory": "ravenwood",
       "signature_ability": "Phantom Arrows",
       "movement_points": 3,
       "unlock_item": "lyra_vane_relic",
@@ -81,7 +119,7 @@
     "thorvald": {
       "name": "Thorvald Thunderbrow, The Peak Sentinel",
       "class": "Tempest Warrior / Smith",
-      "origin_territory": "stormpeaks",
+      "origin_territory": "stormcrown_mountains",
       "signature_ability": "Lightning Smash",
       "movement_points": 3,
       "unlock_item": "thorvald_relic",
@@ -92,7 +130,7 @@
     "cedric": {
       "name": "General Cedric Ironclad",
       "class": "Heavy Cavalry Commander",
-      "origin_territory": "ironmarch",
+      "origin_territory": "iron_plains",
       "signature_ability": "Phalanx Charge",
       "movement_points": 3,
       "unlock_item": "cedric_relic",
@@ -114,7 +152,7 @@
     "dareth": {
       "name": "Dareth Scalebreaker",
       "class": "Dragon Slayer / Vanguard",
-      "origin_territory": "dragons_rest",
+      "origin_territory": "drakeshard_range",
       "signature_ability": "Draconic Cleave",
       "movement_points": 3,
       "unlock_item": "dareth_relic",
@@ -125,7 +163,7 @@
     "jora": {
       "name": "Captain Jora Stormtide",
       "class": "Naval Commander / Swashbuckler",
-      "origin_territory": "stormtide_coast",
+      "origin_territory": "veiled_sea",
       "signature_ability": "Tidal Blade",
       "movement_points": 3,
       "unlock_item": "jora_relic",
