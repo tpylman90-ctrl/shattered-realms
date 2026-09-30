@@ -2035,6 +2035,12 @@ func _build_game_hud() -> void:
     equipment_button.pressed.connect(_open_equipment_panel)
     box.add_child(equipment_button)
 
+    var world_button := Button.new()
+    world_button.text = "World Map"
+    world_button.custom_minimum_size = Vector2(0, 38)
+    world_button.pressed.connect(_return_to_world_map)
+    box.add_child(world_button)
+
     boss_button = Button.new()
     boss_button.text = "Confront Vulgrim"
     boss_button.custom_minimum_size = Vector2(0, 44)
@@ -2091,6 +2097,10 @@ func _build_game_hud() -> void:
     _build_nav_edit_panel()
     _build_progression_panel()
     _build_equipment_panel()
+
+func _return_to_world_map() -> void:
+    _save_game_state()
+    get_tree().change_scene_to_file("res://scenes/FrontEnd.tscn")
 
 func _toggle_hud_details() -> void:
     hud_expanded = not hud_expanded
