@@ -4,7 +4,7 @@ config_version=5
 
 [application]
 config/name="Shattered Realms"
-run/main_scene="res://scenes/AshenreachDemo.tscn"
+run/main_scene="res://scenes/FrontEnd.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 
 [display]
