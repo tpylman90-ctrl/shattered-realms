@@ -4,7 +4,7 @@ Shattered Realms is a native Godot strategy/adventure game for Android.
 
 ## Current vertical slice
 
-The title screen uses the hero ensemble artwork and opens an interactive illustrated atlas with thirteen named regions. **The Ashen Wastes → Ashenreach** is the playable campaign route; the other mapped regions are previews. Entering Ashenreach shows a loading screen with real resource progress. The playable slice currently supports:
+The title screen uses the hero ensemble artwork and opens an interactive illustrated atlas with selectable land regions and four reserved ocean expansion areas. **The Ashen Wastes → Ashenreach** is the playable campaign route; the other mapped regions are previews. Entering Ashenreach shows a loading screen with real resource progress. The playable slice currently supports:
 
 - 3D territory-board exploration
 - selectable unlocked heroes
