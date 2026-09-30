@@ -66,6 +66,23 @@
     "devouring_deep": {
       "name": "The Devouring Deep",
       "stronghold": "The Drowned Spire"
+    },
+    "ember_coast": {
+      "name": "The Ember Coast",
+      "stronghold": "Raven's Hold / Mistvale",
+      "hero": "ignacia"
+    },
+    "hollow_isles": {
+      "name": "The Hollow Isles",
+      "stronghold": "Isle Fortress"
+    },
+    "broken_sea": {
+      "name": "The Broken Sea",
+      "stronghold": "The Drowned Spire"
+    },
+    "stormreach_ocean": {
+      "name": "The Stormreach Ocean",
+      "stronghold": "Uncharted sea routes"
     }
   },
   "heroes": {
@@ -207,7 +224,7 @@
     "ignacia": {
       "name": "Ignacia, Flame of the Coast",
       "class": "Dragon Tamer / Sorceress",
-      "origin_territory": "dragons_rest",
+      "origin_territory": "ember_coast",
       "signature_ability": "Dragon Breath",
       "movement_points": 3,
       "unlock_item": "ignacia_relic",
