@@ -20,7 +20,7 @@ const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
 @onready var movement_title: Label = $UI/MovementPanel/Margin/VBox/Title
 @onready var movement_confirm: Button = $UI/MovementPanel/Margin/VBox/ConfirmButton
 @onready var hero_select_panel: PanelContainer = $UI/HeroSelectPanel
-@onready var hero_roster_box: VBoxContainer = $UI/HeroSelectPanel/Margin/VBox/Roster
+@onready var hero_roster_box: VBoxContainer = $UI/HeroSelectPanel/Margin/VBox/RosterScroll/Roster
 @onready var hero_label: Label3D = $MovementBoard/HeroUnit/HeroLabel
 @onready var ui_root: CanvasLayer = $UI
 
@@ -121,6 +121,9 @@ var nav_selected_hex := ""
 var progression_panel: PanelContainer
 var progression_info: Label
 var progression_skill_list: HBoxContainer
+var progression_hero_picker: OptionButton
+var progression_view_hero_id := ""
+var progression_respec_button: Button
 var equipment_panel: PanelContainer
 var equipment_list: VBoxContainer
 var equipment_info: Label
@@ -546,6 +549,10 @@ func _build_progression_panel() -> void:
     title.add_theme_font_size_override("font_size", 20)
     box.add_child(title)
 
+    progression_hero_picker = OptionButton.new()
+    progression_hero_picker.item_selected.connect(_select_progression_hero)
+    box.add_child(progression_hero_picker)
+
     progression_info = Label.new()
     progression_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     box.add_child(progression_info)
@@ -560,11 +567,11 @@ func _build_progression_panel() -> void:
     progression_skill_list.add_theme_constant_override("separation", 12)
     scroll.add_child(progression_skill_list)
 
-    var reset_points := Button.new()
-    reset_points.text = "RESET SPENT POINTS"
-    reset_points.custom_minimum_size.y = 38
-    reset_points.pressed.connect(_respec_hero_skills)
-    box.add_child(reset_points)
+    progression_respec_button = Button.new()
+    progression_respec_button.text = "RESET SPENT POINTS"
+    progression_respec_button.custom_minimum_size.y = 38
+    progression_respec_button.pressed.connect(_respec_hero_skills)
+    box.add_child(progression_respec_button)
 
     var close := Button.new()
     close.text = "CLOSE"
@@ -579,8 +586,15 @@ func _open_progression_panel() -> void:
     _close_equipment_panel()
     if hero_select_panel:
         hero_select_panel.visible = false
+    progression_view_hero_id = selected_hero_id
     _refresh_progression_panel()
     progression_panel.visible = true
+
+
+func _select_progression_hero(index: int) -> void:
+    if index >= 0 and index < progression_hero_picker.item_count:
+        progression_view_hero_id = str(progression_hero_picker.get_item_metadata(index))
+        _refresh_progression_panel()
 
 
 func _close_progression_panel() -> void:
@@ -592,8 +606,18 @@ func _refresh_progression_panel() -> void:
     if not progression_panel or not progression_info or not progression_skill_list:
         return
 
-    var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
-    var definition := HeroProgressionService.hero_definition(selected_hero_id)
+    progression_hero_picker.clear()
+    for hero_id in hero_catalog.keys():
+        var locked := not unlocked_heroes.has(hero_id)
+        progression_hero_picker.add_item("%s%s" % [str(hero_catalog[hero_id].get("name", hero_id)), "  •  LOCKED" if locked else ""])
+        progression_hero_picker.set_item_metadata(progression_hero_picker.item_count - 1, hero_id)
+        if hero_id == progression_view_hero_id:
+            progression_hero_picker.select(progression_hero_picker.item_count - 1)
+    var locked_preview := not unlocked_heroes.has(progression_view_hero_id)
+    progression_respec_button.disabled = locked_preview
+
+    var profile := HeroProgressionService.ensure_profile(progression_view_hero_id, hero_xp if progression_view_hero_id == selected_hero_id else 0)
+    var definition := HeroProgressionService.hero_definition(progression_view_hero_id)
     if profile.is_empty() or definition.is_empty():
         progression_info.text = "Progression data unavailable."
         return
@@ -602,11 +626,11 @@ func _refresh_progression_panel() -> void:
     var xp := int(profile.get("xp", 0))
     var next_xp := HeroProgressionService.xp_for_level(level + 1)
     var points := int(profile.get("skill_points", 0))
-    var stats: Dictionary = HeroEquipmentService.effective_stats(selected_hero_id, profile.get("stats", {}))
+    var stats: Dictionary = HeroEquipmentService.effective_stats(progression_view_hero_id, profile.get("stats", {}))
     var learned: Array = profile.get("learned_skills", [])
 
     progression_info.text = "%s\nLevel %d  •  XP %d/%d  •  Unspent Points %d\nHP %d  MP %d  POW %d  MAG %d  DEF %d  RES %d  SPD %d" % [
-        str(definition.get("name", selected_hero_id)),
+        str(definition.get("name", progression_view_hero_id)) + ("  •  LOCKED PREVIEW" if locked_preview else ""),
         level,
         xp,
         next_xp,
@@ -667,7 +691,7 @@ func _refresh_progression_panel() -> void:
                 var skill_id := str(skill.get("id", ""))
                 var rank := int(ranks.get(skill_id, 0))
                 var max_rank := int(skill.get("max_rank", 1))
-                var can_rank := HeroProgressionService.can_learn(selected_hero_id, skill_id)
+                var can_rank := not locked_preview and HeroProgressionService.can_learn(progression_view_hero_id, skill_id)
                 var is_active := str(skill.get("type", "active")) == "active"
                 var card := PanelContainer.new()
                 card.custom_minimum_size = Vector2(156, 142)
@@ -716,6 +740,7 @@ func _refresh_progression_panel() -> void:
                     var equip_button := Button.new()
                     equip_button.text = "On" if equipped_now.has(skill_id) else "Equip"
                     equip_button.custom_minimum_size.x = 72
+                    equip_button.disabled = locked_preview
                     equip_button.pressed.connect(_toggle_hero_skill.bind(skill_id))
                     controls.add_child(equip_button)
             if tier < 5:
@@ -728,20 +753,22 @@ func _refresh_progression_panel() -> void:
 
 
 func _learn_hero_skill(skill_id: String) -> void:
-    var before := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    if not unlocked_heroes.has(progression_view_hero_id):
+        return
+    var before := HeroProgressionService.ensure_profile(progression_view_hero_id, hero_xp if progression_view_hero_id == selected_hero_id else 0)
     var was_unlearned := int(before.get("skill_ranks", {}).get(skill_id, 0)) == 0
-    if HeroProgressionService.learn_skill(selected_hero_id, skill_id):
-        var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    if HeroProgressionService.learn_skill(progression_view_hero_id, skill_id):
+        var profile := HeroProgressionService.ensure_profile(progression_view_hero_id)
         var equipped: Array[String] = []
         for raw_id in profile.get("equipped_skills", []):
             equipped.append(str(raw_id))
 
         # Newly learned active skills automatically fill an empty battle slot.
-        var skill := HeroProgressionService.skill_by_id(selected_hero_id, skill_id)
+        var skill := HeroProgressionService.skill_by_id(progression_view_hero_id, skill_id)
         var limit := int(HeroProgressionService.data().get("rules", {}).get("equipped_active_limit", 6))
         if was_unlearned and str(skill.get("type", "active")) == "active" and equipped.size() < limit:
             equipped.append(skill_id)
-            HeroProgressionService.set_equipped_skills(selected_hero_id, equipped)
+            HeroProgressionService.set_equipped_skills(progression_view_hero_id, equipped)
 
         status_label.text = "%s rank %d/%d." % [str(skill.get("name", skill_id)), int(profile.get("skill_ranks", {}).get(skill_id, 0)), int(skill.get("max_rank", 1))]
         _refresh_progression_panel()
@@ -749,21 +776,23 @@ func _learn_hero_skill(skill_id: String) -> void:
 
 
 func _respec_hero_skills() -> void:
-    if HeroProgressionService.respec(selected_hero_id):
+    if unlocked_heroes.has(progression_view_hero_id) and HeroProgressionService.respec(progression_view_hero_id):
         status_label.text = "Skill points returned. Starting abilities retained."
         _refresh_progression_panel()
         _refresh_game_hud()
 
 
 func _toggle_hero_skill(skill_id: String) -> void:
-    var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    if not unlocked_heroes.has(progression_view_hero_id):
+        return
+    var profile := HeroProgressionService.ensure_profile(progression_view_hero_id, hero_xp if progression_view_hero_id == selected_hero_id else 0)
     var equipped: Array[String] = []
     for raw_id in profile.get("equipped_skills", []):
         if str(raw_id) != skill_id:
             equipped.append(str(raw_id))
     if not profile.get("equipped_skills", []).has(skill_id):
         equipped.append(skill_id)
-    HeroProgressionService.set_equipped_skills(selected_hero_id, equipped)
+    HeroProgressionService.set_equipped_skills(progression_view_hero_id, equipped)
     _refresh_progression_panel()
 
 
@@ -950,7 +979,7 @@ func _select_equipment_hero(index: int) -> void:
     if index < 0 or index >= equipment_hero_picker.item_count:
         return
     var hero_id := str(equipment_hero_picker.get_item_metadata(index))
-    if unlocked_heroes.has(hero_id):
+    if hero_catalog.has(hero_id):
         equipment_view_hero_id = hero_id
         _refresh_equipment_panel()
 
@@ -959,11 +988,9 @@ func _refresh_equipment_panel() -> void:
     if not equipment_list or not hero_catalog.has(equipment_view_hero_id):
         return
     equipment_hero_picker.clear()
-    for hero_id in unlocked_heroes:
-        if not hero_catalog.has(hero_id):
-            continue
+    for hero_id in hero_catalog.keys():
         var name := str(hero_catalog[hero_id].get("name", hero_id)).split(",")[0]
-        equipment_hero_picker.add_item(name)
+        equipment_hero_picker.add_item("%s%s" % [name, "  •  LOCKED" if not unlocked_heroes.has(hero_id) else ""])
         equipment_hero_picker.set_item_metadata(equipment_hero_picker.item_count - 1, hero_id)
         if hero_id == equipment_view_hero_id:
             equipment_hero_picker.select(equipment_hero_picker.item_count - 1)
@@ -972,7 +999,7 @@ func _refresh_equipment_panel() -> void:
     var base_stats: Dictionary = profile.get("stats", {})
     var stats := HeroEquipmentService.effective_stats(equipment_view_hero_id, base_stats)
     var data: Dictionary = hero_catalog[equipment_view_hero_id]
-    equipment_info.text = "%s\n%s\nLevel %d" % [str(data.get("name", equipment_view_hero_id)), str(data.get("class", "Hero")), int(profile.get("level", 1))]
+    equipment_info.text = "%s\n%s\nLevel %d%s" % [str(data.get("name", equipment_view_hero_id)), str(data.get("class", "Hero")), int(profile.get("level", 1)), "\nLOCKED PREVIEW" if not unlocked_heroes.has(equipment_view_hero_id) else ""]
     for child in equipment_stats_box.get_children():
         if child != equipment_info:
             child.queue_free()
@@ -1013,6 +1040,7 @@ func _refresh_equipment_panel() -> void:
             if str(loadout.get(slot, "")) == str(item_id):
                 selected_index = picker.item_count - 1
         picker.select(selected_index)
+        picker.disabled = not unlocked_heroes.has(equipment_view_hero_id)
         picker.item_selected.connect(_choose_equipment.bind(str(slot), picker))
         content.add_child(picker)
         var equipped_id := str(loadout.get(slot, ""))
@@ -1072,17 +1100,24 @@ func _load_equipment_preview(data: Dictionary) -> void:
                 _fit_equipment_preview(model, centered_content)
                 return
             instance.queue_free()
-    # A readable stand-in while a hero's clean single-character GLB is pending.
-    var body := MeshInstance3D.new()
-    var mesh := CapsuleMesh.new()
-    mesh.radius = 0.45
-    mesh.height = 2.7
-    body.mesh = mesh
+    # Distinctly colored mannequin until this hero's production model arrives.
     var material := StandardMaterial3D.new()
-    material.albedo_color = Color(0.28, 0.48, 0.54)
-    material.metallic = 0.55
-    body.material_override = material
-    centered_content.add_child(body)
+    material.albedo_color = Color(str(data.get("placeholder_color", "#527986")))
+    material.metallic = 0.35
+    _add_preview_part(centered_content, CapsuleMesh.new(), Vector3(0, 0, 0), Vector3(0.76, 1.4, 0.42), material)
+    _add_preview_part(centered_content, SphereMesh.new(), Vector3(0, 1.05, 0), Vector3(0.43, 0.48, 0.4), material)
+    for side in [-1.0, 1.0]:
+        _add_preview_part(centered_content, CapsuleMesh.new(), Vector3(side * 0.58, 0.05, 0), Vector3(0.28, 1.22, 0.28), material)
+        _add_preview_part(centered_content, CapsuleMesh.new(), Vector3(side * 0.22, -1.04, 0), Vector3(0.32, 1.25, 0.32), material)
+
+
+func _add_preview_part(parent: Node3D, mesh: Mesh, at: Vector3, size: Vector3, material: Material) -> void:
+    var part := MeshInstance3D.new()
+    part.mesh = mesh
+    part.position = at
+    part.scale = size
+    part.material_override = material
+    parent.add_child(part)
 
 
 func _fit_equipment_preview(model: Node3D, centered_content: Node3D) -> void:
@@ -1116,6 +1151,8 @@ func _rotate_equipment_preview(direction: int) -> void:
 
 
 func _choose_equipment(index: int, slot: String, picker: OptionButton) -> void:
+    if not unlocked_heroes.has(equipment_view_hero_id):
+        return
     var item_id := "" if index == 0 else str(picker.get_item_metadata(index))
     if HeroEquipmentService.equip(equipment_view_hero_id, slot, item_id, owned_collectibles):
         _refresh_equipment_panel()
@@ -1129,17 +1166,27 @@ func _open_hero_select() -> void:
     _close_poi_panel()
     for child in hero_roster_box.get_children():
         child.queue_free()
-    for hero_id in unlocked_heroes:
-        if not hero_catalog.has(hero_id):
-            continue
+    for hero_id in hero_catalog.keys():
         var data: Dictionary = hero_catalog[hero_id]
         var button := Button.new()
-        button.text = "%s  •  %s" % [data.get("name", hero_id), data.get("class", "Hero")]
+        var locked := not unlocked_heroes.has(hero_id)
+        button.text = "%s  •  %s%s" % [data.get("name", hero_id), data.get("class", "Hero"), "  •  LOCKED / VIEW SKILLS" if locked else ""]
         button.custom_minimum_size = Vector2(0, 52)
-        button.disabled = hero_id == selected_hero_id
-        button.pressed.connect(_select_hero.bind(hero_id))
+        button.disabled = hero_id == selected_hero_id and not locked
+        var portrait_path := "res://assets/ui/hero_placeholders/%s.svg" % hero_id
+        if ResourceLoader.exists(portrait_path):
+            button.icon = load(portrait_path) as Texture2D
+            button.expand_icon = true
+        button.pressed.connect(_preview_locked_hero.bind(hero_id) if locked else _select_hero.bind(hero_id))
         hero_roster_box.add_child(button)
     hero_select_panel.visible = true
+
+
+func _preview_locked_hero(hero_id: String) -> void:
+    hero_select_panel.visible = false
+    _open_progression_panel()
+    progression_view_hero_id = hero_id
+    _refresh_progression_panel()
 
 func _close_hero_select() -> void:
     hero_select_panel.visible = false
@@ -1176,6 +1223,10 @@ func _apply_hero_visual(data: Dictionary) -> void:
     if asset_path == "" or not ResourceLoader.exists(asset_path):
         if placeholder:
             placeholder.visible = true
+            var stand_in := StandardMaterial3D.new()
+            stand_in.albedo_color = Color(str(data.get("placeholder_color", "#527986")))
+            stand_in.metallic = 0.3
+            placeholder.material_override = stand_in
         return
 
     var packed := load(asset_path) as PackedScene
