@@ -121,6 +121,195 @@
       "synergy_stats": {
         "resistance": 2
       }
+    },
+    "raider_hood": {
+      "name": "Raider Hood",
+      "slot": "head",
+      "tags": [
+        "Assassin",
+        "Shadow"
+      ],
+      "stats": {
+        "speed": 2,
+        "crit": 1
+      }
+    },
+    "ashbound_gauntlets": {
+      "name": "Ashbound Gauntlets",
+      "slot": "arms",
+      "tags": [
+        "Fire",
+        "Melee"
+      ],
+      "stats": {
+        "power": 3
+      }
+    },
+    "bridgewarden_greaves": {
+      "name": "Bridgewarden Greaves",
+      "slot": "legs",
+      "tags": [
+        "Guardian",
+        "Vanguard"
+      ],
+      "stats": {
+        "defense": 2,
+        "hp": 5
+      }
+    },
+    "vaultroad_cloak": {
+      "name": "Vaultroad Cloak",
+      "slot": "back",
+      "tags": [
+        "Shadow",
+        "Control"
+      ],
+      "stats": {
+        "resistance": 3
+      }
+    },
+    "ambush_bow": {
+      "name": "Ambush Bow",
+      "slot": "right_hand",
+      "tags": [
+        "Ranger",
+        "Assassin"
+      ],
+      "stats": {
+        "power": 3,
+        "crit": 2
+      }
+    },
+    "outpost_boots": {
+      "name": "Outpost Boots",
+      "slot": "feet",
+      "tags": [
+        "Cavalry",
+        "Wind"
+      ],
+      "stats": {
+        "speed": 3
+      }
+    },
+    "deadwood_charm": {
+      "name": "Deadwood Charm",
+      "slot": "relic_1",
+      "tags": [
+        "Plague",
+        "Shaman"
+      ],
+      "stats": {
+        "magic": 3,
+        "resistance": 1
+      }
+    },
+    "plains_helm": {
+      "name": "Ashen Plains Helm",
+      "slot": "head",
+      "tags": [
+        "Juggernaut",
+        "Warrior"
+      ],
+      "stats": {
+        "hp": 9,
+        "defense": 2
+      }
+    },
+    "capital_aegis": {
+      "name": "Capital Aegis",
+      "slot": "left_hand",
+      "tags": [
+        "Commander",
+        "Guardian"
+      ],
+      "stats": {
+        "defense": 4,
+        "resistance": 2
+      }
+    },
+    "overlook_lens": {
+      "name": "Overlook Lens",
+      "slot": "relic_2",
+      "tags": [
+        "Ranger",
+        "Tactician"
+      ],
+      "stats": {
+        "crit": 3,
+        "speed": 1
+      }
+    },
+    "ritual_talisman": {
+      "name": "Ritual Talisman",
+      "slot": "relic_1",
+      "tags": [
+        "Sorceress",
+        "Necromancer"
+      ],
+      "stats": {
+        "magic": 4
+      }
+    },
+    "pass_mantle": {
+      "name": "Pass Mantle",
+      "slot": "back",
+      "tags": [
+        "Vanguard",
+        "Melee"
+      ],
+      "stats": {
+        "hp": 8,
+        "defense": 1
+      }
+    },
+    "vulgrim_crown": {
+      "name": "Vulgrim Crown",
+      "slot": "head",
+      "tags": [
+        "Fire",
+        "Dragon"
+      ],
+      "stats": {
+        "power": 4,
+        "magic": 4,
+        "hp": 10
+      }
+    },
+    "ember_seal": {
+      "name": "Ember Seal",
+      "slot": "relic_2",
+      "tags": [
+        "Fire",
+        "Radiance"
+      ],
+      "stats": {
+        "magic": 5,
+        "resistance": 3
+      }
+    }
+  },
+  "loot_sources": {
+    "battle": {
+      "Rattal": "raider_hood",
+      "CapitalSouth": "ashbound_gauntlets",
+      "EastBridge": "bridgewarden_greaves",
+      "VaultRoad": "vaultroad_cloak",
+      "AmbushPassNode": "ambush_bow",
+      "ElevatedOutpostNode": "outpost_boots",
+      "DeadForestNode": "deadwood_charm",
+      "AshenPlainsNode": "plains_helm"
+    },
+    "poi": {
+      "CapitalRuins": "capital_aegis",
+      "Overlook": "overlook_lens",
+      "RitualTotems": "ritual_talisman",
+      "AmbushPass": "pass_mantle"
+    },
+    "boss": {
+      "vulgrim": "vulgrim_crown"
+    },
+    "dungeon": {
+      "sundered_vault": "ember_seal"
     }
   }
 }

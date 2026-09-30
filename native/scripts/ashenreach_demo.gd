@@ -268,6 +268,9 @@ func _ready() -> void:
     $UI/HeroSelectPanel/Margin/VBox/CloseButton.pressed.connect(_close_hero_select)
     _load_hero_catalog()
     _load_board_data()
+    for item_id in HeroEquipmentService.inventory():
+        if not owned_collectibles.has(item_id):
+            owned_collectibles.append(item_id)
     _refresh_unlocked_heroes()
     _load_game_state()
     _consume_battle_result()
@@ -2715,8 +2718,12 @@ func _consume_battle_result() -> void:
     hero_health = result_hp
     hero_xp = result_xp
 
+    var loot_name := ""
     if victory and encounter_id != "" and encounter_id != "__battle_test__":
         completed_encounters[encounter_id] = true
+        var loot_id := HeroEquipmentService.claim_reward("battle", encounter_id)
+        if loot_id != "":
+            loot_name = str(HeroEquipmentService.items()[loot_id].get("name", loot_id))
     elif not victory and hero_health <= 0:
         _handle_hero_defeat()
 
@@ -2727,6 +2734,8 @@ func _consume_battle_result() -> void:
         pending_battle_message = "Battle test complete. Campaign state unchanged."
     elif victory:
         pending_battle_message = "%s defeated in battle." % enemy_name
+        if loot_name != "":
+            pending_battle_message += " Loot: %s. Equip it in Loadout." % loot_name
     else:
         pending_battle_message = "Battle lost against %s." % enemy_name
 
@@ -2790,6 +2799,9 @@ func _resolve_vulgrim() -> void:
     encounter_panel.visible = false
     current_encounter_node = ""
     event_log_label.text = "Inferno-Lord Vulgrim defeated. Ashenreach is fully secured."
+    var loot_id := HeroEquipmentService.claim_reward("boss", "vulgrim")
+    if loot_id != "":
+        event_log_label.text += " Loot: %s." % str(HeroEquipmentService.items()[loot_id].get("name", loot_id))
     _refresh_game_hud()
     _save_game_state()
     if victory_panel:
@@ -3698,6 +3710,11 @@ func _on_poi_action() -> void:
         poi_action.disabled = true
         poi_body.text += "\n\nThis strategic location is now under your control."
         event_log_label.text = "Claimed: %s" % str(POI_DATA.get(selected_poi, {}).get("title", selected_poi))
+        var loot_id := HeroEquipmentService.claim_reward("poi", selected_poi)
+        if loot_id != "":
+            var loot_name := str(HeroEquipmentService.items()[loot_id].get("name", loot_id))
+            poi_body.text += "\n\nFound: %s. Equip it in Loadout." % loot_name
+            event_log_label.text += " • Found: %s" % loot_name
         _refresh_game_hud()
         _save_game_state()
         if _all_objectives_complete():
