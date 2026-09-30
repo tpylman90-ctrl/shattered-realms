@@ -19,6 +19,12 @@ static func catalog() -> Dictionary:
 static func items() -> Dictionary:
     return catalog().get("items", {})
 
+static func consumables() -> Dictionary:
+    return catalog().get("consumables", {})
+
+static func region_pool(region_id: String) -> Dictionary:
+    return catalog().get("region_pools", {}).get(region_id, {})
+
 static func loadout(hero_id: String) -> Dictionary:
     var cfg := ConfigFile.new()
     cfg.load(SAVE_PATH)
@@ -27,10 +33,7 @@ static func loadout(hero_id: String) -> Dictionary:
         result[slot] = str(cfg.get_value("hero:%s" % hero_id, slot, ""))
     return result
 
-static func owned(item_id: String, collectibles: Array[String]) -> bool:
-    var item: Dictionary = items().get(item_id, {})
-    return not item.is_empty() and (bool(item.get("starter", false)) or collectibles.has(item_id) or inventory().has(item_id))
-
+# Old template IDs remain valid so existing saves and unlocked heroes keep their gear.
 static func inventory() -> Array[String]:
     var cfg := ConfigFile.new()
     cfg.load(SAVE_PATH)
@@ -40,9 +43,38 @@ static func inventory() -> Array[String]:
             result.append(str(item_id))
     return result
 
+static func gear_instances() -> Array:
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    return cfg.get_value("gear", "instances", [])
+
+static func item_for(reference: String) -> Dictionary:
+    if items().has(reference):
+        return (items()[reference] as Dictionary).duplicate(true)
+    for instance in gear_instances():
+        if str(instance.get("id", "")) == reference:
+            var item: Dictionary = items().get(str(instance.get("template", "")), {}).duplicate(true)
+            if not item.is_empty():
+                item["name"] = str(instance.get("name", item.get("name", reference)))
+                item["stats"] = instance.get("stats", {})
+                item["rarity"] = instance.get("rarity", "")
+                item["quality"] = instance.get("quality", 0)
+                item["source"] = instance.get("source", "")
+            return item
+    return {}
+
+static func owned(reference: String, collectibles: Array[String]) -> bool:
+    var item := item_for(reference)
+    if item.is_empty():
+        return false
+    if reference.begins_with("gear:"):
+        return true
+    return bool(item.get("starter", false)) or collectibles.has(reference) or inventory().has(reference)
+
 static func reward_for(category: String, source_id: String) -> String:
     return str(catalog().get("loot_sources", {}).get(category, {}).get(source_id, ""))
 
+# Preserved for one-time quest relics and old save compatibility.
 static func claim_reward(category: String, source_id: String) -> String:
     var item_id := reward_for(category, source_id)
     if not items().has(item_id):
@@ -64,41 +96,190 @@ static func claim_reward(category: String, source_id: String) -> String:
         return ""
     return item_id if newly_owned else ""
 
-static func equip(hero_id: String, slot: String, item_id: String, collectibles: Array[String]) -> bool:
+static func _roll_rarity() -> String:
+    var rarities: Dictionary = catalog().get("rarities", {})
+    var total := 0
+    for rarity in rarities:
+        total += int(rarities[rarity].get("weight", 0))
+    var roll := randi_range(1, maxi(1, total))
+    for rarity in rarities:
+        roll -= int(rarities[rarity].get("weight", 0))
+        if roll <= 0:
+            return str(rarity)
+    return "tempered"
+
+static func _create_instance(cfg: ConfigFile, template_id: String, source: String) -> Dictionary:
+    var base: Dictionary = items().get(template_id, {})
+    if base.is_empty():
+        return {}
+    var instances: Array = cfg.get_value("gear", "instances", [])
+    var serial := int(cfg.get_value("gear", "next_id", 1))
+    var rarity := _roll_rarity()
+    var quality := randi_range(1, 100)
+    var multiplier := float(catalog().get("rarities", {}).get(rarity, {}).get("multiplier", 1.0)) * (0.9 + float(quality) * 0.002)
+    var stats: Dictionary = {}
+    for stat in base.get("stats", {}):
+        stats[stat] = maxi(1, int(round(float(base["stats"][stat]) * multiplier)))
+    var affix := ""
+    if rarity in ["rare", "epic", "legendary"]:
+        var affixes: Dictionary = catalog().get("affixes", {})
+        var names := affixes.keys()
+        if not names.is_empty():
+            affix = str(names.pick_random())
+            for stat in affixes[affix]:
+                stats[stat] = int(stats.get(stat, 0)) + int(affixes[affix][stat])
+    var instance := {"id": "gear:%d" % serial, "template": template_id, "name": "%s%s" % [str(base.get("name", template_id)), " " + affix if affix != "" else ""], "rarity": rarity, "quality": quality, "stats": stats, "source": source}
+    instances.append(instance)
+    cfg.set_value("gear", "instances", instances)
+    cfg.set_value("gear", "next_id", serial + 1)
+    return instance
+
+static func _claim_drop(source: String, template_id: String) -> Dictionary:
+    if not items().has(template_id):
+        return {}
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var claimed: Array = cfg.get_value("gear", "claimed_drops", [])
+    if claimed.has(source):
+        return {}
+    var instance := _create_instance(cfg, template_id, source)
+    claimed.append(source)
+    cfg.set_value("gear", "claimed_drops", claimed)
+    if cfg.save(SAVE_PATH) != OK:
+        return {}
+    return instance
+
+static func claim_equipment_reward(category: String, source_id: String) -> Dictionary:
+    return _claim_drop("%s:%s" % [category, source_id], reward_for(category, source_id))
+
+static func begin_vault_raid() -> int:
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var serial := int(cfg.get_value("gear", "vault_raid_serial", 0)) + 1
+    cfg.set_value("gear", "vault_raid_serial", serial)
+    if cfg.save(SAVE_PATH) != OK:
+        return 0
+    return serial
+
+static func claim_vault_drop(region_id: String, raid_id: int) -> Dictionary:
+    var pool := region_pool(region_id)
+    if pool.is_empty() or raid_id <= 0:
+        return {}
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var source := "vault:%s:%d" % [region_id, raid_id]
+    if (cfg.get_value("gear", "claimed_drops", []) as Array).has(source):
+        return {}
+    var choices: Array = pool.get("common", [])
+    if choices.is_empty():
+        return {}
+    var template_id := str(pool.get("signature", "")) if randi_range(1, 100) <= 12 else str(choices.pick_random())
+    return _claim_drop(source, template_id)
+
+static func supply_count(supply_id: String) -> int:
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    return int(cfg.get_value("supplies", supply_id, 0))
+
+static func add_supply(supply_id: String, amount: int = 1) -> bool:
+    if not consumables().has(supply_id) or amount <= 0:
+        return false
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    cfg.set_value("supplies", supply_id, int(cfg.get_value("supplies", supply_id, 0)) + amount)
+    return cfg.save(SAVE_PATH) == OK
+
+static func use_supply(supply_id: String, context: String) -> Dictionary:
+    var supply: Dictionary = consumables().get(supply_id, {})
+    if supply.is_empty() or not (supply.get("use", []) as Array).has(context):
+        return {}
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var count := int(cfg.get_value("supplies", supply_id, 0))
+    if count <= 0:
+        return {}
+    cfg.set_value("supplies", supply_id, count - 1)
+    if cfg.save(SAVE_PATH) != OK:
+        return {}
+    return supply
+
+static func claim_supply_drop(category: String, source_id: String, region_id: String) -> String:
+    var choices: Array = catalog().get("region_supplies", {}).get(region_id, [])
+    if choices.is_empty():
+        return ""
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var key := "supply:%s:%s" % [category, source_id]
+    var claimed: Array = cfg.get_value("supplies", "claimed_sources", [])
+    if claimed.has(key):
+        return ""
+    var supply_id := str(choices.pick_random())
+    claimed.append(key)
+    cfg.set_value("supplies", "claimed_sources", claimed)
+    cfg.set_value("supplies", supply_id, int(cfg.get_value("supplies", supply_id, 0)) + 1)
+    if cfg.save(SAVE_PATH) != OK:
+        return ""
+    return supply_id
+
+static func _can_use_slot(hero_id: String, slot: String, item: Dictionary) -> bool:
+    if str(item.get("slot", "")) == slot:
+        return true
+    var traits: Array = catalog().get("hero_traits", {}).get(hero_id, [])
+    return slot == "left_hand" and str(item.get("slot", "")) == "right_hand" and int(item.get("hands", 1)) == 2 and traits.has("OneHandedHeavy")
+
+static func equip(hero_id: String, slot: String, reference: String, collectibles: Array[String]) -> bool:
     if not SLOTS.has(slot):
         return false
-    var item: Dictionary = items().get(item_id, {}) if item_id != "" else {}
-    if item_id != "" and (item.is_empty() or str(item.get("slot", "")) != slot or not owned(item_id, collectibles)):
+    var item := item_for(reference) if reference != "" else {}
+    if reference != "" and (item.is_empty() or not _can_use_slot(hero_id, slot, item) or not owned(reference, collectibles)):
         return false
     var cfg := ConfigFile.new()
     cfg.load(SAVE_PATH)
     var section := "hero:%s" % hero_id
-    cfg.set_value(section, slot, item_id)
+    if reference.begins_with("gear:"):
+        for other_section in cfg.get_sections():
+            if not str(other_section).begins_with("hero:"):
+                continue
+            for other_slot in SLOTS:
+                if str(cfg.get_value(other_section, other_slot, "")) == reference:
+                    cfg.set_value(other_section, other_slot, "")
+    if slot in ["right_hand", "left_hand"] and reference != "":
+        var other_slot := "left_hand" if slot == "right_hand" else "right_hand"
+        var other_item := item_for(str(cfg.get_value(section, other_slot, "")))
+        var traits: Array = catalog().get("hero_traits", {}).get(hero_id, [])
+        if not traits.has("OneHandedHeavy") and (int(item.get("hands", 1)) == 2 or int(other_item.get("hands", 1)) == 2):
+            cfg.set_value(section, other_slot, "")
+    cfg.set_value(section, slot, reference)
     return cfg.save(SAVE_PATH) == OK
 
 static func effective_stats(hero_id: String, base: Dictionary) -> Dictionary:
     var result := base.duplicate(true)
     var equipped := loadout(hero_id)
-    var tags: Array[String] = []
+    var hero_tags: Array = catalog().get("hero_tags", {}).get(hero_id, [])
+    var region_counts: Dictionary = {}
     for slot in SLOTS:
-        var item: Dictionary = items().get(str(equipped.get(slot, "")), {})
+        var item := item_for(str(equipped.get(slot, "")))
         if item.is_empty():
             continue
-        for tag in item.get("tags", []):
-            if not tags.has(str(tag)):
-                tags.append(str(tag))
-        for stat in item.get("stats", {}).keys():
+        var region := str(item.get("region", ""))
+        if region != "":
+            region_counts[region] = int(region_counts.get(region, 0)) + 1
+        for stat in item.get("stats", {}):
             result[stat] = float(result.get(stat, 0)) + float(item["stats"][stat])
-    # Synergies are keyed to shared archetype tags, never to a single hero ID.
-    var hero_tags: Array = catalog().get("hero_tags", {}).get(hero_id, [])
-    for slot in SLOTS:
-        var item: Dictionary = items().get(str(equipped.get(slot, "")), {})
         for tag in item.get("synergy_tags", []):
             if hero_tags.has(tag):
-                for stat in item.get("synergy_stats", {}).keys():
+                for stat in item.get("synergy_stats", {}):
                     result[stat] = float(result.get(stat, 0)) + float(item["synergy_stats"][stat])
                 break
-    for stat in result.keys():
+        if str(item.get("signature_hero", "")) == hero_id:
+            for stat in item.get("signature_stats", {}):
+                result[stat] = float(result.get(stat, 0)) + float(item["signature_stats"][stat])
+    for region in region_counts:
+        for threshold in catalog().get("set_bonuses", {}):
+            if int(region_counts[region]) >= int(threshold):
+                for stat in catalog()["set_bonuses"][threshold]:
+                    result[stat] = float(result.get(stat, 0)) + float(catalog()["set_bonuses"][threshold][stat])
+    for stat in result:
         if stat != "crit":
             result[stat] = int(round(float(result[stat])))
     return result

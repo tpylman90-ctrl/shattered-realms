@@ -3,6 +3,7 @@ extends Control
 const WORLD_DATA := "res://data/world_catalog.json"
 const ASHENREACH_SCENE := "res://scenes/AshenreachDemo.tscn"
 const MAP_SCRIPT := preload("res://scripts/world_map_canvas.gd")
+const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
 
 var territories: Dictionary = {}
 var current_region := "ashen_wastes"
@@ -15,6 +16,8 @@ var detail_name: Label
 var detail_type: Label
 var detail_body: Label
 var enter_button: Button
+var armory_popup: PopupPanel
+var armory_text: RichTextLabel
 var load_bar: ProgressBar
 var load_caption: Label
 var loading_path := ""
@@ -171,6 +174,17 @@ func _build_map() -> void:
     enter_button.custom_minimum_size.x = 170
     enter_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     row.add_child(enter_button)
+    var armory_button := _button("REGIONAL GEAR", _show_region_armory)
+    armory_button.custom_minimum_size.x = 160
+    armory_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    row.add_child(armory_button)
+    armory_popup = PopupPanel.new()
+    armory_popup.title = "REGIONAL ARMORY"
+    add_child(armory_popup)
+    armory_text = RichTextLabel.new()
+    armory_text.custom_minimum_size = Vector2(440, 460)
+    armory_text.bbcode_enabled = true
+    armory_popup.add_child(armory_text)
     var dismiss := Button.new()
     dismiss.text = "×"
     dismiss.tooltip_text = "Hide territory details"
@@ -201,6 +215,22 @@ func _select_region(region_id: String) -> void:
     var stronghold := str(region.get("stronghold", "Uncharted stronghold"))
     detail_body.text = "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]
     enter_button.visible = playable
+
+func _show_region_armory() -> void:
+    var pool := HeroEquipmentService.region_pool(current_region)
+    if pool.is_empty():
+        return
+    var lines: PackedStringArray = ["[b]%s[/b]" % str(territories.get(current_region, {}).get("name", current_region)), ""]
+    for template_id in pool.get("common", []):
+        var item: Dictionary = HeroEquipmentService.items().get(str(template_id), {})
+        lines.append("%s • %s" % [str(item.get("family", item.get("slot", "Gear"))).capitalize(), str(item.get("name", template_id))])
+    var signature: Dictionary = HeroEquipmentService.items().get(str(pool.get("signature", "")), {})
+    lines.append("\n[b]Vault signature[/b] • %s" % str(signature.get("name", "Unknown")))
+    lines.append("Every drop rolls rarity, quality and sometimes an affix. Revisit a vault to seek a better version.")
+    if current_region != "ashen_wastes":
+        lines.append("\nThis region's campaign board is in development; its drops are not available yet.")
+    armory_text.text = "\n".join(lines)
+    armory_popup.popup_centered(Vector2i(470, 490))
 
 func _open_map() -> void:
     _show_page(map_page)
