@@ -33,13 +33,13 @@ func _draw() -> void:
     _path(PackedVector2Array([Vector2(.30,.58),Vector2(.42,.61),Vector2(.54,.72),Vector2(.67,.69),Vector2(.76,.61)]), Color("ba8b52"), 2.0)
     _path(PackedVector2Array([Vector2(.48,.12),Vector2(.51,.29),Vector2(.60,.44),Vector2(.54,.57),Vector2(.61,.78),Vector2(.65,.93)]), Color("4d8790"), 8.0)
     for mountain in [Vector2(.24,.27),Vector2(.30,.23),Vector2(.36,.29),Vector2(.41,.35),Vector2(.78,.26),Vector2(.82,.31)]:
-        var p := mountain * s
+        var p: Vector2 = mountain * s
         draw_polyline(PackedVector2Array([p+Vector2(-12,8),p+Vector2(0,-11),p+Vector2(14,8)]), Color("899087"), 2.0, true)
     for key in REGIONS:
         var region: Dictionary = REGIONS[key]
         var p: Vector2 = region["point"] * s
         var col: Color = region["color"]
-        var active := key == selected_region
+        var active: bool = key == selected_region
         var pulse := 1.0 + sin(drift * 2.4) * 0.12 if active else 1.0
         draw_circle(p, (27.0 if active else 20.0) * pulse, Color(col.r,col.g,col.b,0.16))
         draw_arc(p, (20.0 if active else 15.0) * pulse, 0, TAU, 48, col, 2.0, true)
