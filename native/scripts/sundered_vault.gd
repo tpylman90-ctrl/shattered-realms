@@ -1,5 +1,7 @@
 extends Node3D
 
+const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
+
 var camera: Camera3D
 var hero: Area3D
 var hero_model: Node3D
@@ -482,6 +484,9 @@ func _claim_relic() -> void:
         relic_glow.visible = false
     action_panel.visible = false
     status_label.text = "Ember Seal claimed. The first chamber is cleared."
+    var loot_id := HeroEquipmentService.claim_reward("dungeon", "sundered_vault")
+    if loot_id != "":
+        status_label.text += " Gear: %s (Loadout)." % str(HeroEquipmentService.items()[loot_id].get("name", loot_id))
     _refresh_objective()
     _save_campaign_state()
     _save_dungeon_state()

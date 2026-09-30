@@ -29,7 +29,40 @@ static func loadout(hero_id: String) -> Dictionary:
 
 static func owned(item_id: String, collectibles: Array[String]) -> bool:
     var item: Dictionary = items().get(item_id, {})
-    return bool(item.get("starter", false)) or collectibles.has(item_id)
+    return not item.is_empty() and (bool(item.get("starter", false)) or collectibles.has(item_id) or inventory().has(item_id))
+
+static func inventory() -> Array[String]:
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var result: Array[String] = []
+    for item_id in cfg.get_value("loot", "inventory", []):
+        if items().has(str(item_id)) and not result.has(str(item_id)):
+            result.append(str(item_id))
+    return result
+
+static func reward_for(category: String, source_id: String) -> String:
+    return str(catalog().get("loot_sources", {}).get(category, {}).get(source_id, ""))
+
+static func claim_reward(category: String, source_id: String) -> String:
+    var item_id := reward_for(category, source_id)
+    if not items().has(item_id):
+        return ""
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var source_key := "%s:%s" % [category, source_id]
+    var claimed: Array = cfg.get_value("loot", "claimed_sources", [])
+    if claimed.has(source_key):
+        return ""
+    var owned_items: Array = cfg.get_value("loot", "inventory", [])
+    var newly_owned := not owned_items.has(item_id)
+    if newly_owned:
+        owned_items.append(item_id)
+    claimed.append(source_key)
+    cfg.set_value("loot", "inventory", owned_items)
+    cfg.set_value("loot", "claimed_sources", claimed)
+    if cfg.save(SAVE_PATH) != OK:
+        return ""
+    return item_id if newly_owned else ""
 
 static func equip(hero_id: String, slot: String, item_id: String, collectibles: Array[String]) -> bool:
     if not SLOTS.has(slot):
