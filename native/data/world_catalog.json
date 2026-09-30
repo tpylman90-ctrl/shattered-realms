@@ -66,6 +66,116 @@
         0,
         0
       ]
+    },
+    "lyra_vane": {
+      "name": "Lyra Vane, The Shadow Stalker",
+      "class": "Ranger / Assassin",
+      "origin_territory": "shadowfen_forest",
+      "signature_ability": "Phantom Arrows",
+      "movement_points": 3,
+      "unlock_item": "lyra_vane_relic",
+      "piece_asset": "",
+      "placeholder_color": "#845db6",
+      "placeholder_role": "Ranger"
+    },
+    "thorvald": {
+      "name": "Thorvald Thunderbrow, The Peak Sentinel",
+      "class": "Tempest Warrior / Smith",
+      "origin_territory": "stormpeaks",
+      "signature_ability": "Lightning Smash",
+      "movement_points": 3,
+      "unlock_item": "thorvald_relic",
+      "piece_asset": "",
+      "placeholder_color": "#5ca7c9",
+      "placeholder_role": "Tempest"
+    },
+    "cedric": {
+      "name": "General Cedric Ironclad",
+      "class": "Heavy Cavalry Commander",
+      "origin_territory": "ironmarch",
+      "signature_ability": "Phalanx Charge",
+      "movement_points": 3,
+      "unlock_item": "cedric_relic",
+      "piece_asset": "",
+      "placeholder_color": "#a79a7c",
+      "placeholder_role": "Commander"
+    },
+    "morana": {
+      "name": "Morana, The Rot-Weaver",
+      "class": "Plague Shaman / Witch",
+      "origin_territory": "blighted_marsh",
+      "signature_ability": "Venomous Miasma",
+      "movement_points": 3,
+      "unlock_item": "morana_relic",
+      "piece_asset": "",
+      "placeholder_color": "#648c50",
+      "placeholder_role": "Plague"
+    },
+    "dareth": {
+      "name": "Dareth Scalebreaker",
+      "class": "Dragon Slayer / Vanguard",
+      "origin_territory": "dragons_rest",
+      "signature_ability": "Draconic Cleave",
+      "movement_points": 3,
+      "unlock_item": "dareth_relic",
+      "piece_asset": "",
+      "placeholder_color": "#b86f52",
+      "placeholder_role": "DragonSlayer"
+    },
+    "jora": {
+      "name": "Captain Jora Stormtide",
+      "class": "Naval Commander / Swashbuckler",
+      "origin_territory": "stormtide_coast",
+      "signature_ability": "Tidal Blade",
+      "movement_points": 3,
+      "unlock_item": "jora_relic",
+      "piece_asset": "",
+      "placeholder_color": "#418cac",
+      "placeholder_role": "Naval"
+    },
+    "alistair": {
+      "name": "Sir Alistair of Ravenford",
+      "class": "Paladin / Guardian",
+      "origin_territory": "ravenford",
+      "signature_ability": "Aura of Light",
+      "movement_points": 3,
+      "unlock_item": "alistair_relic",
+      "piece_asset": "",
+      "placeholder_color": "#dec17c",
+      "placeholder_role": "Paladin"
+    },
+    "zephyr": {
+      "name": "Zephyr, The Mirage Blade",
+      "class": "Dervish / Tactician",
+      "origin_territory": "shifting_sands",
+      "signature_ability": "Mirage Step",
+      "movement_points": 3,
+      "unlock_item": "zephyr_relic",
+      "piece_asset": "",
+      "placeholder_color": "#c2a260",
+      "placeholder_role": "Dervish"
+    },
+    "malakor": {
+      "name": "Malakor, The Soul Reaper",
+      "class": "Necromancer / Reaver",
+      "origin_territory": "cursed_mire",
+      "signature_ability": "Soul Harvest",
+      "movement_points": 3,
+      "unlock_item": "malakor_relic",
+      "piece_asset": "",
+      "placeholder_color": "#8961a4",
+      "placeholder_role": "Necromancer"
+    },
+    "ignacia": {
+      "name": "Ignacia, Flame of the Coast",
+      "class": "Dragon Tamer / Sorceress",
+      "origin_territory": "dragons_rest",
+      "signature_ability": "Dragon Breath",
+      "movement_points": 3,
+      "unlock_item": "ignacia_relic",
+      "piece_asset": "",
+      "placeholder_color": "#da6349",
+      "placeholder_role": "Dragon"
     }
   },
   "legendary_monsters": {
@@ -138,6 +248,76 @@
       "hero_unlock": "ignis",
       "description": "Ignis's molten chest armor. Acquiring this relic unlocks Ignis, The Magma-Heart, for the player's hero roster.",
       "asset_source": "embedded_in_ignis_glb"
+    },
+    "lyra_vane_relic": {
+      "name": "Lyra Vane's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "lyra_vane",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "thorvald_relic": {
+      "name": "Thorvald Thunderbrow's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "thorvald",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "cedric_relic": {
+      "name": "General Cedric Ironclad's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "cedric",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "morana_relic": {
+      "name": "Morana's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "morana",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "dareth_relic": {
+      "name": "Dareth Scalebreaker's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "dareth",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "jora_relic": {
+      "name": "Captain Jora Stormtide's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "jora",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "alistair_relic": {
+      "name": "Sir Alistair of Ravenford's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "alistair",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "zephyr_relic": {
+      "name": "Zephyr's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "zephyr",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "malakor_relic": {
+      "name": "Malakor's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "malakor",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
+    },
+    "ignacia_relic": {
+      "name": "Ignacia's Relic",
+      "type": "hero_relic",
+      "hero_unlock": "ignacia",
+      "description": "Campaign relic reserved for this hero unlock.",
+      "asset_source": "placeholder"
     }
   },
   "player_progression": {

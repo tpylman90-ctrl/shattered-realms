@@ -353,8 +353,13 @@ layout_mode = 2
 text = "CHOOSE HERO"
 theme_override_font_sizes/font_size = 24
 
-[node name="Roster" type="VBoxContainer" parent="UI/HeroSelectPanel/Margin/VBox"]
+[node name="RosterScroll" type="ScrollContainer" parent="UI/HeroSelectPanel/Margin/VBox"]
 layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Roster" type="VBoxContainer" parent="UI/HeroSelectPanel/Margin/VBox/RosterScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
 [node name="CloseButton" type="Button" parent="UI/HeroSelectPanel/Margin/VBox"]
