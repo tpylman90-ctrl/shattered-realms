@@ -10,6 +10,7 @@ var title_page: Control
 var map_page: Control
 var load_page: Control
 var map_canvas: Control
+var atlas_info: PanelContainer
 var detail_name: Label
 var detail_type: Label
 var detail_body: Label
@@ -129,40 +130,67 @@ func _build_map() -> void:
     title_button.offset_bottom = -14
 
     var info := PanelContainer.new()
+    atlas_info = info
     map_page.add_child(info)
-    info.anchor_left = 1.0
-    info.anchor_right = 1.0
-    info.anchor_top = 0.32
-    info.anchor_bottom = 0.79
-    info.offset_left = -342
-    info.offset_right = -16
+    info.anchor_left = 0.24
+    info.anchor_right = 0.76
+    info.anchor_top = 1.0
+    info.anchor_bottom = 1.0
+    info.offset_top = -120
+    info.offset_bottom = -12
     info.add_theme_stylebox_override("panel", _style(Color(0.035, 0.065, 0.08, 0.95), Color("c39b67")))
+    info.gui_input.connect(_atlas_panel_input.bind(info))
     var margin := MarginContainer.new()
     margin.add_theme_constant_override("margin_left", 16)
     margin.add_theme_constant_override("margin_right", 16)
-    margin.add_theme_constant_override("margin_top", 12)
-    margin.add_theme_constant_override("margin_bottom", 12)
+    margin.add_theme_constant_override("margin_top", 9)
+    margin.add_theme_constant_override("margin_bottom", 9)
+    margin.mouse_filter = Control.MOUSE_FILTER_PASS
     info.add_child(margin)
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 14)
+    row.mouse_filter = Control.MOUSE_FILTER_PASS
+    margin.add_child(row)
     var details := VBoxContainer.new()
-    details.add_theme_constant_override("separation", 9)
-    margin.add_child(details)
-    details.add_child(_label("TERRITORY", 13, Color("cba36b")))
-    detail_name = _label("", 24)
+    details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    details.add_theme_constant_override("separation", 2)
+    details.mouse_filter = Control.MOUSE_FILTER_PASS
+    row.add_child(details)
+    detail_name = _label("", 23)
     detail_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    detail_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
     details.add_child(detail_name)
     detail_type = _label("", 13, Color("d0a365"))
+    detail_type.mouse_filter = Control.MOUSE_FILTER_IGNORE
     details.add_child(detail_type)
-    details.add_child(HSeparator.new())
-    detail_body = _label("", 14, Color("c4d0ce"))
+    detail_body = _label("", 13, Color("c4d0ce"))
     detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    detail_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    detail_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
     details.add_child(detail_body)
     enter_button = _button("ENTER ASHENREACH", _enter_region)
-    details.add_child(enter_button)
+    enter_button.custom_minimum_size.x = 170
+    enter_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    row.add_child(enter_button)
+    var dismiss := Button.new()
+    dismiss.text = "×"
+    dismiss.tooltip_text = "Hide territory details"
+    dismiss.custom_minimum_size.x = 35
+    dismiss.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+    dismiss.pressed.connect(info.hide)
+    row.add_child(dismiss)
     _select_region(current_region)
+
+func _atlas_panel_input(event: InputEvent, panel: Control) -> void:
+    if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+        var map_point: Vector2 = map_canvas.get_global_transform_with_canvas().affine_inverse() * (panel.get_global_transform_with_canvas() * event.position)
+        map_canvas.call("select_at", map_point)
+    elif event is InputEventScreenTouch and event.pressed:
+        var map_point: Vector2 = map_canvas.get_global_transform_with_canvas().affine_inverse() * (panel.get_global_transform_with_canvas() * event.position)
+        map_canvas.call("select_at", map_point)
 
 func _select_region(region_id: String) -> void:
     current_region = region_id
+    atlas_info.show()
     if map_canvas:
         map_canvas.set("selected_region", region_id)
     var region: Dictionary = territories.get(region_id, {})
@@ -171,7 +199,7 @@ func _select_region(region_id: String) -> void:
     detail_type.text = "PLAYABLE STRONGHOLD" if playable else "FUTURE CAMPAIGN"
     var guardian := str(region.get("legendary_monster", "")).replace("_", " ").capitalize()
     var stronghold := str(region.get("stronghold", "Uncharted stronghold"))
-    detail_body.text = "%s%s\n\n%s" % [stronghold, "\nLegendary threat: %s" % guardian if guardian != "" else "", "Continue your saved expedition or enter the Ashenreach board." if playable else "This region is mapped in the atlas. Its campaign board is still in development."]
+    detail_body.text = "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]
     enter_button.visible = playable
 
 func _open_map() -> void:
