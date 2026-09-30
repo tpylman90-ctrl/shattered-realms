@@ -1019,6 +1019,7 @@ func _refresh_equipment_panel() -> void:
     for child in equipment_list.get_children():
         child.queue_free()
     var loadout := HeroEquipmentService.loadout(equipment_view_hero_id)
+    var found_gear := HeroEquipmentService.gear_instances()
     for slot in HeroEquipmentService.SLOTS:
         var card := PanelContainer.new()
         card.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.11, 0.13, 0.15)))
@@ -1036,11 +1037,20 @@ func _refresh_equipment_panel() -> void:
         var selected_index := 0
         for item_id in HeroEquipmentService.items().keys():
             var item: Dictionary = HeroEquipmentService.items()[item_id]
-            if str(item.get("slot", "")) != slot or not HeroEquipmentService.owned(str(item_id), owned_collectibles):
+            if not HeroEquipmentService.owned(str(item_id), owned_collectibles) or not HeroEquipmentService._can_use_slot(equipment_view_hero_id, str(slot), item):
                 continue
             picker.add_item(str(item.get("name", item_id)))
             picker.set_item_metadata(picker.item_count - 1, str(item_id))
             if str(loadout.get(slot, "")) == str(item_id):
+                selected_index = picker.item_count - 1
+        for instance in found_gear:
+            var gear_id := str(instance.get("id", ""))
+            var gear := HeroEquipmentService.item_for(gear_id)
+            if not HeroEquipmentService._can_use_slot(equipment_view_hero_id, str(slot), gear):
+                continue
+            picker.add_item("%s • %s Q%d" % [str(gear.get("name", gear_id)), str(gear.get("rarity", "")).capitalize(), int(gear.get("quality", 0))])
+            picker.set_item_metadata(picker.item_count - 1, gear_id)
+            if str(loadout.get(slot, "")) == gear_id:
                 selected_index = picker.item_count - 1
         picker.select(selected_index)
         picker.disabled = not unlocked_heroes.has(equipment_view_hero_id)
@@ -1048,7 +1058,7 @@ func _refresh_equipment_panel() -> void:
         content.add_child(picker)
         var equipped_id := str(loadout.get(slot, ""))
         if equipped_id != "":
-            var item: Dictionary = HeroEquipmentService.items().get(equipped_id, {})
+            var item: Dictionary = HeroEquipmentService.item_for(equipped_id)
             var bonuses: PackedStringArray = []
             for stat in item.get("stats", {}).keys():
                 bonuses.append("%s +%s" % [str(stat).to_upper(), str(item["stats"][stat])])
@@ -1058,11 +1068,42 @@ func _refresh_equipment_panel() -> void:
                     for stat in item.get("synergy_stats", {}).keys():
                         bonuses.append("Synergy %s +%s" % [str(stat).to_upper(), str(item["synergy_stats"][stat])])
                     break
+            if str(item.get("signature_hero", "")) == equipment_view_hero_id:
+                for stat in item.get("signature_stats", {}):
+                    bonuses.append("Signature %s +%s" % [str(stat).to_upper(), str(item["signature_stats"][stat])])
             var bonus_label := Label.new()
-            bonus_label.text = ", ".join(bonuses)
+            bonus_label.text = "%s%s" % ["%s • " % str(item.get("armor_type", item.get("rarity", ""))).capitalize() if item.has("armor_type") or item.has("rarity") else "", ", ".join(bonuses)]
             bonus_label.add_theme_font_size_override("font_size", 10)
             bonus_label.modulate = Color(0.81, 0.68, 0.46)
             content.add_child(bonus_label)
+
+
+    var supplies_title := Label.new()
+    supplies_title.text = "FIELD SUPPLIES"
+    supplies_title.modulate = Color(0.93, 0.73, 0.42)
+    equipment_list.add_child(supplies_title)
+    for supply_id in HeroEquipmentService.consumables():
+        var count := HeroEquipmentService.supply_count(str(supply_id))
+        if count <= 0:
+            continue
+        var supply: Dictionary = HeroEquipmentService.consumables()[supply_id]
+        var button := Button.new()
+        button.text = "%s ×%d • %s" % [str(supply.get("name", supply_id)), count, str(supply.get("description", ""))]
+        button.disabled = not (supply.get("use", []) as Array).has("map") or equipment_view_hero_id != selected_hero_id or hero_health >= int(HeroEquipmentService.effective_stats(selected_hero_id, HeroProgressionService.ensure_profile(selected_hero_id).get("stats", {})).get("hp", 100))
+        button.pressed.connect(_use_map_supply.bind(str(supply_id)))
+        equipment_list.add_child(button)
+
+func _use_map_supply(supply_id: String) -> void:
+    var max_hp := int(HeroEquipmentService.effective_stats(selected_hero_id, HeroProgressionService.ensure_profile(selected_hero_id).get("stats", {})).get("hp", 100))
+    if hero_health >= max_hp:
+        return
+    var supply := HeroEquipmentService.use_supply(supply_id, "map")
+    if supply.is_empty() or str(supply.get("effect", "")) != "heal_hp":
+        return
+    hero_health = mini(max_hp, hero_health + int(supply.get("value", 0)))
+    _save_game_state()
+    _refresh_game_hud()
+    _refresh_equipment_panel()
 
 
 func _equipment_stat_row(stat: String, value: float, base: float) -> void:
@@ -2721,9 +2762,12 @@ func _consume_battle_result() -> void:
     var loot_name := ""
     if victory and encounter_id != "" and encounter_id != "__battle_test__":
         completed_encounters[encounter_id] = true
-        var loot_id := HeroEquipmentService.claim_reward("battle", encounter_id)
-        if loot_id != "":
-            loot_name = str(HeroEquipmentService.items()[loot_id].get("name", loot_id))
+        var gear_drop := HeroEquipmentService.claim_equipment_reward("battle", encounter_id)
+        if not gear_drop.is_empty():
+            loot_name = "%s (%s, quality %d)" % [str(gear_drop.get("name", "")), str(gear_drop.get("rarity", "")).capitalize(), int(gear_drop.get("quality", 0))]
+        var supply_id := HeroEquipmentService.claim_supply_drop("battle", encounter_id, "ashen_wastes")
+        if supply_id != "":
+            loot_name += "%s%s" % [" • " if loot_name != "" else "", str(HeroEquipmentService.consumables()[supply_id].get("name", supply_id))]
     elif not victory and hero_health <= 0:
         _handle_hero_defeat()
 
@@ -2799,9 +2843,9 @@ func _resolve_vulgrim() -> void:
     encounter_panel.visible = false
     current_encounter_node = ""
     event_log_label.text = "Inferno-Lord Vulgrim defeated. Ashenreach is fully secured."
-    var loot_id := HeroEquipmentService.claim_reward("boss", "vulgrim")
-    if loot_id != "":
-        event_log_label.text += " Loot: %s." % str(HeroEquipmentService.items()[loot_id].get("name", loot_id))
+    var gear_drop := HeroEquipmentService.claim_equipment_reward("boss", "vulgrim")
+    if not gear_drop.is_empty():
+        event_log_label.text += " Loot: %s (%s, quality %d)." % [str(gear_drop.get("name", "")), str(gear_drop.get("rarity", "")).capitalize(), int(gear_drop.get("quality", 0))]
     _refresh_game_hud()
     _save_game_state()
     if victory_panel:
@@ -3662,8 +3706,8 @@ func _select_poi(node: Node3D) -> void:
     poi_body.text = data["body"]
     var rule := _poi_rule(String(node.name))
     if node.name == "SunderedVault" and sundered_vault_cleared:
-        poi_body.text = "The Sundered Vault has been breached. The Ember Seal was recovered and the lower halls are secure."
-        poi_action.text = "Re-enter"
+        poi_body.text = "The Ember Seal was recovered. Raid the lower halls again for a new weapon or armor roll; rarity, quality and affix can improve each time."
+        poi_action.text = "Raid Again"
         poi_action.disabled = false
     elif bool(rule.get("claimable", false)) and not claimed_pois.has(node.name):
         if _hero_near_poi(node):
@@ -3710,11 +3754,14 @@ func _on_poi_action() -> void:
         poi_action.disabled = true
         poi_body.text += "\n\nThis strategic location is now under your control."
         event_log_label.text = "Claimed: %s" % str(POI_DATA.get(selected_poi, {}).get("title", selected_poi))
-        var loot_id := HeroEquipmentService.claim_reward("poi", selected_poi)
-        if loot_id != "":
-            var loot_name := str(HeroEquipmentService.items()[loot_id].get("name", loot_id))
+        var gear_drop := HeroEquipmentService.claim_equipment_reward("poi", selected_poi)
+        if not gear_drop.is_empty():
+            var loot_name := "%s (%s, quality %d)" % [str(gear_drop.get("name", "")), str(gear_drop.get("rarity", "")).capitalize(), int(gear_drop.get("quality", 0))]
             poi_body.text += "\n\nFound: %s. Equip it in Loadout." % loot_name
             event_log_label.text += " • Found: %s" % loot_name
+        var supply_id := HeroEquipmentService.claim_supply_drop("poi", selected_poi, "ashen_wastes")
+        if supply_id != "":
+            poi_body.text += "\nSupplies: %s." % str(HeroEquipmentService.consumables()[supply_id].get("name", supply_id))
         _refresh_game_hud()
         _save_game_state()
         if _all_objectives_complete():
@@ -3730,6 +3777,18 @@ func _on_poi_action() -> void:
             poi_body.text = "The Sundered Vault has been discovered. Move your hero onto the vault entrance before entering."
             return
         _save_game_state()
+        var dungeon := ConfigFile.new()
+        var has_run := dungeon.load("user://sundered_vault_save.cfg") == OK
+        if not has_run or (sundered_vault_cleared and bool(dungeon.get_value("vault", "relic_claimed", false))) or int(dungeon.get_value("vault", "raid_id", 0)) <= 0:
+            var raid_id := HeroEquipmentService.begin_vault_raid()
+            if raid_id <= 0:
+                poi_body.text += "\n\nCould not save this vault raid. Try again."
+                return
+            var effect_applied := bool(dungeon.get_value("vault", "ember_seal_effect_applied", false))
+            dungeon = ConfigFile.new()
+            dungeon.set_value("vault", "raid_id", raid_id)
+            dungeon.set_value("vault", "ember_seal_effect_applied", effect_applied)
+            dungeon.save("user://sundered_vault_save.cfg")
         get_tree().change_scene_to_file("res://scenes/SunderedVault.tscn")
     else:
         poi_body.text += "\n\nLocation recorded in the Ashenreach campaign map."

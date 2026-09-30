@@ -50,7 +50,8 @@ var army_slot_atb_bars: Array[ProgressBar] = []
 var battle_over := false
 var defending := false
 var guard_multiplier := 0.45
-var item_used := false
+var item_popup: PopupPanel
+var item_choices: VBoxContainer
 var action_locked := false
 
 var hero_anchor: Node3D
@@ -88,6 +89,7 @@ func _ready() -> void:
     _build_world()
     _build_army_formation()
     _build_ui()
+    _build_item_popup()
     _spawn_hero()
     _spawn_army_placeholders()
     _spawn_enemy_placeholder()
@@ -740,7 +742,7 @@ func _configure_commands_for_active_actor() -> void:
     defend_button.text = "DEFEND"
     item_button.text = "ITEM" if is_hero else "HOLD"
     skills_button.disabled = false
-    item_button.disabled = item_used if is_hero else false
+    item_button.disabled = false if is_hero else false
 
 
 func _animate_command_ring_open() -> void:
@@ -896,7 +898,7 @@ func _set_commands_enabled(enabled: bool) -> void:
     attack_button.disabled = not enabled
     skills_button.disabled = not enabled
     defend_button.disabled = not enabled
-    item_button.disabled = not enabled or item_used
+    item_button.disabled = not enabled
     if command_box:
         command_box.visible = enabled and active_actor_id != ""
         if not enabled:
@@ -1240,29 +1242,87 @@ func _on_defend() -> void:
     _consume_active_turn()
 
 
+func _build_item_popup() -> void:
+    item_popup = PopupPanel.new()
+    item_popup.title = "FIELD SUPPLIES"
+    battle_ui_layer.add_child(item_popup)
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 14)
+    margin.add_theme_constant_override("margin_right", 14)
+    margin.add_theme_constant_override("margin_top", 12)
+    margin.add_theme_constant_override("margin_bottom", 12)
+    item_popup.add_child(margin)
+    item_choices = VBoxContainer.new()
+    item_choices.custom_minimum_size.x = 330
+    margin.add_child(item_choices)
+
 func _on_item() -> void:
     if active_actor_id == "" or action_locked or battle_over:
         return
-
     if active_actor_id != "hero":
         var index := int(active_actor_id.trim_prefix("army_"))
         var unit_name := str(army_slots[index].get("name", "Unit"))
         _consume_active_turn()
         message_label.text = "%s holds position." % unit_name
         return
+    for child in item_choices.get_children():
+        child.queue_free()
+    var any_available := false
+    for supply_id in HeroEquipmentService.consumables():
+        var count := HeroEquipmentService.supply_count(str(supply_id))
+        var supply: Dictionary = HeroEquipmentService.consumables()[supply_id]
+        if count <= 0 or not (supply.get("use", []) as Array).has("battle"):
+            continue
+        any_available = true
+        var button := Button.new()
+        button.text = "%s ×%d • %s" % [str(supply.get("name", supply_id)), count, str(supply.get("description", ""))]
+        button.custom_minimum_size.y = 42
+        button.pressed.connect(_use_battle_supply.bind(str(supply_id)))
+        item_choices.add_child(button)
+    if not any_available:
+        var empty := Label.new()
+        empty.text = "No supplies. Find them in battles and locations."
+        item_choices.add_child(empty)
+    var cancel := Button.new()
+    cancel.text = "BACK"
+    cancel.pressed.connect(item_popup.hide)
+    item_choices.add_child(cancel)
+    item_popup.popup_centered(Vector2i(380, 0))
 
-    if item_used:
+func _use_battle_supply(supply_id: String) -> void:
+    if active_actor_id != "hero" or battle_over or action_locked:
         return
-
-    item_used = true
-    var before_hp: int = hero_hp
-    hero_hp = mini(hero_max_hp, hero_hp + 28)
-    var restored: int = hero_hp - before_hp
+    var preview: Dictionary = HeroEquipmentService.consumables().get(supply_id, {})
+    var effect := str(preview.get("effect", ""))
+    if (effect == "heal_hp" and hero_hp >= hero_max_hp) or (effect == "heal_mp" and hero_mp >= hero_max_mp):
+        message_label.text = "Already at full strength."
+        item_popup.hide()
+        return
+    var supply := HeroEquipmentService.use_supply(supply_id, "battle")
+    if supply.is_empty():
+        item_popup.hide()
+        return
+    var amount := int(supply.get("value", 0))
+    var restored := 0
+    match effect:
+        "heal_hp":
+            restored = mini(amount, hero_max_hp - hero_hp)
+            hero_hp += restored
+            _show_damage_popup(hero_anchor, restored, true)
+        "heal_mp":
+            restored = mini(amount, hero_max_mp - hero_mp)
+            hero_mp += restored
+        "damage_enemy":
+            enemy_hp = maxi(0, enemy_hp - amount)
+            _show_damage_popup(enemy_anchor, amount)
+        "ward":
+            defending = true
+            guard_multiplier = 0.20
+    item_popup.hide()
     _consume_active_turn()
-    message_label.text = "%s restores %d health." % [hero_name, restored]
+    message_label.text = "%s uses %s%s" % [hero_name, str(supply.get("name", supply_id)), " (+%d)." % restored if restored > 0 else "."]
     _refresh_ui()
-    _show_damage_popup(hero_anchor, restored, true)
-
+    _check_battle_end()
 
 func _enemy_turn() -> void:
     if battle_over:
