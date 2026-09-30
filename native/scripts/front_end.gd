@@ -228,7 +228,7 @@ func _select_region(region_id: String) -> void:
         map_canvas.set("selected_region", region_id)
     var region: Dictionary = territories.get(region_id, {})
     detail_name.text = str(region.get("name", region_id))
-    var playable := region_id == "ashen_wastes" and region.get("boards", []).has("ashenreach")
+    var playable: bool = region_id == "ashen_wastes" and (region.get("boards", []) as Array).has("ashenreach")
     detail_type.text = "PLAYABLE STRONGHOLD" if playable else "FUTURE CAMPAIGN"
     var guardian := str(region.get("legendary_monster", "unknown")).replace("_", " ").capitalize()
     var stronghold := str(region.get("stronghold", "Uncharted stronghold"))
