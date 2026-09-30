@@ -1059,14 +1059,17 @@ func _load_equipment_preview(data: Dictionary) -> void:
     model.name = "PreviewHero"
     equipment_preview_stage.add_child(model)
     equipment_preview_model = model
+    var centered_content := Node3D.new()
+    centered_content.name = "CenteredContent"
+    model.add_child(centered_content)
     var asset_path := str(data.get("piece_asset", ""))
     if asset_path != "" and ResourceLoader.exists(asset_path):
         var packed := load(asset_path) as PackedScene
         if packed:
             var instance := packed.instantiate()
             if instance is Node3D:
-                model.add_child(instance)
-                _fit_equipment_preview(model)
+                centered_content.add_child(instance)
+                _fit_equipment_preview(model, centered_content)
                 return
             instance.queue_free()
     # A readable stand-in while a hero's clean single-character GLB is pending.
@@ -1079,10 +1082,10 @@ func _load_equipment_preview(data: Dictionary) -> void:
     material.albedo_color = Color(0.28, 0.48, 0.54)
     material.metallic = 0.55
     body.material_override = material
-    model.add_child(body)
+    centered_content.add_child(body)
 
 
-func _fit_equipment_preview(model: Node3D) -> void:
+func _fit_equipment_preview(model: Node3D, centered_content: Node3D) -> void:
     var minimum := Vector3(1000000, 1000000, 1000000)
     var maximum := Vector3(-1000000, -1000000, -1000000)
     var found := false
@@ -1102,7 +1105,9 @@ func _fit_equipment_preview(model: Node3D) -> void:
     var extent := maximum - minimum
     var scale_value := minf(3.4 / maxf(extent.y, 0.01), 2.4 / maxf(maxf(extent.x, extent.z), 0.01))
     model.scale = Vector3.ONE * scale_value
-    model.position = -center * scale_value
+    # Keep the rotation pivot at the viewport origin. Moving the pivot itself
+    # makes its offset orbit the camera whenever the user rotates the hero.
+    centered_content.position = -center
 
 
 func _rotate_equipment_preview(direction: int) -> void:
