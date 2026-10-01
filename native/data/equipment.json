@@ -1966,7 +1966,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 2
+      "hands": 2,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_vanguard.webp"
     },
     "ravenwood_guardian": {
       "name": "Blackthorn Bulwark",
@@ -1987,7 +1988,8 @@
       "synergy_stats": {
         "defense": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_guardian.webp"
     },
     "ravenwood_assassin": {
       "name": "Blackthorn Dirk",
@@ -2009,7 +2011,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_assassin.webp"
     },
     "ravenwood_ranger": {
       "name": "Blackthorn Longbow",
@@ -2031,7 +2034,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 2
+      "hands": 2,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_ranger.webp"
     },
     "ravenwood_sorcerer": {
       "name": "Blackthorn Runestaff",
@@ -2052,7 +2056,8 @@
       "synergy_stats": {
         "magic": 2
       },
-      "hands": 2
+      "hands": 2,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_sorcerer.webp"
     },
     "ravenwood_shaman": {
       "name": "Blackthorn Totem",
@@ -2074,7 +2079,8 @@
       "synergy_stats": {
         "magic": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_shaman.webp"
     },
     "ravenwood_commander": {
       "name": "Blackthorn Spear",
@@ -2096,7 +2102,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_commander.webp"
     },
     "ravenwood_dervish": {
       "name": "Blackthorn Scimitar",
@@ -2118,7 +2125,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_dervish.webp"
     },
     "ravenwood_helm": {
       "name": "Blackthorn Helm",
@@ -2137,7 +2145,8 @@
       "synergy_stats": {
         "hp": 5
       },
-      "armor_type": "medium"
+      "armor_type": "medium",
+      "icon_path": "res://assets/items/ravenwood/ravenwood_helm.webp"
     },
     "ravenwood_mail": {
       "name": "Blackthorn Mail",
@@ -2156,7 +2165,8 @@
       "synergy_stats": {
         "hp": 5
       },
-      "armor_type": "heavy"
+      "armor_type": "heavy",
+      "icon_path": "res://assets/items/ravenwood/ravenwood_mail.webp"
     },
     "ravenwood_bracers": {
       "name": "Blackthorn Bracers",
@@ -2175,7 +2185,8 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "armor_type": "medium"
+      "armor_type": "medium",
+      "icon_path": "res://assets/items/ravenwood/ravenwood_bracers.webp"
     },
     "ravenwood_greaves": {
       "name": "Blackthorn Greaves",
@@ -2194,7 +2205,8 @@
       "synergy_stats": {
         "hp": 5
       },
-      "armor_type": "heavy"
+      "armor_type": "heavy",
+      "icon_path": "res://assets/items/ravenwood/ravenwood_greaves.webp"
     },
     "ravenwood_boots": {
       "name": "Blackthorn Boots",
@@ -2213,7 +2225,8 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "armor_type": "light"
+      "armor_type": "light",
+      "icon_path": "res://assets/items/ravenwood/ravenwood_boots.webp"
     },
     "ravenwood_cloak": {
       "name": "Blackthorn Mantle",
@@ -2232,7 +2245,8 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "armor_type": "light"
+      "armor_type": "light",
+      "icon_path": "res://assets/items/ravenwood/ravenwood_cloak.webp"
     },
     "ravenwood_sigil": {
       "name": "Blackthorn Sigil",
@@ -2251,7 +2265,8 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "armor_type": "relic"
+      "armor_type": "relic",
+      "icon_path": "res://assets/items/ravenwood/ravenwood_sigil.webp"
     },
     "ravenwood_signature": {
       "name": "Nightbloom",
@@ -2277,7 +2292,8 @@
         "power": 5,
         "magic": 4
       },
-      "hands": 2
+      "hands": 2,
+      "icon_path": "res://assets/items/ravenwood/ravenwood_signature.webp"
     },
     "frostpeaks_vanguard": {
       "name": "Rimeforged Greatblade",

@@ -134,6 +134,16 @@ var equipment_preview_stage: Node3D
 var equipment_preview_model: Node3D
 var equipment_view_hero_id := ""
 var equipment_preview_hero_id := ""
+var inventory_panel: PanelContainer
+var inventory_grid: GridContainer
+var inventory_search: LineEdit
+var inventory_count_label: Label
+var inventory_detail: Label
+var inventory_action_button: Button
+var inventory_selected_id := ""
+var inventory_selected_is_supply := false
+var inventory_category := "all"
+var inventory_filter_buttons: Dictionary = {}
 var progression_button: Button
 
 const MIN_ZOOM := 16.0
@@ -805,8 +815,8 @@ func _build_equipment_panel() -> void:
     equipment_panel.visible = false
     equipment_panel.set_anchors_preset(Control.PRESET_CENTER)
     var screen := get_viewport().get_visible_rect().size
-    var half_width := screen.x * 0.47
-    var half_height := screen.y * 0.45
+    var half_width := screen.x * 0.49
+    var half_height := screen.y * 0.48
     equipment_panel.offset_left = -half_width
     equipment_panel.offset_top = -half_height
     equipment_panel.offset_right = half_width
@@ -833,7 +843,7 @@ func _build_equipment_panel() -> void:
     header.add_theme_constant_override("separation", 10)
     page.add_child(header)
     var heading := Label.new()
-    heading.text = "LOADOUT"
+    heading.text = "ARMORY"
     heading.add_theme_font_size_override("font_size", 23)
     heading.modulate = Color(0.93, 0.73, 0.42)
     heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -854,7 +864,7 @@ func _build_equipment_panel() -> void:
     page.add_child(body)
 
     var stats_panel := PanelContainer.new()
-    stats_panel.custom_minimum_size.x = 220
+    stats_panel.custom_minimum_size.x = 175
     stats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
     stats_panel.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.07, 0.09, 0.11)))
     body.add_child(stats_panel)
@@ -926,7 +936,7 @@ func _build_equipment_panel() -> void:
         controls.add_child(rotate)
 
     var slots_panel := PanelContainer.new()
-    slots_panel.custom_minimum_size.x = 330
+    slots_panel.custom_minimum_size.x = 235
     slots_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
     slots_panel.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.07, 0.09, 0.11)))
     body.add_child(slots_panel)
@@ -949,6 +959,101 @@ func _build_equipment_panel() -> void:
     equipment_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     equipment_list.add_theme_constant_override("separation", 6)
     scroll.add_child(equipment_list)
+
+    inventory_panel = PanelContainer.new()
+    inventory_panel.custom_minimum_size.x = 340
+    inventory_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    inventory_panel.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.055, 0.07, 0.08)))
+    body.add_child(inventory_panel)
+    var inventory_margin := MarginContainer.new()
+    inventory_margin.add_theme_constant_override("margin_left", 10)
+    inventory_margin.add_theme_constant_override("margin_right", 10)
+    inventory_margin.add_theme_constant_override("margin_top", 10)
+    inventory_margin.add_theme_constant_override("margin_bottom", 10)
+    inventory_panel.add_child(inventory_margin)
+    var inventory_page := VBoxContainer.new()
+    inventory_page.add_theme_constant_override("separation", 7)
+    inventory_margin.add_child(inventory_page)
+    var inventory_heading := HBoxContainer.new()
+    inventory_page.add_child(inventory_heading)
+    var inventory_title := Label.new()
+    inventory_title.text = "INVENTORY"
+    inventory_title.modulate = Color(0.93, 0.73, 0.42)
+    inventory_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    inventory_heading.add_child(inventory_title)
+    inventory_count_label = Label.new()
+    inventory_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    inventory_count_label.modulate = Color(0.68, 0.76, 0.77)
+    inventory_heading.add_child(inventory_count_label)
+
+    inventory_search = LineEdit.new()
+    inventory_search.placeholder_text = "Search owned gear"
+    inventory_search.clear_button_enabled = true
+    inventory_search.text_changed.connect(_on_inventory_search_changed)
+    inventory_page.add_child(inventory_search)
+    var filter_row := HBoxContainer.new()
+    filter_row.add_theme_constant_override("separation", 3)
+    inventory_page.add_child(filter_row)
+    for filter in ["all", "weapons", "armor", "relics", "supplies"]:
+        var filter_button := Button.new()
+        filter_button.text = str(filter).substr(0, 1).to_upper() + str(filter).substr(1)
+        filter_button.toggle_mode = true
+        filter_button.button_pressed = str(filter) == "all"
+        filter_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        filter_button.custom_minimum_size.y = 30
+        filter_button.add_theme_font_size_override("font_size", 10)
+        var filter_style := StyleBoxFlat.new()
+        filter_style.bg_color = Color(0.09, 0.11, 0.12)
+        filter_style.border_color = Color(0.24, 0.29, 0.29)
+        filter_style.set_border_width_all(1)
+        filter_style.set_corner_radius_all(4)
+        var filter_active := filter_style.duplicate() as StyleBoxFlat
+        filter_active.bg_color = Color(0.26, 0.20, 0.12)
+        filter_active.border_color = Color(0.76, 0.56, 0.30)
+        filter_button.add_theme_stylebox_override("normal", filter_style)
+        filter_button.add_theme_stylebox_override("hover", filter_active)
+        filter_button.add_theme_stylebox_override("pressed", filter_active)
+        filter_button.pressed.connect(_set_inventory_category.bind(str(filter)))
+        filter_row.add_child(filter_button)
+        inventory_filter_buttons[filter] = filter_button
+
+    var inventory_scroll := ScrollContainer.new()
+    inventory_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    inventory_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    inventory_page.add_child(inventory_scroll)
+    inventory_grid = GridContainer.new()
+    inventory_grid.columns = 4
+    inventory_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    inventory_grid.add_theme_constant_override("h_separation", 5)
+    inventory_grid.add_theme_constant_override("v_separation", 5)
+    inventory_scroll.add_child(inventory_grid)
+
+    var detail_panel := PanelContainer.new()
+    detail_panel.custom_minimum_size.y = 118
+    detail_panel.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.085, 0.10, 0.11)))
+    inventory_page.add_child(detail_panel)
+    var detail_margin := MarginContainer.new()
+    detail_margin.add_theme_constant_override("margin_left", 8)
+    detail_margin.add_theme_constant_override("margin_right", 8)
+    detail_margin.add_theme_constant_override("margin_top", 6)
+    detail_margin.add_theme_constant_override("margin_bottom", 6)
+    detail_panel.add_child(detail_margin)
+    var detail_box := VBoxContainer.new()
+    detail_box.add_theme_constant_override("separation", 4)
+    detail_margin.add_child(detail_box)
+    inventory_detail = Label.new()
+    inventory_detail.text = "Select an item to inspect its stats and equip it."
+    inventory_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    inventory_detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    inventory_detail.add_theme_font_size_override("font_size", 11)
+    inventory_detail.modulate = Color(0.80, 0.84, 0.82)
+    detail_box.add_child(inventory_detail)
+    inventory_action_button = Button.new()
+    inventory_action_button.text = "SELECT AN ITEM"
+    inventory_action_button.custom_minimum_size.y = 34
+    inventory_action_button.disabled = true
+    inventory_action_button.pressed.connect(_inventory_primary_action)
+    detail_box.add_child(inventory_action_button)
 
 
 func _equipment_column_style(color: Color) -> StyleBoxFlat:
@@ -1092,6 +1197,230 @@ func _refresh_equipment_panel() -> void:
         button.disabled = not (supply.get("use", []) as Array).has("map") or equipment_view_hero_id != selected_hero_id or hero_health >= int(HeroEquipmentService.effective_stats(selected_hero_id, HeroProgressionService.ensure_profile(selected_hero_id).get("stats", {})).get("hp", 100))
         button.pressed.connect(_use_map_supply.bind(str(supply_id)))
         equipment_list.add_child(button)
+    _refresh_inventory_grid()
+
+
+func _set_inventory_category(category: String) -> void:
+    inventory_category = category
+    for key in inventory_filter_buttons:
+        var button := inventory_filter_buttons[key] as Button
+        if button:
+            button.button_pressed = str(key) == category
+    _refresh_inventory_grid()
+
+
+func _on_inventory_search_changed(_value: String) -> void:
+    _refresh_inventory_grid()
+
+
+func _inventory_kind(item: Dictionary) -> String:
+    var slot := str(item.get("slot", ""))
+    if slot in ["right_hand", "left_hand"]:
+        return "weapons"
+    if slot in ["head", "chest", "arms", "legs", "feet", "back"]:
+        return "armor"
+    if slot.begins_with("relic"):
+        return "relics"
+    return "other"
+
+
+func _inventory_entries() -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    for item_id in HeroEquipmentService.items():
+        var reference := str(item_id)
+        if not HeroEquipmentService.owned(reference, owned_collectibles):
+            continue
+        result.append({"id": reference, "item": HeroEquipmentService.item_for(reference), "supply": false, "count": 1})
+    for instance in HeroEquipmentService.gear_instances():
+        var reference := str(instance.get("id", ""))
+        var item := HeroEquipmentService.item_for(reference)
+        if not reference.is_empty() and not item.is_empty():
+            result.append({"id": reference, "item": item, "supply": false, "count": 1})
+    for supply_id in HeroEquipmentService.consumables():
+        var amount := HeroEquipmentService.supply_count(str(supply_id))
+        if amount <= 0:
+            continue
+        var supply: Dictionary = HeroEquipmentService.consumables()[supply_id].duplicate(true)
+        supply["slot"] = "supply"
+        result.append({"id": str(supply_id), "item": supply, "supply": true, "count": amount})
+    return result
+
+
+func _refresh_inventory_grid() -> void:
+    if not inventory_grid or not inventory_count_label:
+        return
+    for child in inventory_grid.get_children():
+        child.queue_free()
+    var entries := _inventory_entries()
+    var visible_count := 0
+    var search_text := inventory_search.text.strip_edges().to_lower() if inventory_search else ""
+    var selection_visible := false
+    for entry in entries:
+        var item: Dictionary = entry.get("item", {})
+        var reference := str(entry.get("id", ""))
+        var is_supply := bool(entry.get("supply", false))
+        var category := "supplies" if is_supply else _inventory_kind(item)
+        if inventory_category != "all" and category != inventory_category:
+            continue
+        var name := str(item.get("name", reference))
+        if not search_text.is_empty() and not name.to_lower().contains(search_text):
+            continue
+        visible_count += 1
+        if reference == inventory_selected_id and is_supply == inventory_selected_is_supply:
+            selection_visible = true
+        var rarity := str(item.get("rarity", "common")).to_lower()
+        var border := _inventory_rarity_color(rarity)
+        var tile_style := StyleBoxFlat.new()
+        tile_style.bg_color = Color(0.075, 0.085, 0.09)
+        tile_style.border_color = border
+        if reference == inventory_selected_id and is_supply == inventory_selected_is_supply:
+            tile_style.border_color = Color(0.96, 0.76, 0.39)
+        tile_style.set_border_width_all(2)
+        tile_style.set_corner_radius_all(5)
+        var hover_style := tile_style.duplicate() as StyleBoxFlat
+        hover_style.bg_color = Color(0.14, 0.15, 0.14)
+        hover_style.border_color = Color(0.90, 0.73, 0.43)
+        var card := Button.new()
+        card.custom_minimum_size = Vector2(70, 86)
+        card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        card.alignment = HORIZONTAL_ALIGNMENT_CENTER
+        card.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        card.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+        card.expand_icon = true
+        card.icon_max_width = 40
+        var icon_path := str(item.get("icon_path", ""))
+        if not icon_path.is_empty() and ResourceLoader.exists(icon_path):
+            card.icon = load(icon_path) as Texture2D
+        var short_name := name
+        if short_name.length() > 13:
+            short_name = short_name.substr(0, 12) + "…"
+        var quality := " ×%d" % int(entry.get("count", 1)) if is_supply else ""
+        var rarity_label := str(item.get("rarity", "GEAR")).to_upper()
+        card.text = "%s\n%s%s" % [short_name, rarity_label, quality]
+        card.add_theme_font_size_override("font_size", 10)
+        card.add_theme_color_override("font_color", Color(0.88, 0.88, 0.83))
+        card.add_theme_stylebox_override("normal", tile_style)
+        card.add_theme_stylebox_override("hover", hover_style)
+        card.add_theme_stylebox_override("pressed", hover_style)
+        card.tooltip_text = "%s • %s" % [name, category.capitalize()]
+        card.pressed.connect(_select_inventory_item.bind(reference, is_supply))
+        inventory_grid.add_child(card)
+    inventory_count_label.text = "%d / %d" % [visible_count, entries.size()]
+    if not selection_visible:
+        inventory_selected_id = ""
+        inventory_selected_is_supply = false
+        inventory_detail.text = "Select an item to inspect its stats and equip it."
+        inventory_action_button.text = "SELECT AN ITEM"
+        inventory_action_button.disabled = true
+    else:
+        _show_inventory_selection()
+    if visible_count == 0:
+        var empty_label := Label.new()
+        empty_label.text = "Nothing in this section yet. Explore, win encounters, and open vaults to find more gear."
+        empty_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        empty_label.modulate = Color(0.68, 0.75, 0.73)
+        inventory_grid.add_child(empty_label)
+
+
+func _inventory_rarity_color(rarity: String) -> Color:
+    match rarity:
+        "tempered":
+            return Color(0.68, 0.75, 0.78)
+        "uncommon":
+            return Color(0.30, 0.73, 0.48)
+        "rare":
+            return Color(0.32, 0.55, 0.98)
+        "epic":
+            return Color(0.72, 0.42, 0.96)
+        "legendary":
+            return Color(0.96, 0.66, 0.20)
+        _:
+            return Color(0.44, 0.49, 0.48)
+
+
+func _select_inventory_item(reference: String, is_supply: bool) -> void:
+    inventory_selected_id = reference
+    inventory_selected_is_supply = is_supply
+    _show_inventory_selection()
+
+
+func _show_inventory_selection() -> void:
+    if inventory_selected_id.is_empty():
+        return
+    var item: Dictionary = {}
+    if inventory_selected_is_supply:
+        item = HeroEquipmentService.consumables().get(inventory_selected_id, {}).duplicate(true)
+    else:
+        item = HeroEquipmentService.item_for(inventory_selected_id)
+    if item.is_empty():
+        return
+    var name := str(item.get("name", inventory_selected_id))
+    if inventory_selected_is_supply:
+        var amount := HeroEquipmentService.supply_count(inventory_selected_id)
+        inventory_detail.text = "%s  ×%d\n%s" % [name, amount, str(item.get("description", "Field supply"))]
+        var usable := (item.get("use", []) as Array).has("map") and equipment_view_hero_id == selected_hero_id
+        inventory_action_button.text = "USE SUPPLY"
+        inventory_action_button.disabled = not usable
+        return
+    var slot := str(item.get("slot", "gear")).replace("_", " ").capitalize()
+    var rarity := str(item.get("rarity", "Common")).capitalize()
+    var stats: Dictionary = item.get("stats", {})
+    var stat_text := PackedStringArray()
+    for stat in stats:
+        stat_text.append("%s +%s" % [str(stat).to_upper(), str(stats[stat])])
+    var tags := PackedStringArray()
+    for tag in item.get("synergy_tags", item.get("tags", [])):
+        tags.append(str(tag))
+    var detail := "%s  •  %s" % [name, rarity]
+    if not stat_text.is_empty():
+        detail += "\n" + ", ".join(stat_text)
+    detail += "\n%s%s" % [slot, "  •  " + ", ".join(tags) if not tags.is_empty() else ""]
+    var hero_tags: Array = HeroEquipmentService.catalog().get("hero_tags", {}).get(equipment_view_hero_id, [])
+    var active_synergies := PackedStringArray()
+    for tag in item.get("synergy_tags", []):
+        if hero_tags.has(tag):
+            active_synergies.append(str(tag))
+    if not active_synergies.is_empty():
+        detail += "\nActive synergy: " + ", ".join(active_synergies)
+    if str(item.get("signature_hero", "")) == equipment_view_hero_id:
+        detail += "\nSignature synergy active"
+    if int(item.get("quality", 0)) > 0:
+        detail += "  •  Quality %d" % int(item.get("quality", 0))
+    inventory_detail.text = detail
+    var equipped_slot := _equipped_slot_for(inventory_selected_id)
+    inventory_action_button.text = "UNEQUIP %s" % equipped_slot.replace("_", " ").to_upper() if equipped_slot != "" else "EQUIP"
+    inventory_action_button.disabled = not unlocked_heroes.has(equipment_view_hero_id)
+
+
+func _equipped_slot_for(reference: String) -> String:
+    var equipped := HeroEquipmentService.loadout(equipment_view_hero_id)
+    for slot in HeroEquipmentService.SLOTS:
+        if str(equipped.get(slot, "")) == reference:
+            return str(slot)
+    return ""
+
+
+func _inventory_primary_action() -> void:
+    if inventory_selected_id.is_empty():
+        return
+    if inventory_selected_is_supply:
+        _use_map_supply(inventory_selected_id)
+        return
+    if not unlocked_heroes.has(equipment_view_hero_id):
+        return
+    var equipped_slot := _equipped_slot_for(inventory_selected_id)
+    var success := false
+    if equipped_slot != "":
+        success = HeroEquipmentService.equip(equipment_view_hero_id, equipped_slot, "", owned_collectibles)
+    else:
+        var item := HeroEquipmentService.item_for(inventory_selected_id)
+        var slot := str(item.get("slot", ""))
+        if HeroEquipmentService._can_use_slot(equipment_view_hero_id, slot, item):
+            success = HeroEquipmentService.equip(equipment_view_hero_id, slot, inventory_selected_id, owned_collectibles)
+    if success:
+        _refresh_equipment_panel()
+        if equipment_view_hero_id == selected_hero_id:
+            _refresh_game_hud()
 
 func _use_map_supply(supply_id: String) -> void:
     var max_hp := int(HeroEquipmentService.effective_stats(selected_hero_id, HeroProgressionService.ensure_profile(selected_hero_id).get("stats", {})).get("hp", 100))
