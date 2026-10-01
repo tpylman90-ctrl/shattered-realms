@@ -3056,6 +3056,7 @@ func _start_standard_battle(encounter_id: String, data: Dictionary) -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("battle", "hero_id", selected_hero_id)
     cfg.set_value("battle", "encounter_id", encounter_id)
+    cfg.set_value("battle", "region_id", "ashen_wastes")
     cfg.set_value("battle", "enemy_name", str(data.get("name", "Enemy")))
     cfg.set_value("battle", "enemy_family", str(data.get("battle_family", "skirmisher")))
     cfg.set_value("battle", "hero_hp", hero_health)
@@ -3091,10 +3092,15 @@ func _consume_battle_result() -> void:
     var loot_name := ""
     if victory and encounter_id != "" and encounter_id != "__battle_test__":
         completed_encounters[encounter_id] = true
+        var region_id := str(cfg.get_value("battle", "region_id", "ashen_wastes"))
         var gear_drop := HeroEquipmentService.claim_equipment_reward("battle", encounter_id)
         if not gear_drop.is_empty():
             loot_name = "%s (%s, quality %d)" % [str(gear_drop.get("name", "")), str(gear_drop.get("rarity", "")).capitalize(), int(gear_drop.get("quality", 0))]
-        var supply_id := HeroEquipmentService.claim_supply_drop("battle", encounter_id, "ashen_wastes")
+        var regional_drop := HeroEquipmentService.claim_region_drop("battle", encounter_id, region_id, 35, 12)
+        if not regional_drop.is_empty():
+            var regional_name := "%s (%s, quality %d)" % [str(regional_drop.get("name", "")), str(regional_drop.get("rarity", "")).capitalize(), int(regional_drop.get("quality", 0))]
+            loot_name += "%s%s" % [" • " if loot_name != "" else "", regional_name]
+        var supply_id := HeroEquipmentService.claim_supply_drop("battle", encounter_id, region_id)
         if supply_id != "":
             loot_name += "%s%s" % [" • " if loot_name != "" else "", str(HeroEquipmentService.consumables()[supply_id].get("name", supply_id))]
     elif not victory and hero_health <= 0:
@@ -4088,6 +4094,11 @@ func _on_poi_action() -> void:
             var loot_name := "%s (%s, quality %d)" % [str(gear_drop.get("name", "")), str(gear_drop.get("rarity", "")).capitalize(), int(gear_drop.get("quality", 0))]
             poi_body.text += "\n\nFound: %s. Equip it in Loadout." % loot_name
             event_log_label.text += " • Found: %s" % loot_name
+        var regional_drop := HeroEquipmentService.claim_region_drop("poi", selected_poi, "ashen_wastes", 55, 12)
+        if not regional_drop.is_empty():
+            var regional_name := "%s (%s, quality %d)" % [str(regional_drop.get("name", "")), str(regional_drop.get("rarity", "")).capitalize(), int(regional_drop.get("quality", 0))]
+            poi_body.text += "\nA hidden regional cache held %s. Equip it in the Armory." % regional_name
+            event_log_label.text += " • Cache: %s" % regional_name
         var supply_id := HeroEquipmentService.claim_supply_drop("poi", selected_poi, "ashen_wastes")
         if supply_id != "":
             poi_body.text += "\nSupplies: %s." % str(HeroEquipmentService.consumables()[supply_id].get("name", supply_id))

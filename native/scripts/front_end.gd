@@ -222,13 +222,12 @@ func _show_region_armory() -> void:
     var pool := HeroEquipmentService.region_pool(current_region)
     if pool.is_empty():
         return
-    var lines: PackedStringArray = ["[b]%s[/b]" % str(territories.get(current_region, {}).get("name", current_region)), ""]
-    for template_id in pool.get("common", []):
-        var item: Dictionary = HeroEquipmentService.items().get(str(template_id), {})
-        lines.append("%s • %s" % [str(item.get("family", item.get("slot", "Gear"))).capitalize(), str(item.get("name", template_id))])
-    var signature: Dictionary = HeroEquipmentService.items().get(str(pool.get("signature", "")), {})
-    lines.append("\n[b]Vault signature[/b] • %s" % str(signature.get("name", "Unknown")))
-    lines.append("Every drop rolls rarity, quality and sometimes an affix. Revisit a vault to seek a better version.")
+    var region_name := str(territories.get(current_region, {}).get("name", current_region))
+    var common: Array = pool.get("common", [])
+    var lines: PackedStringArray = ["[b]%s • REGIONAL ARMORY[/b]" % region_name, ""]
+    lines.append("The armory records %d common gear designs and a sealed signature piece." % common.size())
+    lines.append("Explore, win encounters, secure strategic sites, and raid vaults to discover equipment.")
+    lines.append("Each found copy rolls its own rarity, quality, and possible affix.")
     if current_region != "ashen_wastes":
         lines.append("\nThis region's campaign board is in development; its drops are not available yet.")
     armory_text.text = "\n".join(lines)

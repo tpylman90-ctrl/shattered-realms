@@ -152,6 +152,41 @@ static func _claim_drop(source: String, template_id: String) -> Dictionary:
 static func claim_equipment_reward(category: String, source_id: String) -> Dictionary:
     return _claim_drop("%s:%s" % [category, source_id], reward_for(category, source_id))
 
+static func claim_region_drop(category: String, source_id: String, region_id: String, drop_chance: int = 35, signature_chance: int = 12) -> Dictionary:
+    var pool := region_pool(region_id)
+    var common: Array = pool.get("common", [])
+    var signature := str(pool.get("signature", ""))
+    if pool.is_empty() or (common.is_empty() and (signature.is_empty() or not items().has(signature))):
+        return {}
+
+    var source := "region:%s:%s:%s" % [region_id, category, source_id]
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var claimed: Array = cfg.get_value("gear", "claimed_drops", [])
+    if claimed.has(source):
+        return {}
+    claimed.append(source)
+
+    if randi_range(1, 100) > clampi(drop_chance, 0, 100):
+        cfg.set_value("gear", "claimed_drops", claimed)
+        cfg.save(SAVE_PATH)
+        return {}
+
+    var template_id := signature if not signature.is_empty() and randi_range(1, 100) <= clampi(signature_chance, 0, 100) else ""
+    if template_id.is_empty() and not common.is_empty():
+        template_id = str(common.pick_random())
+    if not items().has(template_id):
+        return {}
+
+    var instance := _create_instance(cfg, template_id, source)
+    if instance.is_empty():
+        return {}
+    cfg.set_value("gear", "claimed_drops", claimed)
+    if cfg.save(SAVE_PATH) != OK:
+        return {}
+    return instance
+
+
 static func begin_vault_raid() -> int:
     var cfg := ConfigFile.new()
     cfg.load(SAVE_PATH)
