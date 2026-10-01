@@ -46,7 +46,7 @@ jobs:
       - name: Verify required game assets exist
         run: |
           test -f native/assets/3d/game-ready/ashenreach-hex-board/ashenreach_hex_board.glb
-          test -f native/assets/3d/game-ready/ravenwood-board/ravenwood_board_mobile.glb
+          for part in {00..07}; do test -f "native/assets/3d/game-ready/ravenwood-board/ravenwood_section_${part}.glb"; done
           test -f native/assets/3d/game-ready/ravenwood-board/generated/ravenwood_nav_surface.glb
           python3 - <<'PY'
           import json

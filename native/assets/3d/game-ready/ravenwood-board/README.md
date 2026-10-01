@@ -1,9 +1,7 @@
 # Ravenwood board
 
-`ravenwood_board_mobile.glb` is the optimized visual board (260,000 triangles, 1,024 px embedded texture atlases). Scale it by `(38,38,38)`.
+The preview scene is accessible from Ravenwood on the world map. Orbit with a drag, pinch or wheel to zoom, and toggle the movement overlay. The campaign, encounters, and city/dungeon entrances remain in development.
 
-`generated/ravenwood_nav_surface.glb` is a separate, untextured movement/grounding model with 2,330 hex tiles in the same local coordinates. Keep it hidden during normal play. `native/data/generated/ravenwood_nav_grid.json` gives world positions, hazards, and symmetric `blocked_edges` for neighboring hexes whose height differs by over 0.85 units. The GLB alone does not enforce path rules.
+The eight `ravenwood_section_*.glb` files contain **all 1,915,206 source triangles and original UV coordinates**. They split the mesh at triangle boundaries, duplicating only shared boundary vertices. The 2048px atlas textures are JPEG encoded to keep each section importable. This fixes the cracked terrain caused by the previous 260k-triangle simplification and nearest-neighbor UV remapping. Do not use `ravenwood_board_mobile.glb` for rendering.
 
-The world map opens `RavenwoodPreview.tscn` to inspect the board and toggle the movement layer. Campaign gameplay is not yet implemented.
-
-Regenerate the visual asset with `python native/tools/prepare_ravenwood_board.py path/to/original.glb` (numpy, scipy, trimesh, fast-simplification, pillow). Regenerate nav with `python native/tools/generate_ravenwood_nav_surface.py` (also rtree). The original 69 MB GLB remains outside the repository.
+Regenerate the board with `python native/tools/prepare_ravenwood_board.py path/to/source.glb` (`numpy`, `trimesh`, `pillow`, `pygltflib`). The source file stays outside the repository. The movement layer is in `generated/ravenwood_nav_surface.glb` and `native/data/generated/ravenwood_nav_grid.json`; regenerate it with `python native/tools/generate_ravenwood_nav_surface.py`.
