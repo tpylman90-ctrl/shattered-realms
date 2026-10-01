@@ -1967,8 +1967,7 @@
         "power": 2
       },
       "hands": 2,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_vanguard.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_vanguard.webp"
     },
     "ravenwood_guardian": {
       "name": "Blackthorn Bulwark",
@@ -1990,8 +1989,7 @@
         "defense": 2
       },
       "hands": 1,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_guardian.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_guardian.webp"
     },
     "ravenwood_assassin": {
       "name": "Blackthorn Dirk",
@@ -2014,8 +2012,7 @@
         "power": 2
       },
       "hands": 1,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_assassin.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_assassin.webp"
     },
     "ravenwood_ranger": {
       "name": "Blackthorn Longbow",
@@ -2038,8 +2035,7 @@
         "power": 2
       },
       "hands": 2,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_ranger.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_ranger.webp"
     },
     "ravenwood_sorcerer": {
       "name": "Blackthorn Runestaff",
@@ -2061,8 +2057,7 @@
         "magic": 2
       },
       "hands": 2,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_sorcerer.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_sorcerer.webp"
     },
     "ravenwood_shaman": {
       "name": "Blackthorn Totem",
@@ -2085,8 +2080,7 @@
         "magic": 2
       },
       "hands": 1,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_shaman.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_shaman.webp"
     },
     "ravenwood_commander": {
       "name": "Blackthorn Spear",
@@ -2109,8 +2103,7 @@
         "power": 2
       },
       "hands": 1,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_commander.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_commander.webp"
     },
     "ravenwood_dervish": {
       "name": "Blackthorn Scimitar",
@@ -2133,8 +2126,7 @@
         "power": 2
       },
       "hands": 1,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_dervish.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_dervish.webp"
     },
     "ravenwood_helm": {
       "name": "Blackthorn Helm",
@@ -2154,8 +2146,7 @@
         "hp": 5
       },
       "armor_type": "medium",
-      "icon_path": "res://assets/items/ravenwood/ravenwood_helm.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_helm.webp"
     },
     "ravenwood_mail": {
       "name": "Blackthorn Mail",
@@ -2175,8 +2166,7 @@
         "hp": 5
       },
       "armor_type": "heavy",
-      "icon_path": "res://assets/items/ravenwood/ravenwood_mail.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_mail.webp"
     },
     "ravenwood_bracers": {
       "name": "Blackthorn Bracers",
@@ -2196,8 +2186,7 @@
         "resistance": 2
       },
       "armor_type": "medium",
-      "icon_path": "res://assets/items/ravenwood/ravenwood_bracers.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_bracers.webp"
     },
     "ravenwood_greaves": {
       "name": "Blackthorn Greaves",
@@ -2217,8 +2206,7 @@
         "hp": 5
       },
       "armor_type": "heavy",
-      "icon_path": "res://assets/items/ravenwood/ravenwood_greaves.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_greaves.webp"
     },
     "ravenwood_boots": {
       "name": "Blackthorn Boots",
@@ -2238,8 +2226,7 @@
         "resistance": 2
       },
       "armor_type": "light",
-      "icon_path": "res://assets/items/ravenwood/ravenwood_boots.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_boots.webp"
     },
     "ravenwood_cloak": {
       "name": "Blackthorn Mantle",
@@ -2259,8 +2246,7 @@
         "resistance": 2
       },
       "armor_type": "light",
-      "icon_path": "res://assets/items/ravenwood/ravenwood_cloak.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_cloak.webp"
     },
     "ravenwood_sigil": {
       "name": "Blackthorn Sigil",
@@ -2280,8 +2266,7 @@
         "resistance": 2
       },
       "armor_type": "relic",
-      "icon_path": "res://assets/items/ravenwood/ravenwood_sigil.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_sigil.webp"
     },
     "ravenwood_signature": {
       "name": "Nightbloom",
@@ -2308,8 +2293,7 @@
         "magic": 4
       },
       "hands": 2,
-      "icon_path": "res://assets/items/ravenwood/ravenwood_signature.webp",
-      "starter": true
+      "icon_path": "res://assets/items/ravenwood/ravenwood_signature.webp"
     },
     "frostpeaks_vanguard": {
       "name": "Rimeforged Greatblade",
