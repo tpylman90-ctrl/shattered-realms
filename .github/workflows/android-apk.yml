@@ -46,10 +46,21 @@ jobs:
       - name: Verify required game assets exist
         run: |
           test -f native/assets/3d/game-ready/ashenreach-hex-board/ashenreach_hex_board.glb
-          for part in {00..07}; do test -f "native/assets/3d/game-ready/ravenwood-board/ravenwood_section_${part}.glb"; done
+          for part in {00..19}; do test -f "native/assets/3d/game-ready/ravenwood-board/ravenwood_section_${part}.glb"; done
+          for map in albedo normal metal_rough; do test -f "native/assets/3d/game-ready/ravenwood-board/ravenwood_${map}.jpg"; done
           test -f native/assets/3d/game-ready/ravenwood-board/generated/ravenwood_nav_surface.glb
           python3 - <<'PY'
-          import json
+          import json, pathlib, struct
+          board=pathlib.Path('native/assets/3d/game-ready/ravenwood-board')
+          sections=list(board.glob('ravenwood_section_*.glb'))
+          assert len(sections)==20
+          for section in sections:
+              data=section.read_bytes()
+              assert len(data)<2*1024*1024, section
+              json_length=struct.unpack_from('<I',data,12)[0]
+              scene=json.loads(data[20:20+json_length])
+              assert not scene.get('images') and not scene.get('textures'), section
+              assert scene['accessors'][scene['meshes'][0]['primitives'][0]['indices']]['componentType']==5123
           grid=json.load(open('native/data/generated/ravenwood_nav_grid.json'))
           assert grid['tile_count']==len(grid['tiles']) and grid['tile_count']>2000
           for key,tile in grid['tiles'].items():
