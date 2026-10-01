@@ -1,7 +1,14 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/ravenwood_preview.gd" id="1_script"]
-[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_board_mobile.glb" id="2_terrain"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_00.glb" id="2_section_00"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_01.glb" id="2_section_01"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_02.glb" id="2_section_02"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_03.glb" id="2_section_03"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_04.glb" id="2_section_04"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_05.glb" id="2_section_05"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_06.glb" id="2_section_06"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_07.glb" id="2_section_07"]
 [ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/generated/ravenwood_nav_surface.glb" id="3_nav"]
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -22,7 +29,14 @@ light_energy = 1.5
 shadow_enabled = true
 [node name="TerrainRoot" type="Node3D" parent="."]
 scale = Vector3(38, 38, 38)
-[node name="Terrain" parent="TerrainRoot" instance=ExtResource("2_terrain")]
+[node name="Terrain00" parent="TerrainRoot" instance=ExtResource("2_section_00")]
+[node name="Terrain01" parent="TerrainRoot" instance=ExtResource("2_section_01")]
+[node name="Terrain02" parent="TerrainRoot" instance=ExtResource("2_section_02")]
+[node name="Terrain03" parent="TerrainRoot" instance=ExtResource("2_section_03")]
+[node name="Terrain04" parent="TerrainRoot" instance=ExtResource("2_section_04")]
+[node name="Terrain05" parent="TerrainRoot" instance=ExtResource("2_section_05")]
+[node name="Terrain06" parent="TerrainRoot" instance=ExtResource("2_section_06")]
+[node name="Terrain07" parent="TerrainRoot" instance=ExtResource("2_section_07")]
 [node name="MovementRoot" type="Node3D" parent="."]
 visible = false
 scale = Vector3(38, 38, 38)
