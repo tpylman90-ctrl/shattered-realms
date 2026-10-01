@@ -14,6 +14,7 @@ var hero_data: Dictionary = {}
 
 var hero_id := "ignis"
 var encounter_id := ""
+var region_id := "ashen_wastes"
 var enemy_name := "Enemy"
 var enemy_family := "skirmisher"
 var hero_name := "Hero"
@@ -150,6 +151,7 @@ func _load_context() -> void:
 
     hero_id = str(cfg.get_value("battle", "hero_id", "ignis"))
     encounter_id = str(cfg.get_value("battle", "encounter_id", ""))
+    region_id = str(cfg.get_value("battle", "region_id", "ashen_wastes"))
     enemy_name = str(cfg.get_value("battle", "enemy_name", "Enemy"))
     enemy_family = str(cfg.get_value("battle", "enemy_family", "skirmisher"))
     hero_hp = int(cfg.get_value("battle", "hero_hp", 100))
@@ -1469,6 +1471,7 @@ func _finish_battle(victory: bool) -> void:
 
     var cfg := ConfigFile.new()
     cfg.set_value("battle", "encounter_id", encounter_id)
+    cfg.set_value("battle", "region_id", region_id)
     cfg.set_value("battle", "victory", victory)
     cfg.set_value("battle", "hero_hp", hero_hp)
     cfg.set_value("battle", "hero_xp", hero_xp)
