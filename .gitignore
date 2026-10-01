@@ -17,7 +17,8 @@ Thumbs.db
 native/assets/3d/game-ready/ashenreach-hex-board/generated/
 
 # Build-time generated navigation data
-native/data/generated/
+native/data/generated/*
+!native/data/generated/ravenwood_nav_grid.json
 
 # Build-time generated battle backdrops
 native/assets/battle/generated/
