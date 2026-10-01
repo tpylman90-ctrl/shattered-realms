@@ -46,6 +46,17 @@ jobs:
       - name: Verify required game assets exist
         run: |
           test -f native/assets/3d/game-ready/ashenreach-hex-board/ashenreach_hex_board.glb
+          test -f native/assets/3d/game-ready/ravenwood-board/ravenwood_board_mobile.glb
+          test -f native/assets/3d/game-ready/ravenwood-board/generated/ravenwood_nav_surface.glb
+          python3 - <<'PY'
+          import json
+          grid=json.load(open('native/data/generated/ravenwood_nav_grid.json'))
+          assert grid['tile_count']==len(grid['tiles']) and grid['tile_count']>2000
+          for key,tile in grid['tiles'].items():
+              for other in tile['blocked_edges']:
+                  assert key in grid['tiles'][other]['blocked_edges']
+          print('[ravenwood] movement grid verified:',grid['tile_count'])
+          PY
 
       - name: Generate playable hero meshes
         shell: bash
