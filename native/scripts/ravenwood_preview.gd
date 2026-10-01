@@ -2,6 +2,7 @@ extends Node3D
 
 @onready var camera: Camera3D = $Camera3D
 @onready var movement_root: Node3D = $MovementRoot
+@onready var terrain_root: Node3D = $TerrainRoot
 @onready var toggle_button: Button = $UI/TopBar/Row/MovementButton
 var orbit_angle := 0.0
 var distance := 36.0
@@ -11,6 +12,19 @@ var last_pinch := 0.0
 const TARGET := Vector3(0.0, 4.5, 0.0)
 
 func _ready() -> void:
+    var terrain_material := StandardMaterial3D.new()
+    terrain_material.albedo_texture = preload("res://assets/3d/game-ready/ravenwood-board/ravenwood_albedo.jpg")
+    terrain_material.normal_enabled = true
+    terrain_material.normal_texture = preload("res://assets/3d/game-ready/ravenwood-board/ravenwood_normal.jpg")
+    var metal_rough := preload("res://assets/3d/game-ready/ravenwood-board/ravenwood_metal_rough.jpg")
+    terrain_material.metallic = 1.0
+    terrain_material.metallic_texture = metal_rough
+    terrain_material.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
+    terrain_material.roughness = 1.0
+    terrain_material.roughness_texture = metal_rough
+    terrain_material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GREEN
+    for mesh in terrain_root.find_children("*", "MeshInstance3D", true, false):
+        (mesh as MeshInstance3D).material_override = terrain_material
     var overlay := StandardMaterial3D.new()
     overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
