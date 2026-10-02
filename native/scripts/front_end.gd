@@ -23,6 +23,14 @@ var armory_popup: PopupPanel
 var armory_text: RichTextLabel
 var load_bar: ProgressBar
 var load_caption: Label
+var character_page: Control
+var character_name_input: LineEdit
+var character_gender: OptionButton
+var character_skin_tone: OptionButton
+var character_hair_style: OptionButton
+var character_hair_color: OptionButton
+var character_discipline: OptionButton
+var character_status: Label
 var loading_path := ""
 var load_time := 0.0
 
@@ -33,6 +41,7 @@ func _ready() -> void:
         if parsed is Dictionary:
             territories = parsed.get("territories", {})
     _build_title()
+    _build_character_selection()
     _build_map()
     _build_loading()
     _show_page(title_page)
@@ -72,6 +81,7 @@ func _fill_panel() -> Control:
 
 func _show_page(page: Control) -> void:
     title_page.visible = page == title_page
+    character_page.visible = page == character_page
     map_page.visible = page == map_page
     load_page.visible = page == load_page
 
@@ -122,9 +132,148 @@ func _build_title() -> void:
     margin.add_theme_constant_override("margin_top", 10)
     margin.add_theme_constant_override("margin_bottom", 10)
     bottom.add_child(margin)
-    var button := _button("CONTINUE CAMPAIGN" if FileAccess.file_exists("user://ashenreach_save.cfg") else "ENTER THE REALMS", _open_map)
+    var button_label := "CONTINUE CAMPAIGN" if FileAccess.file_exists("user://chosen_hero.cfg") else "CREATE YOUR HERO"
+    var button := _button(button_label, _start_or_continue)
     button.add_theme_font_size_override("font_size", 21)
     margin.add_child(button)
+
+func _start_or_continue() -> void:
+    if FileAccess.file_exists("user://chosen_hero.cfg"):
+        _open_map()
+    else:
+        _show_page(character_page)
+
+func _build_character_selection() -> void:
+    character_page = _fill_panel()
+    var backdrop := TextureRect.new()
+    backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    backdrop.texture = load("res://assets/ui/front_end/title_heroes.jpg")
+    backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    character_page.add_child(backdrop)
+    var shade := ColorRect.new()
+    shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    shade.color = Color(0.015, 0.025, 0.035, 0.78)
+    character_page.add_child(shade)
+
+    var center := CenterContainer.new()
+    center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    character_page.add_child(center)
+    var card := PanelContainer.new()
+    card.custom_minimum_size = Vector2(760, 0)
+    card.add_theme_stylebox_override("panel", _style(Color(0.035, 0.055, 0.065, 0.97), Color("c69a61")))
+    center.add_child(card)
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 28)
+    margin.add_theme_constant_override("margin_right", 28)
+    margin.add_theme_constant_override("margin_top", 20)
+    margin.add_theme_constant_override("margin_bottom", 20)
+    card.add_child(margin)
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 12)
+    margin.add_child(column)
+
+    var title := _label("CREATE YOUR CHOSEN HERO", 29, Color("d6a865"))
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    column.add_child(title)
+    var subtitle := _label("Your journey begins in Ravenford. Shape the hero who will reunite the shattered realm.", 15, Color("c4d0ce"))
+    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(subtitle)
+
+    var name_label := _label("HERO NAME", 13, Color("d6a865"))
+    column.add_child(name_label)
+    character_name_input = LineEdit.new()
+    character_name_input.placeholder_text = "Enter a name"
+    character_name_input.max_length = 24
+    character_name_input.custom_minimum_size.y = 42
+    character_name_input.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
+    column.add_child(character_name_input)
+
+    var identity_grid := GridContainer.new()
+    identity_grid.columns = 2
+    identity_grid.add_theme_constant_override("h_separation", 16)
+    identity_grid.add_theme_constant_override("v_separation", 6)
+    column.add_child(identity_grid)
+    _add_character_option(identity_grid, "BODY", ["Male", "Female"], "gender")
+    _add_character_option(identity_grid, "SKIN TONE", ["Light", "Olive", "Brown", "Deep"], "skin")
+    _add_character_option(identity_grid, "HAIR STYLE", ["Short", "Long", "Braided", "Cropped"], "hair_style")
+    _add_character_option(identity_grid, "HAIR COLOR", ["Black", "Brown", "Auburn", "Silver"], "hair_color")
+
+    var discipline_label := _label("STARTING DISCIPLINE", 13, Color("d6a865"))
+    column.add_child(discipline_label)
+    character_discipline = OptionButton.new()
+    character_discipline.add_item("Vanguard  —  sturdy front-line fighter")
+    character_discipline.add_item("Wayfinder  —  quick, precise explorer")
+    character_discipline.add_item("Arcanist  —  adaptable spell wielder")
+    character_discipline.custom_minimum_size.y = 42
+    character_discipline.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
+    column.add_child(character_discipline)
+
+    var rules := _label("This is your own hero, separate from the 12 recruitable champions. Your focus guides your beginning; it does not lock you out of their skills.", 13, Color("aebdbb"))
+    rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(rules)
+    character_status = _label("", 13, Color("e6a078"))
+    character_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    column.add_child(character_status)
+
+    var actions := HBoxContainer.new()
+    actions.add_theme_constant_override("separation", 12)
+    column.add_child(actions)
+    var back := _button("BACK", func(): _show_page(title_page))
+    back.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    actions.add_child(back)
+    var begin := _button("BEGIN THE JOURNEY", _confirm_chosen_hero)
+    begin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    begin.add_theme_stylebox_override("normal", _style(Color("604629"), Color("e2b66a")))
+    actions.add_child(begin)
+
+func _add_character_option(parent: GridContainer, label_text: String, options: Array, option_kind: String) -> void:
+    var field := VBoxContainer.new()
+    field.add_theme_constant_override("separation", 4)
+    parent.add_child(field)
+    var label := _label(label_text, 12, Color("d6a865"))
+    field.add_child(label)
+    var picker := OptionButton.new()
+    for option in options:
+        picker.add_item(str(option))
+    picker.custom_minimum_size.y = 38
+    picker.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
+    field.add_child(picker)
+    match option_kind:
+        "gender":
+            character_gender = picker
+        "skin":
+            character_skin_tone = picker
+        "hair_style":
+            character_hair_style = picker
+        "hair_color":
+            character_hair_color = picker
+
+func _confirm_chosen_hero() -> void:
+    var hero_name := character_name_input.text.strip_edges()
+    if hero_name.is_empty():
+        character_status.text = "Choose a name for your hero to continue."
+        return
+    var profile := {
+        "name": hero_name,
+        "gender": character_gender.get_item_text(character_gender.selected),
+        "skin_tone": character_skin_tone.get_item_text(character_skin_tone.selected),
+        "hair_style": character_hair_style.get_item_text(character_hair_style.selected),
+        "hair_color": character_hair_color.get_item_text(character_hair_color.selected),
+        "starting_discipline": character_discipline.get_item_text(character_discipline.selected).split("  —  ")[0],
+        "is_chosen_hero": true
+    }
+    var cfg := ConfigFile.new()
+    for key in profile:
+        cfg.set_value("chosen_hero", key, profile[key])
+    var result := cfg.save("user://chosen_hero.cfg")
+    if result != OK:
+        character_status.text = "Could not save your hero. Please try again."
+        return
+    get_tree().set_meta("chosen_hero_profile", profile)
+    character_status.text = ""
+    _open_map()
 
 func _build_map() -> void:
     map_page = _fill_panel()
@@ -266,6 +415,12 @@ func _enter_region() -> void:
         scene_path = IRON_PLAINS_PREVIEW_SCENE
     else:
         scene_path = TERRITORY_PREVIEW_SCENE
+    var profile_cfg := ConfigFile.new()
+    var profile: Dictionary = {}
+    if profile_cfg.load("user://chosen_hero.cfg") == OK:
+        for key in profile_cfg.get_section_keys("chosen_hero"):
+            profile[key] = profile_cfg.get_value("chosen_hero", key)
+        get_tree().set_meta("chosen_hero_profile", profile)
     get_tree().set_meta("preview_territory", current_region)
     _show_page(load_page)
     load_time = 0.0
