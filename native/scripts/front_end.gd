@@ -203,14 +203,21 @@ func _build_character_selection() -> void:
     var discipline_label := _label("STARTING DISCIPLINE", 13, Color("d6a865"))
     column.add_child(discipline_label)
     character_discipline = OptionButton.new()
-    character_discipline.add_item("Vanguard  —  sturdy front-line fighter")
-    character_discipline.add_item("Wayfinder  —  quick, precise explorer")
-    character_discipline.add_item("Arcanist  —  adaptable spell wielder")
+    character_discipline.add_item("Fracture Adept  —  shift foes and reshape broken ground")
+    character_discipline.set_item_metadata(0, "fracture_adept")
+    character_discipline.add_item("Relicwright  —  deploy devices, traps, and crafted gear")
+    character_discipline.set_item_metadata(1, "relicwright")
+    character_discipline.add_item("Wayfinder  —  scout routes and exploit the terrain")
+    character_discipline.set_item_metadata(2, "wayfinder")
+    character_discipline.add_item("Lifebinder  —  restore health and ward allies")
+    character_discipline.set_item_metadata(3, "lifebinder")
+    character_discipline.add_item("Banneret  —  rally troops and coordinate formations")
+    character_discipline.set_item_metadata(4, "banneret")
     character_discipline.custom_minimum_size.y = 42
     character_discipline.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
     column.add_child(character_discipline)
 
-    var rules := _label("This is your own hero, separate from the 12 recruitable champions. Your focus guides your beginning; it does not lock you out of their skills.", 13, Color("aebdbb"))
+    var rules := _label("Your chosen discipline is your only learnable path at first. Reunite a champion's land and recover that hero's chest piece to unlock their skill path for your Chosen Hero. Skill points remain limited.", 13, Color("aebdbb"))
     rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(rules)
     character_status = _label("", 13, Color("e6a078"))
@@ -262,6 +269,8 @@ func _confirm_chosen_hero() -> void:
         "hair_style": character_hair_style.get_item_text(character_hair_style.selected),
         "hair_color": character_hair_color.get_item_text(character_hair_color.selected),
         "starting_discipline": character_discipline.get_item_text(character_discipline.selected).split("  —  ")[0],
+        "starting_discipline_id": str(character_discipline.get_item_metadata(character_discipline.selected)),
+        "unlocked_discipline_paths": [str(character_discipline.get_item_metadata(character_discipline.selected))],
         "is_chosen_hero": true
     }
     var cfg := ConfigFile.new()
