@@ -71,7 +71,8 @@
       ],
       "stats": {
         "power": 2
-      }
+      },
+      "icon_path": "res://assets/items/ravenwood/ravenwood_vanguard.webp"
     },
     "field_shield": {
       "name": "Field Shield",
@@ -82,7 +83,8 @@
       ],
       "stats": {
         "defense": 2
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_guardian.webp"
     },
     "magma_heart_cuirass": {
       "name": "Magma-Heart Cuirass",
@@ -101,7 +103,8 @@
       ],
       "synergy_stats": {
         "power": 2
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_mail.webp"
     },
     "vesper_chestplate": {
       "name": "Frostbinder Chestplate",
@@ -120,7 +123,8 @@
       ],
       "synergy_stats": {
         "resistance": 2
-      }
+      },
+      "icon_path": "res://assets/items/ravenwood/ravenwood_mail.webp"
     },
     "raider_hood": {
       "name": "Raider Hood",
@@ -132,7 +136,8 @@
       "stats": {
         "speed": 2,
         "crit": 1
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_helm.webp"
     },
     "ashbound_gauntlets": {
       "name": "Ashbound Gauntlets",
@@ -143,7 +148,8 @@
       ],
       "stats": {
         "power": 3
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_bracers.webp"
     },
     "bridgewarden_greaves": {
       "name": "Bridgewarden Greaves",
@@ -155,7 +161,8 @@
       "stats": {
         "defense": 2,
         "hp": 5
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_greaves.webp"
     },
     "vaultroad_cloak": {
       "name": "Vaultroad Cloak",
@@ -166,7 +173,8 @@
       ],
       "stats": {
         "resistance": 3
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_cloak.webp"
     },
     "ambush_bow": {
       "name": "Ambush Bow",
@@ -178,7 +186,8 @@
       "stats": {
         "power": 3,
         "crit": 2
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_ranger.webp"
     },
     "outpost_boots": {
       "name": "Outpost Boots",
@@ -189,7 +198,8 @@
       ],
       "stats": {
         "speed": 3
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_boots.webp"
     },
     "deadwood_charm": {
       "name": "Deadwood Charm",
@@ -201,7 +211,8 @@
       "stats": {
         "magic": 3,
         "resistance": 1
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_sigil.webp"
     },
     "plains_helm": {
       "name": "Ashen Plains Helm",
@@ -213,7 +224,8 @@
       "stats": {
         "hp": 9,
         "defense": 2
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_helm.webp"
     },
     "capital_aegis": {
       "name": "Capital Aegis",
@@ -225,7 +237,8 @@
       "stats": {
         "defense": 4,
         "resistance": 2
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_guardian.webp"
     },
     "overlook_lens": {
       "name": "Overlook Lens",
@@ -237,7 +250,8 @@
       "stats": {
         "crit": 3,
         "speed": 1
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_sigil.webp"
     },
     "ritual_talisman": {
       "name": "Ritual Talisman",
@@ -248,7 +262,8 @@
       ],
       "stats": {
         "magic": 4
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_sigil.webp"
     },
     "pass_mantle": {
       "name": "Pass Mantle",
@@ -260,7 +275,8 @@
       "stats": {
         "hp": 8,
         "defense": 1
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_cloak.webp"
     },
     "vulgrim_crown": {
       "name": "Vulgrim Crown",
@@ -273,7 +289,8 @@
         "power": 4,
         "magic": 4,
         "hp": 10
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_helm.webp"
     },
     "ember_seal": {
       "name": "Ember Seal",
@@ -285,7 +302,8 @@
       "stats": {
         "magic": 5,
         "resistance": 3
-      }
+      },
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_signature.webp"
     },
     "ashen_wastes_vanguard": {
       "name": "Ashen Greatblade",
@@ -306,7 +324,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 2
+      "hands": 2,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_vanguard.webp"
     },
     "ashen_wastes_guardian": {
       "name": "Ashen Bulwark",
@@ -327,7 +346,8 @@
       "synergy_stats": {
         "defense": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_guardian.webp"
     },
     "ashen_wastes_assassin": {
       "name": "Ashen Dirk",
@@ -349,7 +369,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_assassin.webp"
     },
     "ashen_wastes_ranger": {
       "name": "Ashen Longbow",
@@ -371,7 +392,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 2
+      "hands": 2,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_ranger.webp"
     },
     "ashen_wastes_sorcerer": {
       "name": "Ashen Runestaff",
@@ -392,7 +414,8 @@
       "synergy_stats": {
         "magic": 2
       },
-      "hands": 2
+      "hands": 2,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_sorcerer.webp"
     },
     "ashen_wastes_shaman": {
       "name": "Ashen Totem",
@@ -414,7 +437,8 @@
       "synergy_stats": {
         "magic": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_shaman.webp"
     },
     "ashen_wastes_commander": {
       "name": "Ashen Spear",
@@ -436,7 +460,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_commander.webp"
     },
     "ashen_wastes_dervish": {
       "name": "Ashen Scimitar",
@@ -458,7 +483,8 @@
       "synergy_stats": {
         "power": 2
       },
-      "hands": 1
+      "hands": 1,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_dervish.webp"
     },
     "ashen_wastes_helm": {
       "name": "Ashen Helm",
@@ -477,7 +503,8 @@
       "synergy_stats": {
         "hp": 5
       },
-      "armor_type": "medium"
+      "armor_type": "medium",
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_helm.webp"
     },
     "ashen_wastes_mail": {
       "name": "Ashen Mail",
@@ -496,7 +523,8 @@
       "synergy_stats": {
         "hp": 5
       },
-      "armor_type": "heavy"
+      "armor_type": "heavy",
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_mail.webp"
     },
     "ashen_wastes_bracers": {
       "name": "Ashen Bracers",
@@ -515,7 +543,8 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "armor_type": "medium"
+      "armor_type": "medium",
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_bracers.webp"
     },
     "ashen_wastes_greaves": {
       "name": "Ashen Greaves",
@@ -534,7 +563,8 @@
       "synergy_stats": {
         "hp": 5
       },
-      "armor_type": "heavy"
+      "armor_type": "heavy",
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_greaves.webp"
     },
     "ashen_wastes_boots": {
       "name": "Ashen Boots",
@@ -553,7 +583,8 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "armor_type": "light"
+      "armor_type": "light",
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_boots.webp"
     },
     "ashen_wastes_cloak": {
       "name": "Ashen Mantle",
@@ -572,7 +603,8 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "armor_type": "light"
+      "armor_type": "light",
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_cloak.webp"
     },
     "ashen_wastes_sigil": {
       "name": "Ashen Sigil",
@@ -591,7 +623,8 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "armor_type": "relic"
+      "armor_type": "relic",
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_sigil.webp"
     },
     "ashen_wastes_signature": {
       "name": "Cinder Sovereign",
@@ -617,7 +650,8 @@
         "power": 5,
         "magic": 4
       },
-      "hands": 2
+      "hands": 2,
+      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_signature.webp"
     },
     "blighted_marsh_vanguard": {
       "name": "Mireborn Greatblade",
