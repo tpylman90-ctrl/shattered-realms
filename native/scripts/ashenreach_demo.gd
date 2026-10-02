@@ -567,7 +567,7 @@ func _refresh_chosen_hero_skill_unlocks() -> void:
         var chest_owned := chest_item != "" and owned_collectibles.has(chest_item)
         if HeroProgressionService.unlock_chosen_hero_champion_path(hero_id, land_reconnected, chest_owned):
             if event_log_label:
-                event_log_label.text = "%s's specialty skill path unlocked." % str(data.get("name", hero_id))
+                event_log_label.text = "%s's three specialty skill ladders unlocked." % str(data.get("name", hero_id))
             _refresh_unlocked_heroes()
             if progression_panel and progression_panel.visible:
                 _refresh_progression_panel()
