@@ -31,6 +31,7 @@ var character_hair_style: OptionButton
 var character_hair_color: OptionButton
 var character_class: OptionButton
 var character_status: Label
+var character_preview_model: Node3D
 var loading_path := ""
 var load_time := 0.0
 
@@ -160,7 +161,7 @@ func _build_character_selection() -> void:
     center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     character_page.add_child(center)
     var card := PanelContainer.new()
-    card.custom_minimum_size = Vector2(760, 0)
+    card.custom_minimum_size = Vector2(880, 0)
     card.add_theme_stylebox_override("panel", _style(Color(0.035, 0.055, 0.065, 0.97), Color("c69a61")))
     center.add_child(card)
     var margin := MarginContainer.new()
@@ -181,27 +182,84 @@ func _build_character_selection() -> void:
     subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(subtitle)
 
+    var creator_row := HBoxContainer.new()
+    creator_row.add_theme_constant_override("separation", 20)
+    column.add_child(creator_row)
+    var form_column := VBoxContainer.new()
+    form_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    form_column.add_theme_constant_override("separation", 9)
+    creator_row.add_child(form_column)
+
+    var preview_card := PanelContainer.new()
+    preview_card.custom_minimum_size = Vector2(250, 300)
+    preview_card.add_theme_stylebox_override("panel", _style(Color("10191c"), Color("806641")))
+    creator_row.add_child(preview_card)
+    var preview_column := VBoxContainer.new()
+    preview_column.add_theme_constant_override("separation", 8)
+    preview_card.add_child(preview_column)
+    var preview_title := _label("FIELD MODEL", 13, Color("d6a865"))
+    preview_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    preview_column.add_child(preview_title)
+    var preview_container := SubViewportContainer.new()
+    preview_container.custom_minimum_size = Vector2(220, 245)
+    preview_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    preview_container.stretch = true
+    preview_column.add_child(preview_container)
+    var preview_viewport := SubViewport.new()
+    preview_viewport.size = Vector2i(300, 330)
+    preview_viewport.transparent_bg = true
+    preview_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    preview_container.add_child(preview_viewport)
+    var preview_stage := Node3D.new()
+    preview_viewport.add_child(preview_stage)
+    var preview_camera := Camera3D.new()
+    preview_camera.position = Vector3(0.0, 1.3, 5.0)
+    preview_camera.fov = 37.0
+    preview_camera.look_at(Vector3(0.0, 1.18, 0.0), Vector3.UP)
+    preview_stage.add_child(preview_camera)
+    preview_camera.current = true
+    var preview_light := DirectionalLight3D.new()
+    preview_light.rotation_degrees = Vector3(-32.0, -24.0, 0.0)
+    preview_light.light_energy = 2.2
+    preview_stage.add_child(preview_light)
+    var preview_fill := OmniLight3D.new()
+    preview_fill.position = Vector3(2.0, 1.7, 2.0)
+    preview_fill.light_color = Color("d49b5b")
+    preview_fill.light_energy = 1.2
+    preview_fill.omni_range = 6.0
+    preview_stage.add_child(preview_fill)
+    var model_scene := load("res://scenes/ChosenHeroPiece.tscn") as PackedScene
+    if model_scene:
+        character_preview_model = model_scene.instantiate() as Node3D
+        if character_preview_model:
+            character_preview_model.call("set_profile", _chosen_profile_from_controls())
+            preview_stage.add_child(character_preview_model)
+    var preview_note := _label("Appearance and class colors carry into the journey.", 11, Color("aebdbb"))
+    preview_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    preview_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    preview_column.add_child(preview_note)
+
     var name_label := _label("HERO NAME", 13, Color("d6a865"))
-    column.add_child(name_label)
+    form_column.add_child(name_label)
     character_name_input = LineEdit.new()
     character_name_input.placeholder_text = "Enter a name"
     character_name_input.max_length = 24
     character_name_input.custom_minimum_size.y = 42
     character_name_input.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
-    column.add_child(character_name_input)
+    form_column.add_child(character_name_input)
 
     var identity_grid := GridContainer.new()
     identity_grid.columns = 2
     identity_grid.add_theme_constant_override("h_separation", 16)
     identity_grid.add_theme_constant_override("v_separation", 6)
-    column.add_child(identity_grid)
+    form_column.add_child(identity_grid)
     _add_character_option(identity_grid, "BODY", ["Male", "Female"], "gender")
     _add_character_option(identity_grid, "SKIN TONE", ["Light", "Olive", "Brown", "Deep"], "skin")
     _add_character_option(identity_grid, "HAIR STYLE", ["Short", "Long", "Braided", "Cropped"], "hair_style")
     _add_character_option(identity_grid, "HAIR COLOR", ["Black", "Brown", "Auburn", "Silver"], "hair_color")
 
     var discipline_label := _label("STARTING CLASS", 13, Color("d6a865"))
-    column.add_child(discipline_label)
+    form_column.add_child(discipline_label)
     character_class = OptionButton.new()
     character_class.add_item("Warrior  —  close combat and armor")
     character_class.set_item_metadata(0, "warrior")
@@ -215,7 +273,7 @@ func _build_character_selection() -> void:
     character_class.set_item_metadata(4, "thief")
     character_class.custom_minimum_size.y = 42
     character_class.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
-    column.add_child(character_class)
+    form_column.add_child(character_class)
 
     var rules := _label("Only your chosen class is open at first. Reunite a champion's land and recover that hero's chest piece to unlock their specialty path for your Chosen Hero. Skill points remain limited.", 13, Color("aebdbb"))
     rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -247,6 +305,7 @@ func _add_character_option(parent: GridContainer, label_text: String, options: A
     picker.custom_minimum_size.y = 38
     picker.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
     field.add_child(picker)
+    picker.item_selected.connect(func(_index: int): _refresh_character_preview())
     match option_kind:
         "gender":
             character_gender = picker
@@ -257,22 +316,32 @@ func _add_character_option(parent: GridContainer, label_text: String, options: A
         "hair_color":
             character_hair_color = picker
 
+func _chosen_profile_from_controls() -> Dictionary:
+    var class_id := str(character_class.get_item_metadata(character_class.selected)) if character_class and character_class.selected >= 0 else "warrior"
+    return {
+        "name": character_name_input.text.strip_edges() if character_name_input else "",
+        "gender": character_gender.get_item_text(character_gender.selected) if character_gender and character_gender.selected >= 0 else "Male",
+        "skin_tone": character_skin_tone.get_item_text(character_skin_tone.selected) if character_skin_tone and character_skin_tone.selected >= 0 else "Olive",
+        "hair_style": character_hair_style.get_item_text(character_hair_style.selected) if character_hair_style and character_hair_style.selected >= 0 else "Short",
+        "hair_color": character_hair_color.get_item_text(character_hair_color.selected) if character_hair_color and character_hair_color.selected >= 0 else "Brown",
+        "starting_class": HeroProgressionService.STARTER_CLASSES.get(class_id, HeroProgressionService.STARTER_CLASSES["warrior"]).get("name", "Warrior"),
+        "starting_class_id": class_id
+    }
+
+func _refresh_character_preview() -> void:
+    if character_preview_model:
+        character_preview_model.call("set_profile", _chosen_profile_from_controls())
+
 func _confirm_chosen_hero() -> void:
     var hero_name := character_name_input.text.strip_edges()
     if hero_name.is_empty():
         character_status.text = "Choose a name for your hero to continue."
         return
-    var profile := {
-        "name": hero_name,
-        "gender": character_gender.get_item_text(character_gender.selected),
-        "skin_tone": character_skin_tone.get_item_text(character_skin_tone.selected),
-        "hair_style": character_hair_style.get_item_text(character_hair_style.selected),
-        "hair_color": character_hair_color.get_item_text(character_hair_color.selected),
-        "starting_class": character_class.get_item_text(character_class.selected).split("  —  ")[0],
-        "starting_class_id": str(character_class.get_item_metadata(character_class.selected)),
-        "unlocked_skill_paths": [str(character_class.get_item_metadata(character_class.selected))],
-        "is_chosen_hero": true
-    }
+    var profile := _chosen_profile_from_controls()
+    var starter_class_id := str(profile.get("starting_class_id", "warrior"))
+    profile["name"] = hero_name
+    profile["unlocked_skill_paths"] = [starter_class_id]
+    profile["is_chosen_hero"] = true
     var cfg := ConfigFile.new()
     for key in profile:
         cfg.set_value("chosen_hero", key, profile[key])
