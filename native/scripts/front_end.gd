@@ -31,7 +31,8 @@ func _ready() -> void:
     if file:
         var parsed: Variant = JSON.parse_string(file.get_as_text())
         if parsed is Dictionary:
-            territories = parsed.get("territories", {})
+            territories = parsed.get("territories", {}).duplicate()
+            territories.merge(parsed.get("locations", {}))
     _build_title()
     _build_map()
     _build_loading()
@@ -224,10 +225,10 @@ func _select_region(region_id: String) -> void:
     var playable: bool = region_id == "ashen_wastes" and (region.get("boards", []) as Array).has("ashenreach")
     var has_preview := region_id in ["ravenwood", "iron_plains"]
     var concept_ready := ResourceLoader.exists("res://assets/boards/concept/" + region_id + ".webp")
-    detail_type.text = "PLAYABLE STRONGHOLD" if playable else "3D BOARD PREVIEW" if has_preview else "TERRITORY BOARD CONCEPT" if concept_ready else "FUTURE CAMPAIGN"
+    detail_type.text = "PLAYABLE STRONGHOLD" if playable else "3D BOARD PREVIEW" if has_preview else "LOCATION BOARD CONCEPT" if region.has("kind") and concept_ready else "TERRITORY BOARD CONCEPT" if concept_ready else "FUTURE CAMPAIGN"
     var guardian := str(region.get("legendary_monster", "")).replace("_", " ").capitalize()
     var stronghold := str(region.get("stronghold", "Uncharted stronghold"))
-    detail_body.text = "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]
+    detail_body.text = str(region.get("description", "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]))
     enter_button.visible = playable or has_preview or concept_ready
     if region_id == "ravenwood":
         enter_button.text = "PREVIEW RAVENWOOD"
@@ -239,7 +240,8 @@ func _select_region(region_id: String) -> void:
         enter_button.text = "ENTER ASHENREACH"
 
 func _show_region_armory() -> void:
-    var pool := HeroEquipmentService.region_pool(current_region)
+    var source_region := str(territories.get(current_region, {}).get("parent_territory", current_region))
+    var pool := HeroEquipmentService.region_pool(source_region)
     if pool.is_empty():
         return
     var region_name := str(territories.get(current_region, {}).get("name", current_region))
