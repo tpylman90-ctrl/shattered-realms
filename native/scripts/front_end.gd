@@ -4,6 +4,7 @@ const WORLD_DATA := "res://data/world_catalog.json"
 const ASHENREACH_SCENE := "res://scenes/AshenreachDemo.tscn"
 const RAVENWOOD_PREVIEW_SCENE := "res://scenes/RavenwoodPreview.tscn"
 const IRON_PLAINS_PREVIEW_SCENE := "res://scenes/IronPlainsPreview.tscn"
+const TERRITORY_PREVIEW_SCENE := "res://scenes/TerritoryBoardPreview.tscn"
 const MAP_SCRIPT := preload("res://scripts/world_map_canvas.gd")
 const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
 
@@ -49,6 +50,8 @@ func _process(delta: float) -> void:
         destination = "Ravenwood preview"
     elif loading_path == IRON_PLAINS_PREVIEW_SCENE:
         destination = "Iron Plains preview"
+    elif loading_path == TERRITORY_PREVIEW_SCENE:
+        destination = str(territories.get(current_region, {}).get("name", current_region)) + " concept"
     load_caption.text = "Opening %s  •  %d%%" % [destination, int(fraction * 100.0)]
     if state == ResourceLoader.THREAD_LOAD_LOADED:
         var packed := ResourceLoader.load_threaded_get(loading_path) as PackedScene
@@ -210,6 +213,8 @@ func _atlas_panel_input(event: InputEvent, panel: Control) -> void:
         map_canvas.call("select_at", map_point)
 
 func _select_region(region_id: String) -> void:
+    if str(territories.get(region_id, {}).get("status", "")) == "future_ocean_expansion":
+        return
     current_region = region_id
     atlas_info.show()
     if map_canvas:
@@ -218,15 +223,18 @@ func _select_region(region_id: String) -> void:
     detail_name.text = str(region.get("name", region_id))
     var playable: bool = region_id == "ashen_wastes" and (region.get("boards", []) as Array).has("ashenreach")
     var has_preview := region_id in ["ravenwood", "iron_plains"]
-    detail_type.text = "PLAYABLE STRONGHOLD" if playable else "BOARD PREVIEW • CAMPAIGN IN DEVELOPMENT" if has_preview else "FUTURE CAMPAIGN"
+    var concept_ready := ResourceLoader.exists("res://assets/boards/concept/" + region_id + ".webp")
+    detail_type.text = "PLAYABLE STRONGHOLD" if playable else "3D BOARD PREVIEW" if has_preview else "TERRITORY BOARD CONCEPT" if concept_ready else "FUTURE CAMPAIGN"
     var guardian := str(region.get("legendary_monster", "")).replace("_", " ").capitalize()
     var stronghold := str(region.get("stronghold", "Uncharted stronghold"))
     detail_body.text = "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]
-    enter_button.visible = playable or has_preview
+    enter_button.visible = playable or has_preview or concept_ready
     if region_id == "ravenwood":
         enter_button.text = "PREVIEW RAVENWOOD"
     elif region_id == "iron_plains":
         enter_button.text = "PREVIEW IRON PLAINS"
+    elif concept_ready:
+        enter_button.text = "PREVIEW BOARD"
     else:
         enter_button.text = "ENTER ASHENREACH"
 
@@ -249,13 +257,16 @@ func _open_map() -> void:
     _show_page(map_page)
 
 func _enter_region() -> void:
-    if current_region not in ["ashen_wastes", "ravenwood", "iron_plains"] or loading_path != "":
+    if loading_path != "" or not enter_button.visible:
         return
     var scene_path := ASHENREACH_SCENE
     if current_region == "ravenwood":
         scene_path = RAVENWOOD_PREVIEW_SCENE
     elif current_region == "iron_plains":
         scene_path = IRON_PLAINS_PREVIEW_SCENE
+    else:
+        scene_path = TERRITORY_PREVIEW_SCENE
+    get_tree().set_meta("preview_territory", current_region)
     _show_page(load_page)
     load_time = 0.0
     load_bar.value = 0
@@ -263,6 +274,8 @@ func _enter_region() -> void:
         load_caption.text = "Preparing Ravenwood preview..."
     elif current_region == "iron_plains":
         load_caption.text = "Preparing Iron Plains preview..."
+    elif scene_path == TERRITORY_PREVIEW_SCENE:
+        load_caption.text = "Preparing %s board concept..." % str(territories.get(current_region, {}).get("name", current_region))
     else:
         load_caption.text = "Preparing Ashenreach..."
     var error := ResourceLoader.load_threaded_request(scene_path)
