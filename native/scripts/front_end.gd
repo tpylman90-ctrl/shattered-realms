@@ -209,7 +209,7 @@ func _build_character_selection() -> void:
     var preview_viewport := SubViewport.new()
     preview_viewport.size = Vector2i(300, 330)
     preview_viewport.transparent_bg = true
-    preview_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+    preview_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
     preview_container.add_child(preview_viewport)
     var preview_stage := Node3D.new()
     preview_viewport.add_child(preview_stage)
