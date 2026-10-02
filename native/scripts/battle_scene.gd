@@ -189,7 +189,9 @@ func _load_hero_data() -> void:
         hero_data = {
             "name": HeroProgressionService.chosen_hero_name(),
             "class": HeroProgressionService.chosen_hero_class_name(),
-            "piece_asset": "",
+            "piece_asset": "res://scenes/ChosenHeroPiece.tscn",
+            "piece_scale": 1.0,
+            "piece_offset": [0.0, 0.0, 0.0],
             "placeholder_color": HeroProgressionService.chosen_hero_class_color()
         }
         hero_name = str(hero_data["name"])
@@ -397,6 +399,8 @@ func _spawn_hero() -> void:
 
     model.scale = Vector3.ONE * scale_value
     model.position = Vector3(x_offset, y_offset, z_offset)
+    if hero_id == HeroProgressionService.CHOSEN_HERO_ID:
+        model.call("set_profile", HeroProgressionService.chosen_hero_appearance())
     hero_anchor.add_child(model)
 
 
