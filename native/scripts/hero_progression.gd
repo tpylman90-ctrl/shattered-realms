@@ -203,7 +203,7 @@ static func _chosen_hero_definition() -> Dictionary:
         trees.append({
             "id": path_id,
             "name": str(source.get("name", hero_id)),
-            "theme": "Champion specialty • unlock by restoring their land and recovering their chest piece."
+            "theme": "Champion specialties • skills learned with your Chosen Hero's limited points."
         })
         for raw_skill in source.get("skills", []):
             if not raw_skill is Dictionary:
