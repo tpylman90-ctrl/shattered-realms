@@ -20,6 +20,23 @@ const REGIONS := {
     "ember_coast": Vector2(0.330, 0.807),
     "hollow_isles": Vector2(0.744, 0.928)
 }
+# Distinct atlas locations. These pins open their own board concepts.
+const LOCATIONS := {
+    "eldergrove": Vector2(0.286, 0.368),
+    "deadwind_hollow": Vector2(0.313, 0.613),
+    "ravenford": Vector2(0.478, 0.481),
+    "ravens_hold": Vector2(0.420, 0.808),
+    "mistvale": Vector2(0.569, 0.806),
+    "silverkeep": Vector2(0.183, 0.379),
+    "westhaven": Vector2(0.171, 0.527),
+    "blackthorn": Vector2(0.280, 0.225),
+    "icehelm": Vector2(0.457, 0.069),
+    "stormcrown_keep": Vector2(0.532, 0.263),
+    "harrowstead": Vector2(0.427, 0.358),
+    "bloodspine_pass": Vector2(0.690, 0.425),
+    "ironhold": Vector2(0.837, 0.469),
+    "sunspire": Vector2(0.652, 0.645)
+}
 const OCEAN_LABELS := [
     Rect2(0.09, 0.235, 0.105, 0.105), # Veiled Sea
     Rect2(0.91, 0.355, 0.09, 0.12), # Broken Sea
@@ -32,16 +49,8 @@ const LANDMARKS := {
     "ashen_wastes": [Vector2(0.716, 0.203), Vector2(0.668, 0.105)],
     "blighted_marsh": [Vector2(0.842, 0.295)],
     "shadowfen_forest": [Vector2(0.612, 0.411)],
-    "cursed_mire": [Vector2(0.419, 0.712), Vector2(0.312, 0.615)],
-    "dragons_rest": [Vector2(0.126, 0.754)],
-    "ravenwood": [Vector2(0.287, 0.226), Vector2(0.290, 0.369)],
-    "frostpeaks": [Vector2(0.465, 0.071)],
-    "stormcrown_mountains": [Vector2(0.525, 0.267)],
-    "iron_plains": [Vector2(0.434, 0.364), Vector2(0.495, 0.484)],
-    "drakeshard_range": [Vector2(0.697, 0.424), Vector2(0.838, 0.468)],
-    "westhaven_coast": [Vector2(0.186, 0.385), Vector2(0.166, 0.523)],
-    "golden_expanse": [Vector2(0.687, 0.645)],
-    "ember_coast": [Vector2(0.418, 0.817), Vector2(0.577, 0.812)]
+    "cursed_mire": [Vector2(0.419, 0.712)],
+    "dragons_rest": [Vector2(0.126, 0.754)]
 }
 
 var selected_region := "ashen_wastes"
@@ -64,7 +73,10 @@ func _draw() -> void:
     for region_id in REGIONS:
         var pin: Vector2 = picture.position + REGIONS[region_id] * picture.size
         draw_circle(pin, 3.0, Color(0.97, 0.77, 0.48, 0.72))
-    if REGIONS.has(selected_region):
+    for location_id in LOCATIONS:
+        var pin: Vector2 = picture.position + LOCATIONS[location_id] * picture.size
+        draw_circle(pin, 3.0, Color(0.55, 0.89, 0.93, 0.84))
+    if REGIONS.has(selected_region) or LOCATIONS.has(selected_region):
         var center: Vector2 = picture.position + selected_point * picture.size
         var radius := 20.0 + sin(pulse_time * 2.4) * 3.0
         draw_circle(center, radius + 7.0, Color(1.0, 0.69, 0.31, 0.14))
@@ -92,8 +104,8 @@ func select_at(position_on_map: Vector2) -> void:
     var nearest := ""
     var nearest_point := Vector2.ZERO
     var distance := clampf(picture.size.x * 0.085, 56.0, 92.0)
-    for region_id in REGIONS:
-        var positions: Array = [REGIONS[region_id]]
+    for region_id in REGIONS.keys() + LOCATIONS.keys():
+        var positions: Array = [REGIONS.get(region_id, LOCATIONS.get(region_id))]
         positions.append_array(LANDMARKS.get(region_id, []))
         for spot in positions:
             var center: Vector2 = picture.position + (spot as Vector2) * picture.size

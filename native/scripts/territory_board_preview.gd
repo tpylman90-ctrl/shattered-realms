@@ -14,6 +14,8 @@ func _ready() -> void:
     var file := FileAccess.open(CATALOG, FileAccess.READ)
     var catalog: Dictionary = JSON.parse_string(file.get_as_text()) if file else {}
     var territory: Dictionary = catalog.get("territories", {}).get(board_id, {})
+    if territory.is_empty():
+        territory = catalog.get("locations", {}).get(board_id, {})
     if territory.get("status", "") == "future_ocean_expansion":
         get_tree().change_scene_to_file("res://scenes/FrontEnd.tscn")
         return

@@ -119,6 +119,160 @@
       "movement_layer": null,
       "stronghold_is_separate": true,
       "layout": "Sea confined to west edge with two coves; dry central crossroads."
+    },
+    {
+      "location": "eldergrove",
+      "name": "Eldergrove",
+      "art": "res://assets/boards/concept/eldergrove.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "territory",
+      "parent_territory": null,
+      "layout": "Ancient living forest beyond Ravenwood."
+    },
+    {
+      "location": "deadwind_hollow",
+      "name": "Deadwind Hollow",
+      "art": "res://assets/boards/concept/deadwind_hollow.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "territory",
+      "parent_territory": null,
+      "layout": "Dry necrotic hollow beyond the Cursed Mire."
+    },
+    {
+      "location": "ravenford",
+      "name": "Ravenford",
+      "art": "res://assets/boards/concept/ravenford.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "city",
+      "parent_territory": "iron_plains",
+      "layout": "Fortified river crossing south of the Iron Plains."
+    },
+    {
+      "location": "ravens_hold",
+      "name": "Raven's Hold",
+      "art": "res://assets/boards/concept/ravens_hold.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "stronghold",
+      "parent_territory": "ember_coast",
+      "layout": "Fortress island on the Ember Coast."
+    },
+    {
+      "location": "mistvale",
+      "name": "Mistvale",
+      "art": "res://assets/boards/concept/mistvale.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "territory",
+      "parent_territory": null,
+      "layout": "Misty green island off the Ember Coast."
+    },
+    {
+      "location": "silverkeep",
+      "name": "Silverkeep",
+      "art": "res://assets/boards/concept/silverkeep.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "stronghold",
+      "parent_territory": "westhaven_coast",
+      "layout": "Fortified coastal city north of Westhaven."
+    },
+    {
+      "location": "westhaven",
+      "name": "Westhaven",
+      "art": "res://assets/boards/concept/westhaven.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "city",
+      "parent_territory": "westhaven_coast",
+      "layout": "Merchant harbor on the western coast."
+    },
+    {
+      "location": "blackthorn",
+      "name": "Blackthorn",
+      "art": "res://assets/boards/concept/blackthorn.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "stronghold",
+      "parent_territory": "ravenwood",
+      "layout": "Ravenwood forest stronghold."
+    },
+    {
+      "location": "icehelm",
+      "name": "Icehelm",
+      "art": "res://assets/boards/concept/icehelm.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "stronghold",
+      "parent_territory": "frostpeaks",
+      "layout": "Snowbound fortress of Frostpeaks."
+    },
+    {
+      "location": "stormcrown_keep",
+      "name": "Stormcrown Keep",
+      "art": "res://assets/boards/concept/stormcrown_keep.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "stronghold",
+      "parent_territory": "stormcrown_mountains",
+      "layout": "Mountain keep above Stormcrown."
+    },
+    {
+      "location": "harrowstead",
+      "name": "Harrowstead",
+      "art": "res://assets/boards/concept/harrowstead.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "stronghold",
+      "parent_territory": "iron_plains",
+      "layout": "Cavalry garrison of the Iron Plains."
+    },
+    {
+      "location": "bloodspine_pass",
+      "name": "Bloodspine Pass",
+      "art": "res://assets/boards/concept/bloodspine_pass.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "pass",
+      "parent_territory": "drakeshard_range",
+      "layout": "Defensible mountain pass through Drakeshard."
+    },
+    {
+      "location": "ironhold",
+      "name": "Ironhold",
+      "art": "res://assets/boards/concept/ironhold.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "stronghold",
+      "parent_territory": "drakeshard_range",
+      "layout": "Iron fortress below the Drakeshard cliffs."
+    },
+    {
+      "location": "sunspire",
+      "name": "Sunspire",
+      "art": "res://assets/boards/concept/sunspire.webp",
+      "stage": "concept_preview",
+      "mesh": null,
+      "movement_layer": null,
+      "kind": "stronghold",
+      "parent_territory": "golden_expanse",
+      "layout": "Desert city of the Golden Expanse."
     }
   ],
   "excluded_ocean_expansions": [

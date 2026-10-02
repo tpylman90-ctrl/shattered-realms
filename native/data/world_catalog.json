@@ -22,7 +22,8 @@
     },
     "cursed_mire": {
       "name": "The Cursed Mire",
-      "legendary_monster": "golgotha_soul_tainted"
+      "legendary_monster": "golgotha_soul_tainted",
+      "nearby_location": "deadwind_hollow"
     },
     "dragons_rest": {
       "name": "Dragon's Rest",
@@ -73,8 +74,11 @@
     },
     "ember_coast": {
       "name": "The Ember Coast",
-      "stronghold": "Raven's Hold / Mistvale",
-      "hero": "ignacia"
+      "hero": "ignacia",
+      "locations": [
+        "ravens_hold",
+        "mistvale"
+      ]
     },
     "hollow_isles": {
       "name": "The Hollow Isles",
@@ -92,8 +96,11 @@
     },
     "westhaven_coast": {
       "name": "Westhaven Coast",
-      "stronghold": "Silverkeep / Westhaven",
-      "hero": "jora"
+      "hero": "jora",
+      "locations": [
+        "silverkeep",
+        "westhaven"
+      ]
     }
   },
   "heroes": {
@@ -268,7 +275,7 @@
     },
     "golgotha_soul_tainted": {
       "name": "Golgotha the Soul-Tainted",
-      "location": "The Cursed Mire / Deadwind Hollow",
+      "location": "Deadwind Hollow",
       "tier": "Undead Titan / Necromancy Vanguard",
       "combat_profile": "Wields spectral slashes and a soul-harvesting aura that raises fallen combatants as temporary phantom thralls.",
       "piece_asset": ""
@@ -391,5 +398,88 @@
     "collectible_types": [
       "hero_relic"
     ]
+  },
+  "locations": {
+    "eldergrove": {
+      "name": "Eldergrove",
+      "kind": "territory",
+      "description": "Ancient living forest beyond Ravenwood."
+    },
+    "deadwind_hollow": {
+      "name": "Deadwind Hollow",
+      "kind": "territory",
+      "description": "Dry necrotic hollow beyond the Cursed Mire."
+    },
+    "ravenford": {
+      "name": "Ravenford",
+      "kind": "city",
+      "description": "Fortified river crossing south of the Iron Plains.",
+      "parent_territory": "iron_plains"
+    },
+    "ravens_hold": {
+      "name": "Raven's Hold",
+      "kind": "stronghold",
+      "description": "Fortress island on the Ember Coast.",
+      "parent_territory": "ember_coast"
+    },
+    "mistvale": {
+      "name": "Mistvale",
+      "kind": "territory",
+      "description": "Misty green island off the Ember Coast."
+    },
+    "silverkeep": {
+      "name": "Silverkeep",
+      "kind": "stronghold",
+      "description": "Fortified coastal city north of Westhaven.",
+      "parent_territory": "westhaven_coast"
+    },
+    "westhaven": {
+      "name": "Westhaven",
+      "kind": "city",
+      "description": "Merchant harbor on the western coast.",
+      "parent_territory": "westhaven_coast"
+    },
+    "blackthorn": {
+      "name": "Blackthorn",
+      "kind": "stronghold",
+      "description": "Ravenwood forest stronghold.",
+      "parent_territory": "ravenwood"
+    },
+    "icehelm": {
+      "name": "Icehelm",
+      "kind": "stronghold",
+      "description": "Snowbound fortress of Frostpeaks.",
+      "parent_territory": "frostpeaks"
+    },
+    "stormcrown_keep": {
+      "name": "Stormcrown Keep",
+      "kind": "stronghold",
+      "description": "Mountain keep above Stormcrown.",
+      "parent_territory": "stormcrown_mountains"
+    },
+    "harrowstead": {
+      "name": "Harrowstead",
+      "kind": "stronghold",
+      "description": "Cavalry garrison of the Iron Plains.",
+      "parent_territory": "iron_plains"
+    },
+    "bloodspine_pass": {
+      "name": "Bloodspine Pass",
+      "kind": "pass",
+      "description": "Defensible mountain pass through Drakeshard.",
+      "parent_territory": "drakeshard_range"
+    },
+    "ironhold": {
+      "name": "Ironhold",
+      "kind": "stronghold",
+      "description": "Iron fortress below the Drakeshard cliffs.",
+      "parent_territory": "drakeshard_range"
+    },
+    "sunspire": {
+      "name": "Sunspire",
+      "kind": "stronghold",
+      "description": "Desert city of the Golden Expanse.",
+      "parent_territory": "golden_expanse"
+    }
   }
 }
