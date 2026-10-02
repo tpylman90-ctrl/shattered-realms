@@ -72,7 +72,7 @@
       "stats": {
         "power": 2
       },
-      "icon_path": "res://assets/items/ravenwood/ravenwood_vanguard.webp"
+      "icon_path": "res://assets/items/rewards/training_blade.webp"
     },
     "field_shield": {
       "name": "Field Shield",
@@ -84,7 +84,7 @@
       "stats": {
         "defense": 2
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_guardian.webp"
+      "icon_path": "res://assets/items/rewards/field_shield.webp"
     },
     "magma_heart_cuirass": {
       "name": "Magma-Heart Cuirass",
@@ -104,7 +104,7 @@
       "synergy_stats": {
         "power": 2
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_mail.webp"
+      "icon_path": "res://assets/items/rewards/magma_heart_cuirass.webp"
     },
     "vesper_chestplate": {
       "name": "Frostbinder Chestplate",
@@ -124,7 +124,7 @@
       "synergy_stats": {
         "resistance": 2
       },
-      "icon_path": "res://assets/items/ravenwood/ravenwood_mail.webp"
+      "icon_path": "res://assets/items/rewards/vesper_chestplate.webp"
     },
     "raider_hood": {
       "name": "Raider Hood",
@@ -137,7 +137,7 @@
         "speed": 2,
         "crit": 1
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_helm.webp"
+      "icon_path": "res://assets/items/rewards/raider_hood.webp"
     },
     "ashbound_gauntlets": {
       "name": "Ashbound Gauntlets",
@@ -149,7 +149,7 @@
       "stats": {
         "power": 3
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_bracers.webp"
+      "icon_path": "res://assets/items/rewards/ashbound_gauntlets.webp"
     },
     "bridgewarden_greaves": {
       "name": "Bridgewarden Greaves",
@@ -162,7 +162,7 @@
         "defense": 2,
         "hp": 5
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_greaves.webp"
+      "icon_path": "res://assets/items/rewards/bridgewarden_greaves.webp"
     },
     "vaultroad_cloak": {
       "name": "Vaultroad Cloak",
@@ -174,7 +174,7 @@
       "stats": {
         "resistance": 3
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_cloak.webp"
+      "icon_path": "res://assets/items/rewards/vaultroad_cloak.webp"
     },
     "ambush_bow": {
       "name": "Ambush Bow",
@@ -187,7 +187,7 @@
         "power": 3,
         "crit": 2
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_ranger.webp"
+      "icon_path": "res://assets/items/rewards/ambush_bow.webp"
     },
     "outpost_boots": {
       "name": "Outpost Boots",
@@ -199,7 +199,7 @@
       "stats": {
         "speed": 3
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_boots.webp"
+      "icon_path": "res://assets/items/rewards/outpost_boots.webp"
     },
     "deadwood_charm": {
       "name": "Deadwood Charm",
@@ -212,7 +212,7 @@
         "magic": 3,
         "resistance": 1
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_sigil.webp"
+      "icon_path": "res://assets/items/rewards/deadwood_charm.webp"
     },
     "plains_helm": {
       "name": "Ashen Plains Helm",
@@ -225,7 +225,7 @@
         "hp": 9,
         "defense": 2
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_helm.webp"
+      "icon_path": "res://assets/items/rewards/plains_helm.webp"
     },
     "capital_aegis": {
       "name": "Capital Aegis",
@@ -238,7 +238,7 @@
         "defense": 4,
         "resistance": 2
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_guardian.webp"
+      "icon_path": "res://assets/items/rewards/capital_aegis.webp"
     },
     "overlook_lens": {
       "name": "Overlook Lens",
@@ -251,7 +251,7 @@
         "crit": 3,
         "speed": 1
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_sigil.webp"
+      "icon_path": "res://assets/items/rewards/overlook_lens.webp"
     },
     "ritual_talisman": {
       "name": "Ritual Talisman",
@@ -263,7 +263,7 @@
       "stats": {
         "magic": 4
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_sigil.webp"
+      "icon_path": "res://assets/items/rewards/ritual_talisman.webp"
     },
     "pass_mantle": {
       "name": "Pass Mantle",
@@ -276,7 +276,7 @@
         "hp": 8,
         "defense": 1
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_cloak.webp"
+      "icon_path": "res://assets/items/rewards/pass_mantle.webp"
     },
     "vulgrim_crown": {
       "name": "Vulgrim Crown",
@@ -290,7 +290,7 @@
         "magic": 4,
         "hp": 10
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_helm.webp"
+      "icon_path": "res://assets/items/rewards/vulgrim_crown.webp"
     },
     "ember_seal": {
       "name": "Ember Seal",
@@ -303,7 +303,7 @@
         "magic": 5,
         "resistance": 3
       },
-      "icon_path": "res://assets/items/ashen_wastes/ashen_wastes_signature.webp"
+      "icon_path": "res://assets/items/rewards/ember_seal.webp"
     },
     "ashen_wastes_vanguard": {
       "name": "Ashen Greatblade",
