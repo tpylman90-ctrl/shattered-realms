@@ -40,6 +40,10 @@ func _rebuild_figure() -> void:
     torso.scale.x = 1.0 if not female else 0.88
     _capsule("Neck", 0.09, 0.20, Vector3(0, 1.90, 0), skin)
     var head := _sphere("Head", Vector3(0.21 if not female else 0.205, 0.25, 0.19), Vector3(0, 2.12, 0), skin)
+    var face_detail := _material(Color("33231e"))
+    _sphere("Left Eye", Vector3(0.026, 0.026, 0.014), Vector3(-0.072, 2.15, -0.184), face_detail)
+    _sphere("Right Eye", Vector3(0.026, 0.026, 0.014), Vector3(0.072, 2.15, -0.184), face_detail)
+    _sphere("Nose", Vector3(0.035, 0.055, 0.04), Vector3(0, 2.09, -0.195), skin)
 
     _capsule("Left Arm", 0.105, 0.76, Vector3(-0.39, 1.34, 0), skin).rotation.z = -0.12
     _capsule("Right Arm", 0.105, 0.76, Vector3(0.39, 1.34, 0), skin).rotation.z = 0.12
