@@ -33,7 +33,7 @@ var zoom_distance := 30.0
 var selected_poi := ""
 var glow_time := 0.0
 var unit_selected := false
-var selected_hero_id := "ignis"
+var selected_hero_id := "chosen_hero"
 var owned_collectibles: Array[String] = ["vesper_chestplate", "magma_heart_cuirass"]
 var unlocked_heroes: Array[String] = []
 var hero_catalog: Dictionary = {}
@@ -283,6 +283,8 @@ func _ready() -> void:
             owned_collectibles.append(item_id)
     _refresh_unlocked_heroes()
     _load_game_state()
+    _refresh_unlocked_heroes()
+    _refresh_chosen_hero_skill_unlocks()
     _consume_battle_result()
     _restore_hex_state()
     _apply_selected_hero()
@@ -497,7 +499,18 @@ func _load_hero_catalog() -> void:
     var file := FileAccess.open("res://data/world_catalog.json", FileAccess.READ)
     var parsed = JSON.parse_string(file.get_as_text())
     if parsed is Dictionary:
-        hero_catalog = parsed.get("heroes", {})
+        hero_catalog = (parsed.get("heroes", {}) as Dictionary).duplicate(true)
+    if HeroProgressionService.chosen_hero_exists():
+        hero_catalog["chosen_hero"] = {
+            "name": HeroProgressionService.chosen_hero_name(),
+            "class": HeroProgressionService.chosen_hero_class_name(),
+            "origin_territory": "ravenford",
+            "signature_ability": "Chosen Path",
+            "movement_points": 3,
+            "unlock_item": "",
+            "piece_asset": "",
+            "placeholder_color": HeroProgressionService.chosen_hero_class_color()
+        }
 
 func _load_board_data() -> void:
     if not FileAccess.file_exists("res://data/ashenreach_board.json"):
@@ -512,21 +525,50 @@ func _refresh_unlocked_heroes() -> void:
     unlocked_heroes.clear()
     for hero_id in hero_catalog.keys():
         var data: Dictionary = hero_catalog[hero_id]
-        var unlock_item: String = data.get("unlock_item", "")
-        if unlock_item == "":
-            # Heroes without a relic requirement can remain available by default.
+        var unlock_item := str(data.get("unlock_item", ""))
+        if hero_id == "chosen_hero" or unlock_item == "":
             unlocked_heroes.append(hero_id)
-        elif unlock_item in owned_collectibles:
+            continue
+        if not owned_collectibles.has(unlock_item):
+            continue
+        var origin := str(data.get("origin_territory", ""))
+        var land_reconnected := HeroProgressionService.territory_is_reconnected(origin)
+        if origin == "ashen_wastes" and territory_secured:
+            land_reconnected = true
+        if land_reconnected:
             unlocked_heroes.append(hero_id)
 
-    if selected_hero_id not in unlocked_heroes and not unlocked_heroes.is_empty():
-        selected_hero_id = unlocked_heroes[0]
+    if selected_hero_id not in unlocked_heroes:
+        selected_hero_id = "chosen_hero" if unlocked_heroes.has("chosen_hero") else (unlocked_heroes[0] if not unlocked_heroes.is_empty() else "")
+
+func _refresh_chosen_hero_skill_unlocks() -> void:
+    if not HeroProgressionService.chosen_hero_exists():
+        return
+    for hero_id_variant in hero_catalog.keys():
+        var hero_id := str(hero_id_variant)
+        if hero_id == "chosen_hero":
+            continue
+        var data: Dictionary = hero_catalog[hero_id]
+        var origin := str(data.get("origin_territory", ""))
+        var land_reconnected := HeroProgressionService.territory_is_reconnected(origin)
+        if origin == "ashen_wastes" and territory_secured:
+            land_reconnected = true
+            HeroProgressionService.mark_territory_reconnected(origin)
+        var chest_item := str(data.get("unlock_item", ""))
+        var chest_owned := chest_item != "" and owned_collectibles.has(chest_item)
+        if HeroProgressionService.unlock_chosen_hero_champion_path(hero_id, land_reconnected, chest_owned):
+            if event_log_label:
+                event_log_label.text = "%s's specialty skill path unlocked." % str(data.get("name", hero_id))
+            _refresh_unlocked_heroes()
+            if progression_panel and progression_panel.visible:
+                _refresh_progression_panel()
 
 func grant_collectible(collectible_id: String) -> void:
     if collectible_id in owned_collectibles:
         return
     owned_collectibles.append(collectible_id)
     _refresh_unlocked_heroes()
+    _refresh_chosen_hero_skill_unlocks()
 
 func _build_progression_panel() -> void:
     progression_panel = PanelContainer.new()
@@ -670,15 +712,20 @@ func _refresh_progression_panel() -> void:
         progression_skill_list.add_child(branch)
 
         var heading := Label.new()
-        heading.text = str(tree.get("name", "Path")).to_upper()
+        var tree_id := str(tree.get("id", ""))
+        var path_locked := progression_view_hero_id == "chosen_hero" and not HeroProgressionService.chosen_hero_can_access_path(tree_id)
+        heading.text = str(tree.get("name", "Path")).to_upper() + ("  •  LOCKED" if path_locked else "")
         heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         heading.add_theme_font_size_override("font_size", 18)
-        heading.modulate = Color(1.0, 0.76, 0.42)
+        heading.modulate = Color(0.52, 0.56, 0.59) if path_locked else Color(1.0, 0.76, 0.42)
         branch.add_child(heading)
         var theme_label := Label.new()
-        theme_label.text = str(tree.get("theme", ""))
+        theme_label.text = "Restore this champion's land and recover their chest piece to unlock this path." if path_locked else str(tree.get("theme", ""))
         theme_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+        theme_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         branch.add_child(theme_label)
+        if path_locked:
+            continue
 
         var tree_spent := 0
         for node in definition.get("skills", []):
@@ -3175,6 +3222,9 @@ func _resolve_vulgrim() -> void:
     vulgrim_defeated = true
     vulgrim_available = false
     territory_secured = true
+    HeroProgressionService.mark_territory_reconnected("ashen_wastes")
+    _refresh_unlocked_heroes()
+    _refresh_chosen_hero_skill_unlocks()
     encounter_panel.visible = false
     current_encounter_node = ""
     event_log_label.text = "Inferno-Lord Vulgrim defeated. Ashenreach is fully secured."
@@ -4106,8 +4156,11 @@ func _on_poi_action() -> void:
         _save_game_state()
         if _all_objectives_complete():
             territory_secured = true
+            HeroProgressionService.mark_territory_reconnected("ashen_wastes")
             vulgrim_available = true
             event_log_label.text = "Ashenreach secured. Inferno-Lord Vulgrim can now be confronted."
+            _refresh_unlocked_heroes()
+            _refresh_chosen_hero_skill_unlocks()
             _refresh_game_hud()
             _save_game_state()
         return
