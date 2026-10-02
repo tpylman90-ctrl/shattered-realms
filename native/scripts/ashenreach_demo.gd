@@ -522,6 +522,9 @@ func _load_board_data() -> void:
         board_data = parsed
 
 func _refresh_unlocked_heroes() -> void:
+    for item_id in HeroEquipmentService.inventory():
+        if not owned_collectibles.has(item_id):
+            owned_collectibles.append(item_id)
     unlocked_heroes.clear()
     for hero_id in hero_catalog.keys():
         var data: Dictionary = hero_catalog[hero_id]
@@ -3164,6 +3167,8 @@ func _consume_battle_result() -> void:
             pending_battle_message += " Loot: %s. Equip it in Loadout." % loot_name
     else:
         pending_battle_message = "Battle lost against %s." % enemy_name
+    _refresh_unlocked_heroes()
+    _refresh_chosen_hero_skill_unlocks()
 
 func _resolve_encounter(engage: bool) -> void:
     if current_encounter_node == "__VULGRIM__":
