@@ -3,6 +3,7 @@ extends Control
 const WORLD_DATA := "res://data/world_catalog.json"
 const ASHENREACH_SCENE := "res://scenes/AshenreachDemo.tscn"
 const RAVENWOOD_PREVIEW_SCENE := "res://scenes/RavenwoodPreview.tscn"
+const IRON_PLAINS_PREVIEW_SCENE := "res://scenes/IronPlainsPreview.tscn"
 const MAP_SCRIPT := preload("res://scripts/world_map_canvas.gd")
 const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
 
@@ -43,7 +44,12 @@ func _process(delta: float) -> void:
     var state := ResourceLoader.load_threaded_get_status(loading_path, progress)
     var fraction := float(progress[0]) if not progress.is_empty() else 0.0
     load_bar.value = fraction * 100.0
-    load_caption.text = "Opening %s  •  %d%%" % ["Ravenwood preview" if loading_path == RAVENWOOD_PREVIEW_SCENE else "Ashenreach", int(fraction * 100.0)]
+    var destination := "Ashenreach"
+    if loading_path == RAVENWOOD_PREVIEW_SCENE:
+        destination = "Ravenwood preview"
+    elif loading_path == IRON_PLAINS_PREVIEW_SCENE:
+        destination = "Iron Plains preview"
+    load_caption.text = "Opening %s  •  %d%%" % [destination, int(fraction * 100.0)]
     if state == ResourceLoader.THREAD_LOAD_LOADED:
         var packed := ResourceLoader.load_threaded_get(loading_path) as PackedScene
         loading_path = ""
@@ -211,12 +217,18 @@ func _select_region(region_id: String) -> void:
     var region: Dictionary = territories.get(region_id, {})
     detail_name.text = str(region.get("name", region_id))
     var playable: bool = region_id == "ashen_wastes" and (region.get("boards", []) as Array).has("ashenreach")
-    detail_type.text = "PLAYABLE STRONGHOLD" if playable else "BOARD PREVIEW • CAMPAIGN IN DEVELOPMENT" if region_id == "ravenwood" else "FUTURE CAMPAIGN"
+    var has_preview := region_id in ["ravenwood", "iron_plains"]
+    detail_type.text = "PLAYABLE STRONGHOLD" if playable else "BOARD PREVIEW • CAMPAIGN IN DEVELOPMENT" if has_preview else "FUTURE CAMPAIGN"
     var guardian := str(region.get("legendary_monster", "")).replace("_", " ").capitalize()
     var stronghold := str(region.get("stronghold", "Uncharted stronghold"))
     detail_body.text = "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]
-    enter_button.visible = playable or region_id == "ravenwood"
-    enter_button.text = "PREVIEW RAVENWOOD" if region_id == "ravenwood" else "ENTER ASHENREACH"
+    enter_button.visible = playable or has_preview
+    if region_id == "ravenwood":
+        enter_button.text = "PREVIEW RAVENWOOD"
+    elif region_id == "iron_plains":
+        enter_button.text = "PREVIEW IRON PLAINS"
+    else:
+        enter_button.text = "ENTER ASHENREACH"
 
 func _show_region_armory() -> void:
     var pool := HeroEquipmentService.region_pool(current_region)
@@ -237,13 +249,22 @@ func _open_map() -> void:
     _show_page(map_page)
 
 func _enter_region() -> void:
-    if current_region not in ["ashen_wastes", "ravenwood"] or loading_path != "":
+    if current_region not in ["ashen_wastes", "ravenwood", "iron_plains"] or loading_path != "":
         return
-    var scene_path := RAVENWOOD_PREVIEW_SCENE if current_region == "ravenwood" else ASHENREACH_SCENE
+    var scene_path := ASHENREACH_SCENE
+    if current_region == "ravenwood":
+        scene_path = RAVENWOOD_PREVIEW_SCENE
+    elif current_region == "iron_plains":
+        scene_path = IRON_PLAINS_PREVIEW_SCENE
     _show_page(load_page)
     load_time = 0.0
     load_bar.value = 0
-    load_caption.text = "Preparing Ravenwood preview..." if current_region == "ravenwood" else "Preparing Ashenreach..."
+    if current_region == "ravenwood":
+        load_caption.text = "Preparing Ravenwood preview..."
+    elif current_region == "iron_plains":
+        load_caption.text = "Preparing Iron Plains preview..."
+    else:
+        load_caption.text = "Preparing Ashenreach..."
     var error := ResourceLoader.load_threaded_request(scene_path)
     if error == OK:
         loading_path = scene_path
