@@ -511,7 +511,10 @@ func _load_hero_catalog() -> void:
             "signature_ability": "Chosen Path",
             "movement_points": 3,
             "unlock_item": "",
-            "piece_asset": "",
+            "piece_asset": "res://scenes/ChosenHeroPiece.tscn",
+            "piece_scale": 1.0,
+            "piece_offset": [0.0, 0.0, 0.0],
+            "is_chosen_hero": true,
             "placeholder_color": HeroProgressionService.chosen_hero_class_color()
         }
 
@@ -1678,6 +1681,8 @@ func _apply_hero_visual(data: Dictionary) -> void:
     var z_offset := float(piece_offset[2]) if piece_offset.size() > 2 else 0.0
     active_hero_model.scale = Vector3.ONE * piece_scale
     active_hero_model.position = Vector3(x_offset, y_offset + extra_y, z_offset)
+    if bool(data.get("is_chosen_hero", false)):
+        active_hero_model.call("set_profile", HeroProgressionService.chosen_hero_appearance())
     hero_unit.add_child(active_hero_model)
     await get_tree().process_frame
     _snap_visual_to_ground(active_hero_model, 0.0)
