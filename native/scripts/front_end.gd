@@ -280,7 +280,7 @@ func _build_character_selection() -> void:
     character_name_input.text_changed.connect(func(_value: String): _refresh_character_preview())
     _refresh_character_preview()
 
-    var rules := _label("Only your chosen class is open at first. Reunite a champion's land and recover that hero's chest piece to unlock their specialty path for your Chosen Hero. Skill points remain limited.", 13, Color("aebdbb"))
+    var rules := _label("Only your chosen class is open at first. Reunite a champion's land and recover that hero's chest piece to unlock their three specialty skill ladders for your Chosen Hero. Skill points remain limited.", 13, Color("aebdbb"))
     rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(rules)
     character_status = _label("", 13, Color("e6a078"))
