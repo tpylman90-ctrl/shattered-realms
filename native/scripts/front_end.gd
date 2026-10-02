@@ -211,8 +211,8 @@ func _build_character_selection() -> void:
     character_discipline.set_item_metadata(2, "wayfinder")
     character_discipline.add_item("Lifebinder  —  restore health and ward allies")
     character_discipline.set_item_metadata(3, "lifebinder")
-    character_discipline.add_item("Banneret  —  rally troops and coordinate formations")
-    character_discipline.set_item_metadata(4, "banneret")
+    character_discipline.add_item("Envoy  —  forge alliances and steady a divided coalition")
+    character_discipline.set_item_metadata(4, "envoy")
     character_discipline.custom_minimum_size.y = 42
     character_discipline.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
     column.add_child(character_discipline)
