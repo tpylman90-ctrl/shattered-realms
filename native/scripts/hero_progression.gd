@@ -164,7 +164,13 @@ static func chosen_hero_paths() -> Array[String]:
     return result
 
 static func chosen_hero_can_access_path(path_id: String) -> bool:
-    return chosen_hero_paths().has(path_id)
+    var unlocked_paths := chosen_hero_paths()
+    if unlocked_paths.has(path_id):
+        return true
+    var separator := path_id.find("::")
+    if separator < 0:
+        return false
+    return unlocked_paths.has(path_id.substr(0, separator))
 
 static func unlock_chosen_hero_champion_path(hero_id: String, land_reconnected: bool, chest_piece_owned: bool) -> bool:
     var hero_definitions: Dictionary = data().get("heroes", {})
@@ -209,18 +215,26 @@ static func _chosen_hero_definition() -> Dictionary:
         var hero_id := str(hero_id_variant)
         var source: Dictionary = hero_definitions[hero_id]
         var path_id := "champion_" + hero_id
-        trees.append({
-            "id": path_id,
-            "name": str(source.get("name", hero_id)),
-            "theme": "Champion specialties • skills learned with your Chosen Hero's limited points."
-        })
+        var hero_name := str(source.get("name", hero_id))
+        for source_tree_variant in source.get("trees", []):
+            if not source_tree_variant is Dictionary:
+                continue
+            var source_tree: Dictionary = source_tree_variant
+            var source_tree_id := str(source_tree.get("id", ""))
+            var branch_id := path_id + "::" + source_tree_id
+            trees.append({
+                "id": branch_id,
+                "name": "%s — %s" % [hero_name, str(source_tree.get("name", source_tree_id))],
+                "theme": str(source_tree.get("theme", "Champion specialty path."))
+            })
         for raw_skill in source.get("skills", []):
             if not raw_skill is Dictionary:
                 continue
             var skill: Dictionary = (raw_skill as Dictionary).duplicate(true)
             var old_id := str(skill.get("id", ""))
+            var old_tree_id := str(skill.get("tree", ""))
             skill["id"] = path_id + "::" + old_id
-            skill["tree"] = path_id
+            skill["tree"] = path_id + "::" + old_tree_id
             var mapped_requires: Array[String] = []
             for required in skill.get("requires", []):
                 mapped_requires.append(path_id + "::" + str(required))
