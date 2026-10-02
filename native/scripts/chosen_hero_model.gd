@@ -5,7 +5,8 @@ var appearance: Dictionary = {}
 func _ready() -> void:
     if appearance.is_empty():
         _load_saved_appearance()
-    _rebuild_figure()
+    if get_child_count() == 0:
+        _rebuild_figure()
 
 func set_profile(profile: Dictionary) -> void:
     appearance = profile.duplicate(true)
