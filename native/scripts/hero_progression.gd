@@ -131,6 +131,14 @@ static func chosen_hero_name() -> String:
     var name := str(cfg.get_value("chosen_hero", "name", "Chosen Hero")).strip_edges()
     return name if name != "" else "Chosen Hero"
 
+static func chosen_hero_class_name() -> String:
+    var class_data: Dictionary = STARTER_CLASSES.get(chosen_hero_class_id(), STARTER_CLASSES["warrior"])
+    return str(class_data.get("name", "Warrior"))
+
+static func chosen_hero_class_color() -> String:
+    var class_data: Dictionary = STARTER_CLASSES.get(chosen_hero_class_id(), STARTER_CLASSES["warrior"])
+    return str(class_data.get("color", "#ae7952"))
+
 static func chosen_hero_paths() -> Array[String]:
     var cfg := ConfigFile.new()
     var result: Array[String] = []
