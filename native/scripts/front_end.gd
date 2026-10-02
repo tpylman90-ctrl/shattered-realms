@@ -214,7 +214,7 @@ func _build_character_selection() -> void:
     var preview_stage := Node3D.new()
     preview_viewport.add_child(preview_stage)
     var preview_camera := Camera3D.new()
-    preview_camera.position = Vector3(0.0, 1.3, 5.0)
+    preview_camera.position = Vector3(0.0, 1.3, -5.0)
     preview_camera.fov = 37.0
     preview_camera.look_at(Vector3(0.0, 1.18, 0.0), Vector3.UP)
     preview_stage.add_child(preview_camera)
@@ -224,7 +224,7 @@ func _build_character_selection() -> void:
     preview_light.light_energy = 2.2
     preview_stage.add_child(preview_light)
     var preview_fill := OmniLight3D.new()
-    preview_fill.position = Vector3(2.0, 1.7, 2.0)
+    preview_fill.position = Vector3(2.0, 1.7, -2.0)
     preview_fill.light_color = Color("d49b5b")
     preview_fill.light_energy = 1.2
     preview_fill.omni_range = 6.0
