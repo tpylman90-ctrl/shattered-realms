@@ -3,6 +3,42 @@ extends RefCounted
 
 const DATA_PATH := "res://data/hero_progression.json"
 const SAVE_PATH := "user://hero_progression.cfg"
+const CHOSEN_PROFILE_PATH := "user://chosen_hero.cfg"
+const WORLD_CAMPAIGN_PATH := "user://world_campaign.cfg"
+const CHOSEN_HERO_ID := "chosen_hero"
+
+const STARTER_CLASSES := {
+    "warrior": {
+        "name": "Warrior", "color": "#ae7952",
+        "base_stats": {"hp": 126, "mp": 36, "power": 17, "magic": 8, "defense": 14, "resistance": 9, "speed": 9, "crit": 4.0},
+        "growth": {"hp": 13, "mp": 3, "power": 2.3, "magic": 0.8, "defense": 1.8, "resistance": 1.0, "speed": 0.5, "crit": 0.1},
+        "description": "Direct weapon skill and durable defense."
+    },
+    "ranger": {
+        "name": "Ranger", "color": "#668b56",
+        "base_stats": {"hp": 104, "mp": 42, "power": 14, "magic": 10, "defense": 9, "resistance": 10, "speed": 15, "crit": 8.0},
+        "growth": {"hp": 10, "mp": 4, "power": 1.7, "magic": 1.0, "defense": 0.9, "resistance": 1.0, "speed": 1.1, "crit": 0.22},
+        "description": "Precise ranged attacks and battlefield control."
+    },
+    "black_mage": {
+        "name": "Black Mage", "color": "#7659a7",
+        "base_stats": {"hp": 86, "mp": 62, "power": 7, "magic": 19, "defense": 7, "resistance": 15, "speed": 10, "crit": 4.0},
+        "growth": {"hp": 8, "mp": 7, "power": 0.7, "magic": 2.5, "defense": 0.7, "resistance": 1.6, "speed": 0.7, "crit": 0.12},
+        "description": "High-impact magic, hexes, and disruption."
+    },
+    "white_mage": {
+        "name": "White Mage", "color": "#d4c58e",
+        "base_stats": {"hp": 102, "mp": 64, "power": 8, "magic": 17, "defense": 10, "resistance": 16, "speed": 10, "crit": 5.0},
+        "growth": {"hp": 10, "mp": 7, "power": 0.8, "magic": 2.1, "defense": 1.0, "resistance": 1.8, "speed": 0.7, "crit": 0.14},
+        "description": "Healing, recovery, and protective magic."
+    },
+    "thief": {
+        "name": "Thief", "color": "#877256",
+        "base_stats": {"hp": 96, "mp": 40, "power": 14, "magic": 9, "defense": 8, "resistance": 9, "speed": 17, "crit": 10.0},
+        "growth": {"hp": 9, "mp": 4, "power": 1.6, "magic": 0.8, "defense": 0.8, "resistance": 0.9, "speed": 1.3, "crit": 0.28},
+        "description": "Fast strikes, evasion, and dirty tricks."
+    }
+}
 
 static var _data_cache: Dictionary = {}
 
@@ -27,6 +63,8 @@ static func data() -> Dictionary:
 
 
 static func hero_definition(hero_id: String) -> Dictionary:
+    if hero_id == CHOSEN_HERO_ID:
+        return _chosen_hero_definition()
     var root := data()
     var heroes_variant: Variant = root.get("heroes", {})
     if heroes_variant is Dictionary and (heroes_variant as Dictionary).has(hero_id):
@@ -74,6 +112,181 @@ static func stats_for(hero_id: String, level: int) -> Dictionary:
 
     return result
 
+
+static func chosen_hero_exists() -> bool:
+    var cfg := ConfigFile.new()
+    return cfg.load(CHOSEN_PROFILE_PATH) == OK and str(cfg.get_value("chosen_hero", "name", "")).strip_edges() != ""
+
+static func chosen_hero_class_id() -> String:
+    var cfg := ConfigFile.new()
+    if cfg.load(CHOSEN_PROFILE_PATH) != OK:
+        return "warrior"
+    var class_id := str(cfg.get_value("chosen_hero", "starting_class_id", "warrior"))
+    return class_id if STARTER_CLASSES.has(class_id) else "warrior"
+
+static func chosen_hero_name() -> String:
+    var cfg := ConfigFile.new()
+    if cfg.load(CHOSEN_PROFILE_PATH) != OK:
+        return "Chosen Hero"
+    var name := str(cfg.get_value("chosen_hero", "name", "Chosen Hero")).strip_edges()
+    return name if name != "" else "Chosen Hero"
+
+static func chosen_hero_paths() -> Array[String]:
+    var cfg := ConfigFile.new()
+    var result: Array[String] = []
+    if cfg.load(CHOSEN_PROFILE_PATH) == OK:
+        var stored: Variant = cfg.get_value("chosen_hero", "unlocked_skill_paths", [])
+        if stored is Array:
+            for raw_path in stored:
+                var path_id := str(raw_path)
+                if not result.has(path_id):
+                    result.append(path_id)
+    var starter := chosen_hero_class_id()
+    if not result.has(starter):
+        result.append(starter)
+    return result
+
+static func chosen_hero_can_access_path(path_id: String) -> bool:
+    return chosen_hero_paths().has(path_id)
+
+static func unlock_chosen_hero_champion_path(hero_id: String, land_reconnected: bool, chest_piece_owned: bool) -> bool:
+    if not land_reconnected or not chest_piece_owned or not data().get("heroes", {}).has(hero_id):
+        return false
+    var path_id := "champion_" + hero_id
+    var paths := chosen_hero_paths()
+    if paths.has(path_id):
+        return false
+    paths.append(path_id)
+    var cfg := ConfigFile.new()
+    if cfg.load(CHOSEN_PROFILE_PATH) != OK:
+        return false
+    cfg.set_value("chosen_hero", "unlocked_skill_paths", paths)
+    return cfg.save(CHOSEN_PROFILE_PATH) == OK
+
+static func mark_territory_reconnected(territory_id: String) -> void:
+    if territory_id.strip_edges() == "":
+        return
+    var cfg := ConfigFile.new()
+    cfg.load(WORLD_CAMPAIGN_PATH)
+    cfg.set_value("territories", territory_id, true)
+    cfg.save(WORLD_CAMPAIGN_PATH)
+
+static func territory_is_reconnected(territory_id: String) -> bool:
+    if territory_id.strip_edges() == "":
+        return false
+    var cfg := ConfigFile.new()
+    if cfg.load(WORLD_CAMPAIGN_PATH) == OK:
+        return bool(cfg.get_value("territories", territory_id, false))
+    return false
+
+static func _chosen_hero_definition() -> Dictionary:
+    var root := data()
+    var class_id := chosen_hero_class_id()
+    var starter: Dictionary = STARTER_CLASSES.get(class_id, STARTER_CLASSES["warrior"])
+    var tree_id := class_id
+    var skills: Array = _starter_class_skills(class_id)
+    var trees: Array = [{"id": tree_id, "name": str(starter.get("name", "Warrior")), "theme": str(starter.get("description", ""))}]
+    var hero_definitions: Dictionary = root.get("heroes", {})
+    for hero_id_variant in hero_definitions.keys():
+        var hero_id := str(hero_id_variant)
+        var source: Dictionary = hero_definitions[hero_id]
+        var path_id := "champion_" + hero_id
+        trees.append({
+            "id": path_id,
+            "name": str(source.get("name", hero_id)),
+            "theme": "Champion specialty • unlock by restoring their land and recovering their chest piece."
+        })
+        for raw_skill in source.get("skills", []):
+            if not raw_skill is Dictionary:
+                continue
+            var skill: Dictionary = (raw_skill as Dictionary).duplicate(true)
+            var old_id := str(skill.get("id", ""))
+            skill["id"] = path_id + "::" + old_id
+            skill["tree"] = path_id
+            var mapped_requires: Array[String] = []
+            for required in skill.get("requires", []):
+                mapped_requires.append(path_id + "::" + str(required))
+            skill["requires"] = mapped_requires
+            skills.append(skill)
+
+    var starter_skill := class_id + "::" + class_id + "_basic"
+    return {
+        "id": CHOSEN_HERO_ID,
+        "name": chosen_hero_name(),
+        "base_stats": starter.get("base_stats", {}),
+        "growth": starter.get("growth", {}),
+        "trees": trees,
+        "skills": skills,
+        "starting_skills": [starter_skill],
+        "starting_equipped": [starter_skill]
+    }
+
+static func _starter_class_skills(class_id: String) -> Array:
+    var tree := class_id
+    var class_skills: Array = []
+    match class_id:
+        "warrior":
+            class_skills = [
+                _starter_skill(tree, "warrior_basic", "Heavy Swing", "A forceful strike against one foe.", "active", 1, 1, 4, 25, "power", "heavy_hit"),
+                _starter_skill(tree, "warrior_guard", "Guard Stance", "Gain a lasting defense bonus.", "passive", 2, 2, 0, 0, "none", "", {"defense": 3}, ["warrior_basic"]),
+                _starter_skill(tree, "warrior_sunder", "Sundering Blow", "Strike hard and weaken the target.", "active", 4, 3, 7, 21, "power", "sunder", {}, ["warrior_guard"])
+            ]
+        "ranger":
+            class_skills = [
+                _starter_skill(tree, "ranger_basic", "Quick Shot", "A fast, accurate ranged attack.", "active", 1, 1, 4, 20, "power", "heavy_hit"),
+                _starter_skill(tree, "ranger_keen_eye", "Keen Eye", "Improve critical hit chance.", "passive", 2, 2, 0, 0, "none", "", {"crit": 1.0}, ["ranger_basic"]),
+                _starter_skill(tree, "ranger_snare", "Crippling Shot", "Damage and slow one enemy.", "active", 4, 3, 7, 17, "power", "slow", {}, ["ranger_keen_eye"])
+            ]
+        "black_mage":
+            class_skills = [
+                _starter_skill(tree, "black_mage_basic", "Arcane Bolt", "A focused blast of destructive magic.", "active", 1, 1, 5, 28, "magic", "heavy_hit"),
+                _starter_skill(tree, "black_mage_mana", "Mana Reserve", "Increase maximum MP and magic.", "passive", 2, 2, 0, 0, "none", "", {"mp": 6, "magic": 2}, ["black_mage_basic"]),
+                _starter_skill(tree, "black_mage_hex", "Withering Hex", "Damage and weaken one enemy.", "active", 4, 3, 8, 20, "magic", "weaken", {}, ["black_mage_mana"])
+            ]
+        "white_mage":
+            class_skills = [
+                _starter_skill(tree, "white_mage_basic", "Mend", "Restore a large portion of the hero's health.", "active", 1, 1, 6, 0, "none", "heal"),
+                _starter_skill(tree, "white_mage_ward", "Warding Light", "Increase resistance and maximum health.", "passive", 2, 2, 0, 0, "none", "", {"resistance": 2, "hp": 5}, ["white_mage_basic"]),
+                _starter_skill(tree, "white_mage_sanctuary", "Sanctuary", "Regenerate health over several turns.", "active", 4, 3, 8, 0, "none", "regen", {}, ["white_mage_ward"])
+            ]
+        "thief":
+            class_skills = [
+                _starter_skill(tree, "thief_basic", "Quick Cut", "A swift strike that leaves a bleeding wound.", "active", 1, 1, 4, 18, "power", "bleed"),
+                _starter_skill(tree, "thief_fleet", "Fleet Foot", "Increase movement speed and evasion.", "passive", 2, 2, 0, 0, "none", "", {"speed": 2, "crit": 0.5}, ["thief_basic"]),
+                _starter_skill(tree, "thief_smoke", "Smoke Veil", "Evade incoming attacks for several turns.", "active", 4, 3, 7, 0, "none", "evade", {}, ["thief_fleet"])
+            ]
+    return class_skills
+
+static func _starter_skill(tree_id: String, skill_id: String, skill_name: String, text: String, skill_type: String, required_level: int, tier: int, mp_cost: int, base_power: int, scaling: String, effect: String, bonuses: Dictionary = {}, requirements: Array = []) -> Dictionary:
+    var skill := {
+        "id": tree_id + "::" + skill_id,
+        "name": skill_name,
+        "description": text,
+        "tree": tree_id,
+        "type": skill_type,
+        "level_req": required_level,
+        "tier": tier,
+        "tier_spend_required": 0 if tier == 1 else 1 if tier == 2 else 2,
+        "point_cost_per_rank": 1,
+        "max_rank": 3,
+        "requires": [],
+        "mp": mp_cost,
+        "power": base_power,
+        "power_per_rank": 4 if skill_type == "active" else 0,
+        "scaling": scaling,
+        "element": "physical",
+        "target": "enemy" if effect != "heal" and effect != "regen" and effect != "evade" and not effect.begins_with("guard_") else "self",
+        "effect": effect,
+        "combat_effect": effect
+    }
+    if not requirements.is_empty():
+        var mapped: Array[String] = []
+        for required in requirements:
+            mapped.append(tree_id + "::" + str(required))
+        skill["requires"] = mapped
+    if not bonuses.is_empty():
+        skill["stat_bonus"] = bonuses.duplicate(true)
+    return skill
 
 static func skill_by_id(hero_id: String, skill_id: String) -> Dictionary:
     var definition := hero_definition(hero_id)
@@ -208,6 +421,8 @@ static func can_learn(hero_id: String, skill_id: String) -> bool:
             var node_id := str(node.get("id", ""))
             var free_rank := 1 if definition.get("starting_skills", []).has(node_id) else 0
             tree_spent += maxi(0, int(ranks.get(node_id, 0)) - free_rank)
+    if hero_id == CHOSEN_HERO_ID and not chosen_hero_can_access_path(str(skill.get("tree", ""))):
+        return false
     if tree_spent < int(skill.get("tier_spend_required", 0)):
         return false
 
