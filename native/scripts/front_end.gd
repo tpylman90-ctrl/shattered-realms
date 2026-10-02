@@ -7,6 +7,7 @@ const IRON_PLAINS_PREVIEW_SCENE := "res://scenes/IronPlainsPreview.tscn"
 const TERRITORY_PREVIEW_SCENE := "res://scenes/TerritoryBoardPreview.tscn"
 const MAP_SCRIPT := preload("res://scripts/world_map_canvas.gd")
 const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
+const HeroProgressionService = preload("res://scripts/hero_progression.gd")
 
 var territories: Dictionary = {}
 var current_region := "ashen_wastes"
@@ -274,6 +275,9 @@ func _build_character_selection() -> void:
     character_class.custom_minimum_size.y = 42
     character_class.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
     form_column.add_child(character_class)
+    character_class.item_selected.connect(func(_index: int): _refresh_character_preview())
+    character_name_input.text_changed.connect(func(_value: String): _refresh_character_preview())
+    _refresh_character_preview()
 
     var rules := _label("Only your chosen class is open at first. Reunite a champion's land and recover that hero's chest piece to unlock their specialty path for your Chosen Hero. Skill points remain limited.", 13, Color("aebdbb"))
     rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
