@@ -33,6 +33,7 @@ var character_hair_color: OptionButton
 var character_class: OptionButton
 var character_status: Label
 var character_preview_model: Node3D
+var character_preview_caption: Label
 var loading_path := ""
 var load_time := 0.0
 
@@ -235,10 +236,10 @@ func _build_character_selection() -> void:
         if character_preview_model:
             character_preview_model.call("set_profile", _chosen_profile_from_controls())
             preview_stage.add_child(character_preview_model)
-    var preview_note := _label("Appearance and class colors carry into the journey.", 11, Color("aebdbb"))
-    preview_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    preview_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    preview_column.add_child(preview_note)
+    character_preview_caption = _label("Chosen Hero", 11, Color("aebdbb"))
+    character_preview_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    character_preview_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    preview_column.add_child(character_preview_caption)
 
     var name_label := _label("HERO NAME", 13, Color("d6a865"))
     form_column.add_child(name_label)
@@ -333,8 +334,14 @@ func _chosen_profile_from_controls() -> Dictionary:
     }
 
 func _refresh_character_preview() -> void:
+    var profile := _chosen_profile_from_controls()
     if character_preview_model:
-        character_preview_model.call("set_profile", _chosen_profile_from_controls())
+        character_preview_model.call("set_profile", profile)
+    if character_preview_caption:
+        var display_name := str(profile.get("name", "")).strip_edges()
+        if display_name == "":
+            display_name = "Chosen Hero"
+        character_preview_caption.text = "%s  •  %s" % [display_name, str(profile.get("starting_class", "Warrior"))]
 
 func _confirm_chosen_hero() -> void:
     var hero_name := character_name_input.text.strip_edges()
