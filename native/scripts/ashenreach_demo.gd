@@ -283,6 +283,9 @@ func _ready() -> void:
             owned_collectibles.append(item_id)
     _refresh_unlocked_heroes()
     _load_game_state()
+    if not FileAccess.file_exists("user://ashenreach_save.cfg") and HeroProgressionService.chosen_hero_exists():
+        var chosen_profile := HeroProgressionService.ensure_profile("chosen_hero")
+        hero_health = int(chosen_profile.get("stats", {}).get("hp", 100))
     _refresh_unlocked_heroes()
     _refresh_chosen_hero_skill_unlocks()
     _consume_battle_result()
