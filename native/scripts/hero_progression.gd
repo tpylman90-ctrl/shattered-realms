@@ -131,6 +131,15 @@ static func chosen_hero_name() -> String:
     var name := str(cfg.get_value("chosen_hero", "name", "Chosen Hero")).strip_edges()
     return name if name != "" else "Chosen Hero"
 
+static func chosen_hero_appearance() -> Dictionary:
+    var cfg := ConfigFile.new()
+    if cfg.load(CHOSEN_PROFILE_PATH) != OK:
+        return {}
+    var appearance: Dictionary = {}
+    for key in cfg.get_section_keys("chosen_hero"):
+        appearance[key] = cfg.get_value("chosen_hero", key)
+    return appearance
+
 static func chosen_hero_class_name() -> String:
     var class_data: Dictionary = STARTER_CLASSES.get(chosen_hero_class_id(), STARTER_CLASSES["warrior"])
     return str(class_data.get("name", "Warrior"))
