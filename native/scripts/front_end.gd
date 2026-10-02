@@ -29,7 +29,7 @@ var character_gender: OptionButton
 var character_skin_tone: OptionButton
 var character_hair_style: OptionButton
 var character_hair_color: OptionButton
-var character_discipline: OptionButton
+var character_class: OptionButton
 var character_status: Label
 var loading_path := ""
 var load_time := 0.0
@@ -200,24 +200,24 @@ func _build_character_selection() -> void:
     _add_character_option(identity_grid, "HAIR STYLE", ["Short", "Long", "Braided", "Cropped"], "hair_style")
     _add_character_option(identity_grid, "HAIR COLOR", ["Black", "Brown", "Auburn", "Silver"], "hair_color")
 
-    var discipline_label := _label("STARTING DISCIPLINE", 13, Color("d6a865"))
+    var discipline_label := _label("STARTING CLASS", 13, Color("d6a865"))
     column.add_child(discipline_label)
-    character_discipline = OptionButton.new()
-    character_discipline.add_item("Fracture Adept  —  shift foes and reshape broken ground")
-    character_discipline.set_item_metadata(0, "fracture_adept")
-    character_discipline.add_item("Relicwright  —  deploy devices, traps, and crafted gear")
-    character_discipline.set_item_metadata(1, "relicwright")
-    character_discipline.add_item("Wayfinder  —  scout routes and exploit the terrain")
-    character_discipline.set_item_metadata(2, "wayfinder")
-    character_discipline.add_item("Lifebinder  —  restore health and ward allies")
-    character_discipline.set_item_metadata(3, "lifebinder")
-    character_discipline.add_item("Envoy  —  forge alliances and steady a divided coalition")
-    character_discipline.set_item_metadata(4, "envoy")
-    character_discipline.custom_minimum_size.y = 42
-    character_discipline.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
-    column.add_child(character_discipline)
+    character_class = OptionButton.new()
+    character_class.add_item("Warrior  —  close combat and armor")
+    character_class.set_item_metadata(0, "warrior")
+    character_class.add_item("Ranger  —  bows, scouting, and traps")
+    character_class.set_item_metadata(1, "ranger")
+    character_class.add_item("Black Mage  —  destructive spellcasting")
+    character_class.set_item_metadata(2, "black_mage")
+    character_class.add_item("White Mage  —  healing and protection")
+    character_class.set_item_metadata(3, "white_mage")
+    character_class.add_item("Thief  —  speed, evasion, and precision")
+    character_class.set_item_metadata(4, "thief")
+    character_class.custom_minimum_size.y = 42
+    character_class.add_theme_stylebox_override("normal", _style(Color("111a1e"), Color("67563e")))
+    column.add_child(character_class)
 
-    var rules := _label("Your chosen discipline is your only learnable path at first. Reunite a champion's land and recover that hero's chest piece to unlock their skill path for your Chosen Hero. Skill points remain limited.", 13, Color("aebdbb"))
+    var rules := _label("Only your chosen class is open at first. Reunite a champion's land and recover that hero's chest piece to unlock their specialty path for your Chosen Hero. Skill points remain limited.", 13, Color("aebdbb"))
     rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(rules)
     character_status = _label("", 13, Color("e6a078"))
@@ -268,9 +268,9 @@ func _confirm_chosen_hero() -> void:
         "skin_tone": character_skin_tone.get_item_text(character_skin_tone.selected),
         "hair_style": character_hair_style.get_item_text(character_hair_style.selected),
         "hair_color": character_hair_color.get_item_text(character_hair_color.selected),
-        "starting_discipline": character_discipline.get_item_text(character_discipline.selected).split("  —  ")[0],
-        "starting_discipline_id": str(character_discipline.get_item_metadata(character_discipline.selected)),
-        "unlocked_discipline_paths": [str(character_discipline.get_item_metadata(character_discipline.selected))],
+        "starting_class": character_class.get_item_text(character_class.selected).split("  —  ")[0],
+        "starting_class_id": str(character_class.get_item_metadata(character_class.selected)),
+        "unlocked_skill_paths": [str(character_class.get_item_metadata(character_class.selected))],
         "is_chosen_hero": true
     }
     var cfg := ConfigFile.new()
