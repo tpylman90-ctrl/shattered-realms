@@ -216,8 +216,8 @@ func _build_character_selection() -> void:
     var preview_camera := Camera3D.new()
     preview_camera.position = Vector3(0.0, 1.3, -5.0)
     preview_camera.fov = 37.0
-    preview_camera.look_at(Vector3(0.0, 1.18, 0.0), Vector3.UP)
     preview_stage.add_child(preview_camera)
+    preview_camera.look_at(Vector3(0.0, 1.18, 0.0), Vector3.UP)
     preview_camera.current = true
     var preview_light := DirectionalLight3D.new()
     preview_light.rotation_degrees = Vector3(-32.0, -24.0, 0.0)
