@@ -7,7 +7,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": false
+      "stronghold_is_separate": false,
+      "layout": "Scattered toxic pools around a central dry grove; branching boardwalk loop."
     },
     {
       "territory": "shadowfen_forest",
@@ -16,7 +17,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": false
+      "stronghold_is_separate": false,
+      "layout": "Central clearing with radial forest paths and a small rear-edge pond."
     },
     {
       "territory": "cursed_mire",
@@ -25,7 +27,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": false
+      "stronghold_is_separate": false,
+      "layout": "Disconnected peat pools, dead woods and broken causeways."
     },
     {
       "territory": "dragons_rest",
@@ -34,7 +37,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": false
+      "stronghold_is_separate": false,
+      "layout": "Volcanic island with basalt paths and lava crossings."
     },
     {
       "territory": "frostpeaks",
@@ -43,7 +47,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": true
+      "stronghold_is_separate": true,
+      "layout": "Horseshoe glacier basin with three separate frozen lakes and switchbacks."
     },
     {
       "territory": "stormcrown_mountains",
@@ -52,7 +57,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": true
+      "stronghold_is_separate": true,
+      "layout": "Layered rear ridges and a summit approach above broad alpine meadow."
     },
     {
       "territory": "iron_plains",
@@ -61,7 +67,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": true
+      "stronghold_is_separate": true,
+      "layout": "East-west road crossroads through fields and short earthworks; isolated pond."
     },
     {
       "territory": "drakeshard_range",
@@ -70,7 +77,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": true
+      "stronghold_is_separate": true,
+      "layout": "U-shaped dry canyon with zigzag trails and isolated spring."
     },
     {
       "territory": "golden_expanse",
@@ -79,7 +87,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": true
+      "stronghold_is_separate": true,
+      "layout": "Dry dune sea around a single left-edge oasis and stone mesas."
     },
     {
       "territory": "ember_coast",
@@ -88,7 +97,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": true
+      "stronghold_is_separate": true,
+      "layout": "Coastal cliffs and short tidal inlets around volcanic ground."
     },
     {
       "territory": "hollow_isles",
@@ -97,7 +107,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": true
+      "stronghold_is_separate": true,
+      "layout": "Separate islands connected by causeways and tidal flats."
     },
     {
       "territory": "westhaven_coast",
@@ -106,7 +117,8 @@
       "stage": "concept_preview",
       "mesh": null,
       "movement_layer": null,
-      "stronghold_is_separate": true
+      "stronghold_is_separate": true,
+      "layout": "Sea confined to west edge with two coves; dry central crossroads."
     }
   ],
   "excluded_ocean_expansions": [
