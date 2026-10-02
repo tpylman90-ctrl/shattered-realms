@@ -47,7 +47,11 @@
     "iron_plains": {
       "name": "The Iron Plains",
       "stronghold": "Harrowstead",
-      "hero": "cedric"
+      "hero": "cedric",
+      "boards": [
+        "iron_plains_preview"
+      ],
+      "status": "board_preview"
     },
     "drakeshard_range": {
       "name": "Drakeshard Range",
