@@ -185,6 +185,14 @@ func _load_hero_data() -> void:
     if heroes.has(hero_id):
         hero_data = (heroes[hero_id] as Dictionary).duplicate(true)
         hero_name = str(hero_data.get("name", hero_id))
+    elif hero_id == HeroProgressionService.CHOSEN_HERO_ID and HeroProgressionService.chosen_hero_exists():
+        hero_data = {
+            "name": HeroProgressionService.chosen_hero_name(),
+            "class": HeroProgressionService.chosen_hero_class_name(),
+            "piece_asset": "",
+            "placeholder_color": HeroProgressionService.chosen_hero_class_color()
+        }
+        hero_name = str(hero_data["name"])
 
 
 func _load_progression_profile() -> void:
@@ -365,7 +373,8 @@ func _add_shadow_disc(parent: Node3D, radius: float) -> void:
 func _spawn_hero() -> void:
     var asset_path := str(hero_data.get("piece_asset", ""))
     if asset_path == "" or not ResourceLoader.exists(asset_path):
-        _spawn_placeholder(hero_anchor, Color(0.15, 0.75, 0.95), 1.0)
+        var fallback_color := Color(str(hero_data.get("placeholder_color", "#26bfe0")))
+        _spawn_placeholder(hero_anchor, fallback_color, 1.0)
         return
 
     var packed := load(asset_path) as PackedScene
