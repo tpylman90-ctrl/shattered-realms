@@ -158,7 +158,8 @@ static func chosen_hero_can_access_path(path_id: String) -> bool:
     return chosen_hero_paths().has(path_id)
 
 static func unlock_chosen_hero_champion_path(hero_id: String, land_reconnected: bool, chest_piece_owned: bool) -> bool:
-    if not land_reconnected or not chest_piece_owned or not data().get("heroes", {}).has(hero_id):
+    var hero_definitions: Dictionary = data().get("heroes", {})
+    if not land_reconnected or not chest_piece_owned or not hero_definitions.has(hero_id):
         return false
     var path_id := "champion_" + hero_id
     var paths := chosen_hero_paths()
