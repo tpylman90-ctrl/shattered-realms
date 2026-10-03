@@ -37,8 +37,12 @@ def canyon(x, z):
 
 
 def height(x, z):
-    h = 0.62 + 0.28 * math.sin(0.48 * x + 0.22 * z) + 0.19 * math.sin(0.83 * x - 0.25 * z)
-    h += 0.07 * math.sin(2.5 * x + 0.6 * z)
+    # Broad crests are large enough to read at the whole-board camera scale.
+    # The identical function places both visible ground and movement hexes.
+    dune = math.sin(.43 * x + .25 * z + .48 * math.sin(.21 * z))
+    secondary = math.sin(.71 * x - .34 * z)
+    h = .92 + .93 * dune + .42 * secondary
+    h += .09 * math.sin(2.5 * x + .6 * z)
     h -= 0.81 * (1 - ease(3.3, 6.1, math.hypot(x - OASIS[0], z - OASIS[1])))
     for mx, mz, scale, gain in ((11, -11, 4, 1.6), (14, 14, 4.5, 2.0), (-8, 15, 3.5, 1.3)):
         h += gain * math.exp(-((x - mx) ** 2 + (z - mz) ** 2) / scale ** 2)
@@ -192,6 +196,7 @@ def make_details():
     foliage = Mesh("Oasis reeds and palms", 10)
     gold = Mesh("Caravan markers and brass fittings", 11)
     canvas = Mesh("Caravan shelter awnings", 12)
+    roads = Mesh("Worn caravan roads", 13)
 
     def pillar(mesh, x, z, base, tiers, sides=9, phase=0.0):
         """A faceted rock column with shared rings rather than stacked boxes."""
@@ -340,8 +345,27 @@ def make_details():
                             .62, 1.05, .72)
                 gold.box(x + side * 2.8, y + .10, z + bank * 1.1,
                          .43, .09, .49)
+    # The old painted stripe disappeared from whole-board viewing distance.
+    # Height-matched route ribbons make the travel network legible at a glance.
+    for route in ROUTES:
+        for (ax, az), (bx, bz) in zip(route, route[1:]):
+            dx, dz = bx - ax, bz - az
+            length = math.hypot(dx, dz)
+            px, pz = -dz / length * .49, dx / length * .49
+            steps = max(2, math.ceil(length / .34))
+            for i in range(steps):
+                t0, t1 = i / steps, (i + 1) / steps
+                x0, z0 = ax + dx * t0, az + dz * t0
+                x1, z1 = ax + dx * t1, az + dz * t1
+                # Bridge decks are modeled separately and stay visually clear.
+                if canyon((x0 + x1) / 2, (z0 + z1) / 2) > .40:
+                    continue
+                roads.quad((x0 - px, height(x0 - px, z0 - pz) + .045, z0 - pz),
+                           (x1 - px, height(x1 - px, z1 - pz) + .045, z1 - pz),
+                           (x1 + px, height(x1 + px, z1 + pz) + .045, z1 + pz),
+                           (x0 + px, height(x0 + px, z0 + pz) + .045, z0 + pz))
     return [rock, wood, palms, water, frame, scrub,
-            strata, dark_strata, masonry, foliage, gold, canvas]
+            strata, dark_strata, masonry, foliage, gold, canvas, roads]
 
 
 def make_grid():
@@ -446,7 +470,7 @@ def glb(path,meshes,materials,image=None):
 def main():
     OUT.mkdir(parents=True,exist_ok=True);GRID.parent.mkdir(parents=True,exist_ok=True)
     graph=make_grid();GRID.write_text(json.dumps(graph,separators=(",",":"))+"\n")
-    materials=[material([1,1,1,1],texture=True),material([.57,.34,.17,1]),material([.32,.22,.12,1]),material([.17,.37,.19,1],double=True),material([.08,.47,.5,.88],alpha=True,double=True),material([.28,.19,.11,1]),material([.38,.37,.16,1],double=True),material([.62,.36,.21,1],double=True),material([.32,.18,.14,1],double=True),material([.75,.57,.35,1]),material([.23,.43,.25,1],double=True),material([.69,.49,.22,1]),material([.60,.30,.17,1],double=True)]
+    materials=[material([1,1,1,1],texture=True),material([.57,.34,.17,1]),material([.32,.22,.12,1]),material([.17,.37,.19,1],double=True),material([.08,.47,.5,.88],alpha=True,double=True),material([.28,.19,.11,1]),material([.38,.37,.16,1],double=True),material([.62,.36,.21,1],double=True),material([.32,.18,.14,1],double=True),material([.75,.57,.35,1]),material([.23,.43,.25,1],double=True),material([.69,.49,.22,1]),material([.60,.30,.17,1],double=True),material([.78,.57,.35,1],double=True)]
     glb(OUT/"golden_expanse_board.glb",[make_terrain(),*make_details()],materials,make_texture())
     glb(OUT/"golden_expanse_nav.glb",[make_overlay(graph)],[material([.19,.9,.74,.66],alpha=True,double=True,emissive=[.06,.24,.16])])
     print(len(graph["cells"]),"hexes",round((OUT/"golden_expanse_board.glb").stat().st_size/1048576,2),"MiB board",round((OUT/"golden_expanse_nav.glb").stat().st_size/1048576,2),"MiB nav")
