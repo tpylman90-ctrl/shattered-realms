@@ -151,7 +151,8 @@ def make_details():
             for level,scale in ((0,1.0),(h,RNG.uniform(.45,.88))):
                 for k in range(sides):
                     a=twist+k*math.tau/sides
-                    rock.vertex((x+math.cos(a)*w*scale,y+level,z+math.sin(a)*w*scale))
+                    rock.vertex((x+math.cos(a)*w*scale,y+level,z+math.sin(a)*w*scale),
+                                (math.cos(a), .24, math.sin(a)))
             for k in range(sides):
                 nxt=(k+1)%sides
                 rock.indices.extend((first+k,first+nxt,first+sides+nxt,first+k,first+sides+nxt,first+sides+k))
@@ -185,7 +186,162 @@ def make_details():
             a=len(scrub.pos)
             scrub.vertex((x-dx,y,z-dz));scrub.vertex((x,y+h,z));scrub.vertex((x+dx,y,z+dz))
             scrub.indices.extend((a,a+1,a+2))
-    return [rock,wood,palms,water,frame,scrub]
+    strata = Mesh("Layered sandstone escarpments", 7)
+    dark_strata = Mesh("Oxide seams and canyon faces", 8)
+    masonry = Mesh("Sunspire waystations and carved stone", 9)
+    foliage = Mesh("Oasis reeds and palms", 10)
+    gold = Mesh("Caravan markers and brass fittings", 11)
+    canvas = Mesh("Caravan shelter awnings", 12)
+
+    def pillar(mesh, x, z, base, tiers, sides=9, phase=0.0):
+        """A faceted rock column with shared rings rather than stacked boxes."""
+        first = len(mesh.pos)
+        for y, rx, rz in tiers:
+            for k in range(sides):
+                angle = phase + math.tau * k / sides
+                irregular = 1 + .10 * math.sin(k * 5.1 + x * .4 + z)
+                mesh.vertex((x + math.cos(angle) * rx * irregular,
+                             base + y, z + math.sin(angle) * rz * irregular),
+                            (math.cos(angle), .19, math.sin(angle)))
+        for level in range(len(tiers) - 1):
+            for k in range(sides):
+                a = first + level * sides + k
+                b = first + level * sides + (k + 1) % sides
+                c = b + sides
+                d = a + sides
+                mesh.indices.extend((a, b, c, a, c, d))
+        top = first + (len(tiers) - 1) * sides
+        for k in range(1, sides - 1):
+            mesh.indices.extend((top, top + k, top + k + 1))
+
+    # Landmarks occupy the already blocked mesa zones. Varied silhouettes and
+    # oxide bands give the board depth without adding collision to travel hexes.
+    for mx, mz, radius, count, altitude in ((11, -11, 2.3, 18, 5.0),
+                                            (14, 14, 2.5, 21, 6.2),
+                                            (-8, 15, 1.8, 14, 4.2)):
+        for i in range(count):
+            a = i * 2.39996 + mx
+            r = radius * math.sqrt((i + .35) / count)
+            x, z = mx + math.cos(a) * r, mz + math.sin(a) * r
+            h = altitude * (1 - .48 * r / radius) * RNG.uniform(.65, 1.18)
+            w = RNG.uniform(.22, .53) * (1.25 if i < 5 else 1)
+            y = height(x, z) - .16
+            profile = [(0, w * 1.25, w), (.13 * h, w, w * .92),
+                       (.34 * h, w * .76, w * .82),
+                       (.57 * h, w * .82, w * .71),
+                       (.78 * h, w * .55, w * .60),
+                       (h, w * .20, w * .26)]
+            pillar(strata, x, z, y, profile, 7, a)
+            if i % 2 == 0:
+                band_y = y + .36 * h
+                pillar(dark_strata, x, z, band_y,
+                       [(0, w * .79, w * .85), (.07, w * .78, w * .84)], 7, a)
+
+    # Exposed stratified banks follow the existing canyon, leaving its bridge
+    # openings and the underlying height-aligned navigation untouched.
+    for z in np.arange(1.0, 18.8, .72):
+        for side in (-1, 1):
+            x = canyon_x(float(z)) + side * 1.60
+            y = height(x, float(z))
+            width = .32 + .11 * math.sin(z * 2.7)
+            pillar(dark_strata, x, float(z), y - 1.05,
+                   [(0, width * 1.9, .40), (.56, width * 1.4, .39),
+                    (1.12, width, .31)], 6, z)
+
+    # Two roadside waystations, ruined arches, and carved milestones. Larger
+    # pieces are grouped around blocked rocks or well away from the road.
+    for x, z, size in ((11, -11, 1.0), (14, 14, 1.16), (-8, 15, .83)):
+        y = height(x, z) + .32
+        masonry.box(x, y + .12, z, size * 2.8, .23, size * 2.6)
+        for dx in (-1, 1):
+            for dz in (-1, 1):
+                masonry.box(x + dx * size, y + .84, z + dz * size,
+                            .28 * size, 1.55, .28 * size)
+        masonry.box(x, y + 1.69, z - size, size * 2.5, .19, .30)
+        for step in range(3):
+            masonry.box(x - size * (1.35 + step * .18), y + .04 + step * .11,
+                        z + size * .45, .43, .18, size * 1.6)
+        gold.box(x, y + 1.79, z - size, .75 * size, .10, .23)
+
+    for x, z in ((-17, -12), (-13, 10), (-4, 4), (8, 7), (17, 15),
+                 (-5, -10), (8, -15)):
+        y = height(x, z)
+        masonry.box(x, y + .42, z, .26, .84, .26)
+        masonry.box(x, y + .86, z, .39, .13, .39)
+        gold.box(x, y + .65, z + .14, .07, .23, .025)
+
+    # Pebbled oasis shoreline, layered water plants, and broad shade crowns.
+    for i in range(140):
+        a = i * math.tau / 140
+        r = 3.33 + .20 * math.sin(5 * a) + RNG.uniform(-.12, .12)
+        x, z = cx + r * math.cos(a), cz + r * math.sin(a)
+        y = max(.12, height(x, z))
+        w = RNG.uniform(.08, .22)
+        strata.box(x, y + .03, z, w * 1.4, .09, w)
+    for i in range(270):
+        a = RNG.random() * math.tau
+        r = RNG.uniform(3.5, 5.6)
+        x, z = cx + r * math.cos(a), cz + r * math.sin(a)
+        y = height(x, z)
+        h = RNG.uniform(.18, .65)
+        j = len(foliage.pos)
+        foliage.vertex((x - .10, y, z))
+        foliage.vertex((x, y + h, z + .04))
+        foliage.vertex((x + .10, y, z))
+        foliage.indices.extend((j, j + 1, j + 2))
+    for i in range(17):
+        a = i * math.tau / 17
+        r = 4.3
+        x, z = cx + r * math.cos(a), cz + r * math.sin(a)
+        y = height(x, z)
+        # A denser, layered canopy supplements the simple fronds above.
+        for leaf in range(10):
+            angle = leaf * math.tau / 10 + a
+            dx, dz = math.cos(angle), math.sin(angle)
+            j = len(foliage.pos)
+            foliage.vertex((x, y + 2.7, z))
+            foliage.vertex((x + dx * .65 - dz * .27, y + 2.85,
+                            z + dz * .65 + dx * .27))
+            foliage.vertex((x + dx * 1.65, y + 2.05, z + dz * 1.65))
+            foliage.vertex((x + dx * .65 + dz * .27, y + 2.85,
+                            z + dz * .65 - dx * .27))
+            foliage.indices.extend((j, j + 1, j + 2, j, j + 2, j + 3))
+    # A rugged board perimeter frames the routes without narrowing travel.
+    for edge in (-1, 1):
+        for i in range(27):
+            along = -20.0 + i * 1.52
+            x, z = (edge * 20.95, along) if i % 2 else (along, edge * 20.95)
+            y = height(x, z) - .18
+            h = RNG.uniform(.75, 2.3)
+            w = RNG.uniform(.27, .62)
+            pillar(strata, x, z, y,
+                   [(0, w * 1.8, w), (.25 * h, w * 1.3, w * .9),
+                    (.72 * h, w * .72, w * .7), (h, w * .22, w * .25)], 7, i)
+
+    # Small shelters sit beside, rather than on, the playable caravan road.
+    for x, z in ((-14, 7), (-12, 13), (8, 10), (15, 8), (-8, -15)):
+        y = height(x, z)
+        masonry.box(x, y + .06, z, 1.50, .12, 1.28)
+        i = len(canvas.pos)
+        for px, py, pz in ((-.84, .12, -.72), (0, 1.54, -.72),
+                           (.84, .12, -.72), (-.84, .12, .72),
+                           (0, 1.54, .72), (.84, .12, .72)):
+            canvas.vertex((x + px, y + py, z + pz))
+        canvas.indices.extend((i, i + 1, i + 4, i, i + 4, i + 3,
+                               i + 1, i + 2, i + 5, i + 1, i + 5, i + 4))
+        wood.box(x, y + .76, z - .7, .09, 1.5, .09)
+        wood.box(x, y + .76, z + .7, .09, 1.5, .09)
+        masonry.box(x + 1.15, y + .19, z + 1.0, .42, .38, .44)
+    for z in BRIDGES:
+        x, y = canyon_x(z), deck(z)
+        for side in (-1, 1):
+            for bank in (-1, 1):
+                masonry.box(x + side * 2.8, y - .43, z + bank * 1.1,
+                            .62, 1.05, .72)
+                gold.box(x + side * 2.8, y + .10, z + bank * 1.1,
+                         .43, .09, .49)
+    return [rock, wood, palms, water, frame, scrub,
+            strata, dark_strata, masonry, foliage, gold, canvas]
 
 
 def make_grid():
@@ -226,12 +382,17 @@ def make_overlay(data):
 def make_texture():
     n=768;yy,xx=np.mgrid[0:n,0:n];x=(xx/(n-1)-.5)*SIDE;z=(yy/(n-1)-.5)*SIDE
     wave=np.sin(x*.8+z*.2)+.3*np.sin(x*2.4-z*.5)
-    grit=np.random.default_rng(3).normal(0,2.5,(n,n))
-    sand=np.stack((196+wave*8+grit,151+wave*7+grit,91+wave*5+grit),axis=-1)
+    ripple=np.sin(13*x + 1.1*np.sin(1.8*z)) * 2.4
+    strata=np.sin(.66*x-1.15*z + 2*np.sin(.31*z))
+    grit=np.random.default_rng(3).normal(0,3.8,(n,n))
+    tint=wave*8 + ripple + strata*6 + grit
+    sand=np.stack((190+tint,143+tint*.88,85+tint*.62),axis=-1)
+    stone=np.clip((strata-.28)*.5,0,.30)[...,None]
+    sand=sand*(1-stone)+np.array([114,72,48])*stone
     dist=np.hypot(x-OASIS[0],z-OASIS[1]);green=(dist>3.25)&(dist<5.2)
     sand[green]=sand[green]*.64+np.array([55,83,43])*.36
     crevice=(z>0)&(z<20)&(np.abs(x-(1.9+.8*np.sin(z*.25)))<2.1)
-    sand[crevice]*=[.75,.74,.7]
+    sand[crevice]*=[.63,.61,.57]
     road=np.full((n,n),100.0)
     for route in ROUTES:
         for (ax,az),(bx,bz) in zip(route,route[1:]):
@@ -285,7 +446,7 @@ def glb(path,meshes,materials,image=None):
 def main():
     OUT.mkdir(parents=True,exist_ok=True);GRID.parent.mkdir(parents=True,exist_ok=True)
     graph=make_grid();GRID.write_text(json.dumps(graph,separators=(",",":"))+"\n")
-    materials=[material([1,1,1,1],texture=True),material([.57,.34,.17,1]),material([.32,.22,.12,1]),material([.17,.37,.19,1],double=True),material([.08,.47,.5,.88],alpha=True,double=True),material([.28,.19,.11,1]),material([.38,.37,.16,1],double=True)]
+    materials=[material([1,1,1,1],texture=True),material([.57,.34,.17,1]),material([.32,.22,.12,1]),material([.17,.37,.19,1],double=True),material([.08,.47,.5,.88],alpha=True,double=True),material([.28,.19,.11,1]),material([.38,.37,.16,1],double=True),material([.62,.36,.21,1],double=True),material([.32,.18,.14,1],double=True),material([.75,.57,.35,1]),material([.23,.43,.25,1],double=True),material([.69,.49,.22,1]),material([.60,.30,.17,1],double=True)]
     glb(OUT/"golden_expanse_board.glb",[make_terrain(),*make_details()],materials,make_texture())
     glb(OUT/"golden_expanse_nav.glb",[make_overlay(graph)],[material([.19,.9,.74,.66],alpha=True,double=True,emissive=[.06,.24,.16])])
     print(len(graph["cells"]),"hexes",round((OUT/"golden_expanse_board.glb").stat().st_size/1048576,2),"MiB board",round((OUT/"golden_expanse_nav.glb").stat().st_size/1048576,2),"MiB nav")
