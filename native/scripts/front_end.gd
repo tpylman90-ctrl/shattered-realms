@@ -4,6 +4,7 @@ const WORLD_DATA := "res://data/world_catalog.json"
 const ASHENREACH_SCENE := "res://scenes/AshenreachDemo.tscn"
 const RAVENWOOD_PREVIEW_SCENE := "res://scenes/RavenwoodPreview.tscn"
 const IRON_PLAINS_PREVIEW_SCENE := "res://scenes/IronPlainsPreview.tscn"
+const GOLDEN_EXPANSE_PREVIEW_SCENE := "res://scenes/GoldenExpansePreview.tscn"
 const TERRITORY_PREVIEW_SCENE := "res://scenes/TerritoryBoardPreview.tscn"
 const MAP_SCRIPT := preload("res://scripts/world_map_canvas.gd")
 const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
@@ -63,6 +64,8 @@ func _process(delta: float) -> void:
         destination = "Ravenwood preview"
     elif loading_path == IRON_PLAINS_PREVIEW_SCENE:
         destination = "Iron Plains preview"
+    elif loading_path == GOLDEN_EXPANSE_PREVIEW_SCENE:
+        destination = "Golden Expanse 3D board"
     elif loading_path == TERRITORY_PREVIEW_SCENE:
         destination = str(territories.get(current_region, {}).get("name", current_region)) + " concept"
     load_caption.text = "Opening %s  •  %d%%" % [destination, int(fraction * 100.0)]
@@ -461,7 +464,7 @@ func _select_region(region_id: String) -> void:
     var region: Dictionary = territories.get(region_id, {})
     detail_name.text = str(region.get("name", region_id))
     var playable: bool = region_id == "ashen_wastes" and (region.get("boards", []) as Array).has("ashenreach")
-    var has_preview := region_id in ["ravenwood", "iron_plains"]
+    var has_preview := region_id in ["ravenwood", "iron_plains", "golden_expanse"]
     var concept_ready := ResourceLoader.exists("res://assets/boards/concept/" + region_id + ".webp")
     detail_type.text = "PLAYABLE STRONGHOLD" if playable else "3D BOARD PREVIEW" if has_preview else "LOCATION BOARD CONCEPT" if region.has("kind") and concept_ready else "TERRITORY BOARD CONCEPT" if concept_ready else "FUTURE CAMPAIGN"
     var guardian := str(region.get("legendary_monster", "")).replace("_", " ").capitalize()
@@ -472,6 +475,8 @@ func _select_region(region_id: String) -> void:
         enter_button.text = "PREVIEW RAVENWOOD"
     elif region_id == "iron_plains":
         enter_button.text = "PREVIEW IRON PLAINS"
+    elif region_id == "golden_expanse":
+        enter_button.text = "EXPLORE GOLDEN EXPANSE"
     elif concept_ready:
         enter_button.text = "PREVIEW BOARD"
     else:
@@ -504,6 +509,8 @@ func _enter_region() -> void:
         scene_path = RAVENWOOD_PREVIEW_SCENE
     elif current_region == "iron_plains":
         scene_path = IRON_PLAINS_PREVIEW_SCENE
+    elif current_region == "golden_expanse":
+        scene_path = GOLDEN_EXPANSE_PREVIEW_SCENE
     else:
         scene_path = TERRITORY_PREVIEW_SCENE
     var profile_cfg := ConfigFile.new()
@@ -520,6 +527,8 @@ func _enter_region() -> void:
         load_caption.text = "Preparing Ravenwood preview..."
     elif current_region == "iron_plains":
         load_caption.text = "Preparing Iron Plains preview..."
+    elif current_region == "golden_expanse":
+        load_caption.text = "Preparing Golden Expanse 3D board..."
     elif scene_path == TERRITORY_PREVIEW_SCENE:
         load_caption.text = "Preparing %s board concept..." % str(territories.get(current_region, {}).get("name", current_region))
     else:

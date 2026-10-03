@@ -7,6 +7,10 @@ on:
     paths:
       - "native/**"
       - ".github/workflows/android-apk.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - ".github/workflows/android-apk.yml"
 
 permissions:
   contents: read
@@ -69,6 +73,9 @@ jobs:
                   assert key in grid['tiles'][other]['blocked_edges']
           print('[ravenwood] movement grid verified:',grid['tile_count'])
           PY
+
+      - name: Verify Golden Expanse terrain and crossings
+        run: python3 native/tools/verify_golden_expanse_board.py
 
       - name: Generate playable hero meshes
         shell: bash
