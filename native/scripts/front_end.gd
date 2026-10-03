@@ -52,6 +52,8 @@ func _ready() -> void:
     _show_page(title_page)
 
 func _process(delta: float) -> void:
+    if character_page and character_page.visible and character_preview_model and is_instance_valid(character_preview_model):
+        character_preview_model.rotate_y(delta * 0.22)
     if loading_path == "":
         return
     load_time += delta
@@ -214,10 +216,39 @@ func _build_character_selection() -> void:
     var preview_viewport := SubViewport.new()
     preview_viewport.size = Vector2i(300, 330)
     preview_viewport.transparent_bg = true
+    preview_viewport.msaa_3d = Viewport.MSAA_4X
     preview_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
     preview_container.add_child(preview_viewport)
     var preview_stage := Node3D.new()
     preview_viewport.add_child(preview_stage)
+    var podium_base := MeshInstance3D.new()
+    var podium_gold := CylinderMesh.new()
+    podium_gold.top_radius = 0.88
+    podium_gold.bottom_radius = 0.88
+    podium_gold.height = 0.045
+    podium_gold.radial_segments = 48
+    podium_base.mesh = podium_gold
+    podium_base.position.y = -0.035
+    var podium_trim := StandardMaterial3D.new()
+    podium_trim.albedo_color = Color("b58a4f")
+    podium_trim.metallic = 0.72
+    podium_trim.roughness = 0.32
+    podium_base.material_override = podium_trim
+    preview_stage.add_child(podium_base)
+    var podium_top := MeshInstance3D.new()
+    var podium_disc := CylinderMesh.new()
+    podium_disc.top_radius = 0.81
+    podium_disc.bottom_radius = 0.81
+    podium_disc.height = 0.025
+    podium_disc.radial_segments = 48
+    podium_top.mesh = podium_disc
+    podium_top.position.y = -0.002
+    var podium_material := StandardMaterial3D.new()
+    podium_material.albedo_color = Color("182124")
+    podium_material.metallic = 0.38
+    podium_material.roughness = 0.5
+    podium_top.material_override = podium_material
+    preview_stage.add_child(podium_top)
     var preview_camera := Camera3D.new()
     preview_camera.position = Vector3(0.0, 1.3, -5.0)
     preview_camera.fov = 37.0
@@ -227,6 +258,7 @@ func _build_character_selection() -> void:
     var preview_light := DirectionalLight3D.new()
     preview_light.rotation_degrees = Vector3(-32.0, -24.0, 0.0)
     preview_light.light_energy = 2.2
+    preview_light.shadow_enabled = true
     preview_stage.add_child(preview_light)
     var preview_fill := OmniLight3D.new()
     preview_fill.position = Vector3(2.0, 1.7, -2.0)
