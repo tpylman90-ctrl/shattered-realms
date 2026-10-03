@@ -84,9 +84,9 @@
       "territory": "golden_expanse",
       "name": "The Golden Expanse",
       "art": "res://assets/boards/concept/golden_expanse.webp",
-      "stage": "concept_preview",
-      "mesh": null,
-      "movement_layer": null,
+      "stage": "3d_movement_preview",
+      "mesh": "res://assets/3d/game-ready/golden-expanse-board/golden_expanse_board.glb",
+      "movement_layer": "res://assets/3d/game-ready/golden-expanse-board/golden_expanse_nav.glb",
       "stronghold_is_separate": true,
       "layout": "Dry dune sea around a single left-edge oasis and stone mesas."
     },

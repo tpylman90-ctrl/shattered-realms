@@ -65,7 +65,11 @@
     },
     "golden_expanse": {
       "name": "The Golden Expanse",
-      "stronghold": "Sunspire"
+      "stronghold": "Sunspire",
+      "boards": [
+        "golden_expanse_preview"
+      ],
+      "status": "board_preview"
     },
     "devouring_deep": {
       "name": "The Devouring Deep",
@@ -294,6 +298,13 @@
       "territory": "ashen_wastes",
       "type": "stronghold",
       "dungeon": "sundered_vault"
+    },
+    "golden_expanse_preview": {
+      "name": "The Golden Expanse",
+      "territory": "golden_expanse",
+      "type": "territory_preview",
+      "scene": "res://scenes/GoldenExpansePreview.tscn",
+      "movement_grid": "res://data/generated/golden_expanse_nav_grid.json"
     }
   },
   "dungeons": {
