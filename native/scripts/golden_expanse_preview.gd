@@ -8,6 +8,8 @@ const START := Vector2(-17.0, -11.0)
 @onready var title_label: Label = $UI/TopBar/Row/Title
 @onready var movement_button: Button = $UI/TopBar/Row/MovementButton
 @onready var status_label: Label = $UI/BottomBar/Status
+@onready var art_preview: TextureRect = $UI/ArtPreview
+@onready var art_button: Button = $UI/TopBar/Row/ArtButton
 
 var cells: Array = []
 var routes := AStar3D.new()
@@ -16,7 +18,7 @@ var current_hex := -1
 var queued_path: PackedInt64Array = PackedInt64Array()
 var orbit := -0.75
 var elevation := 0.80
-var distance := 52.0
+var distance := 44.0
 var target := Vector3(0, 0, 0)
 var mouse_down := Vector2.ZERO
 var left_dragging := false
@@ -48,6 +50,7 @@ func _ready() -> void:
                 routes.connect_points(i, j)
     title_label.text = "THE GOLDEN EXPANSE  •  %s MOVEMENT HEXES" % _comma(cells.size())
     movement_button.pressed.connect(_toggle_movement)
+    art_button.pressed.connect(_toggle_art)
     $UI/TopBar/Row/ResetButton.pressed.connect(_reset_camera)
     $UI/TopBar/Row/WorldButton.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/FrontEnd.tscn"))
     current_hex = _closest_cell(START)
@@ -141,6 +144,13 @@ func _toggle_movement() -> void:
     movement_button.text = "HIDE HEXES" if movement_root.visible else "SHOW HEXES"
 
 
+func _toggle_art() -> void:
+    art_preview.visible = not art_preview.visible
+    art_button.text = "3D BOARD" if art_preview.visible else "ART PREVIEW"
+    movement_button.disabled = art_preview.visible
+    status_label.text = "Golden Expanse concept art • Tap 3D BOARD to explore" if art_preview.visible else "Tap a hex to move • Drag to orbit • Pinch to zoom"
+
+
 func _update_camera() -> void:
     camera.position = target + Vector3(sin(orbit) * cos(elevation), sin(elevation), cos(orbit) * cos(elevation)) * distance
     camera.look_at(target, Vector3.UP)
@@ -150,12 +160,12 @@ func _reset_camera() -> void:
     target = Vector3.ZERO
     orbit = -0.75
     elevation = 0.80
-    distance = 52.0
+    distance = 44.0
     _update_camera()
 
 
 func _select_at(screen: Vector2) -> void:
-    if cells.is_empty():
+    if cells.is_empty() or art_preview.visible:
         return
     var ray_origin := camera.project_ray_origin(screen)
     var ray_direction := camera.project_ray_normal(screen)
@@ -181,6 +191,8 @@ func _select_at(screen: Vector2) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+    if art_preview.visible:
+        return
     if event is InputEventMouseButton:
         if event.button_index == MOUSE_BUTTON_LEFT:
             if event.pressed:
