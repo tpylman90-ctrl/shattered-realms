@@ -20,12 +20,14 @@ var orbit_angle := 0.0
 var distance := 36.0
 var camera_target := Vector3(0.0, 4.5, 0.0)
 var mouse_down := false
+var pan_dragging := false
 var mouse_dragged := false
 var mouse_start := Vector2.ZERO
 var touches: Dictionary = {}
 var touch_start := Vector2.ZERO
 var touch_moved := false
 var last_pinch := 0.0
+var last_two_finger_center := Vector2.ZERO
 
 var tiles: Dictionary = {}
 var axial_by_key: Dictionary = {}
@@ -64,7 +66,7 @@ func _ready() -> void:
     _refresh_move_range()
     _update_camera()
     await get_tree().physics_frame
-    _set_status("Turn 1 • Move 3/3 • Tap a green hex to travel • Drag to orbit • Pinch to zoom")
+    _set_status("Turn 1 • Move 3/3 • Tap green hexes to travel • Drag to orbit • Two-finger drag to pan and zoom")
 
 func _apply_terrain_material() -> void:
     var terrain_material := StandardMaterial3D.new()
@@ -389,6 +391,14 @@ func _update_camera() -> void:
     camera.position = camera_target + Vector3(sin(orbit_angle) * distance * 0.72, distance * 0.72, cos(orbit_angle) * distance * 0.72)
     camera.look_at(camera_target, Vector3.UP)
 
+func _pan_camera(delta: Vector2) -> void:
+    var basis := camera.global_transform.basis
+    var screen_right := Vector3(basis.x.x, 0.0, basis.x.z).normalized()
+    var screen_up := Vector3(basis.y.x, 0.0, basis.y.z).normalized()
+    var factor := distance * 0.0015
+    camera_target += -screen_right * delta.x * factor + screen_up * delta.y * factor
+    _update_camera()
+
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventMouseButton:
         if event.button_index == MOUSE_BUTTON_LEFT:
@@ -400,12 +410,16 @@ func _unhandled_input(event: InputEvent) -> void:
                 mouse_down = false
                 if not mouse_dragged:
                     _select_at(event.position)
+        elif event.button_index == MOUSE_BUTTON_RIGHT:
+            pan_dragging = event.pressed
         elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
             distance = clampf(distance - 2.0, 17.0, 65.0)
             _update_camera()
         elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
             distance = clampf(distance + 2.0, 17.0, 65.0)
             _update_camera()
+    elif event is InputEventMouseMotion and pan_dragging:
+        _pan_camera(event.relative)
     elif event is InputEventMouseMotion and mouse_down:
         if mouse_start.distance_to(event.position) > 8.0:
             mouse_dragged = true
@@ -418,7 +432,9 @@ func _unhandled_input(event: InputEvent) -> void:
             if touches.size() == 1:
                 touch_start = event.position
                 touch_moved = false
-            else:
+            elif touches.size() == 2:
+                var points: Array = touches.values()
+                last_two_finger_center = ((points[0] as Vector2) + (points[1] as Vector2)) * 0.5
                 touch_moved = true
         else:
             var is_tap := touches.size() == 1 and not touch_moved
@@ -440,7 +456,9 @@ func _unhandled_input(event: InputEvent) -> void:
             touch_moved = true
             var points: Array = touches.values()
             var pinch := (points[0] as Vector2).distance_to(points[1] as Vector2)
+            var center := ((points[0] as Vector2) + (points[1] as Vector2)) * 0.5
             if last_pinch > 0.0:
                 distance = clampf(distance - (pinch - last_pinch) * 0.065, 17.0, 65.0)
-                _update_camera()
+                _pan_camera(center - last_two_finger_center)
+            last_two_finger_center = center
             last_pinch = pinch
