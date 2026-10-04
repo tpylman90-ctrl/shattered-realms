@@ -537,7 +537,9 @@ func _enter_region() -> void:
     if loading_path != "" or not enter_button.visible:
         return
     var scene_path := ASHENREACH_SCENE
-    if current_region == "ravenwood":
+    if current_region == "ashen_wastes":
+        scene_path = ASHENREACH_SCENE
+    elif current_region == "ravenwood":
         scene_path = RAVENWOOD_PREVIEW_SCENE
     elif current_region == "iron_plains":
         scene_path = IRON_PLAINS_PREVIEW_SCENE
