@@ -22,6 +22,8 @@ var cells: Dictionary = {}
 var overlay_root: Node3D
 var landmark_root: Node3D
 var active_tool := "forest"
+var edge_anchor_key := ""
+var last_stroke_key := ""
 var camera_target := Vector3(0.0, 4.5, 0.0)
 var orbit_angle := 0.0
 var distance := 36.0
@@ -116,14 +118,19 @@ func _build_hud() -> void:
     palette.anchor_bottom = 0.13
     palette.offset_bottom = 570.0
     ui.add_child(palette)
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    palette.add_child(scroll)
     var column := VBoxContainer.new()
+    column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     column.add_theme_constant_override("separation", 5)
-    palette.add_child(column)
+    scroll.add_child(column)
     var palette_title := Label.new()
     palette_title.text = "PAINT HEXES"
     palette_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     column.add_child(palette_title)
-    for item in [["forest", "FOREST"], ["clearing", "CLEARING"], ["trail", "TRAIL"], ["river", "RIVER"], ["bridge", "BRIDGE"], ["cliff", "CLIFF"], ["passability", "TOGGLE PASSABLE"], ["landmark", "PLACE LANDMARK"], ["erase_landmark", "ERASE LANDMARK"]]:
+    for item in [["forest", "FOREST"], ["clearing", "CLEARING"], ["trail", "TRAIL"], ["river", "RIVER"], ["bridge", "BRIDGE"], ["cliff", "CLIFF"], ["passability", "TOGGLE PASSABLE"], ["edge_barrier", "TOGGLE EDGE"], ["landmark", "PLACE LANDMARK"], ["erase_landmark", "ERASE LANDMARK"], ["camera", "CAMERA ORBIT"]]:
         var tool_id: String = item[0]
         _add_button(column, str(item[1]), func(): _set_tool(tool_id))
     landmark_name = LineEdit.new()
@@ -246,6 +253,11 @@ func _find_cell_at(screen_position: Vector2) -> String:
     return nearest_key if nearest_distance <= 0.30 else ""
 
 func _edit_cell(key: String) -> void:
+    if active_tool == "camera":
+        return
+    if active_tool == "edge_barrier":
+        _edit_edge(key)
+        return
     var cell: Dictionary = cells[key]
     if active_tool == "passability":
         cell["blocked"] = not bool(cell.get("blocked", false))
@@ -264,6 +276,45 @@ func _edit_cell(key: String) -> void:
     board["cells"] = cells
     _draw_annotations()
     _set_status("%s  •  %s  •  move cost %s" % [key, str(cell.get("terrain", "natural")).to_upper(), "blocked" if bool(cell.get("blocked", false)) else str(cell.get("movement_cost", 1))])
+
+func _edit_edge(key: String) -> void:
+    if edge_anchor_key == "":
+        edge_anchor_key = key
+        _set_status("Edge tool: choose a neighboring hex to connect or block.")
+        return
+    if key == edge_anchor_key:
+        edge_anchor_key = ""
+        _set_status("Edge selection cleared.")
+        return
+    var first: Dictionary = cells[edge_anchor_key]
+    var second: Dictionary = cells[key]
+    var dq := int(second.get("q", 0)) - int(first.get("q", 0))
+    var dr := int(second.get("r", 0)) - int(first.get("r", 0))
+    var hex_distance := maxi(absi(dq), maxi(absi(dr), absi(dq + dr)))
+    if hex_distance != 1:
+        _set_status("Choose one of the six neighboring hexes.")
+        return
+    var first_edges: Array = first.get("blocked_edges", []).duplicate()
+    var second_edges: Array = second.get("blocked_edges", []).duplicate()
+    var first_has := first_edges.has(key)
+    var second_has := second_edges.has(edge_anchor_key)
+    var should_block := not (first_has or second_has)
+    if should_block:
+        if not first_edges.has(key):
+            first_edges.append(key)
+        if not second_edges.has(edge_anchor_key):
+            second_edges.append(edge_anchor_key)
+    else:
+        first_edges.erase(key)
+        second_edges.erase(edge_anchor_key)
+    first["blocked_edges"] = first_edges
+    second["blocked_edges"] = second_edges
+    cells[edge_anchor_key] = first
+    cells[key] = second
+    board["cells"] = cells
+    var edited_edge := edge_anchor_key + " ↔ " + key
+    edge_anchor_key = ""
+    _set_status("%s  •  %s" % [edited_edge, "blocked" if should_block else "opened"])
 
 func _update_camera() -> void:
     camera.position = camera_target + Vector3(sin(orbit_angle) * distance * 0.72, distance * 0.72, cos(orbit_angle) * distance * 0.72)
@@ -298,6 +349,7 @@ func _unhandled_input(event: InputEvent) -> void:
                     var key := _find_cell_at(event.position)
                     if key != "":
                         _edit_cell(key)
+                last_stroke_key = ""
         elif event.button_index == MOUSE_BUTTON_RIGHT:
             pan_dragging = event.pressed
         elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -311,9 +363,14 @@ func _unhandled_input(event: InputEvent) -> void:
     elif event is InputEventMouseMotion and mouse_down:
         if mouse_start.distance_to(event.position) > 8.0:
             mouse_dragged = true
-        if mouse_dragged:
+        if mouse_dragged and active_tool == "camera":
             orbit_angle -= event.relative.x * 0.006
             _update_camera()
+        elif mouse_dragged and active_tool in ["forest", "clearing", "trail", "river", "bridge", "cliff", "passability"]:
+            var paint_key := _find_cell_at(event.position)
+            if paint_key != "" and paint_key != last_stroke_key:
+                _edit_cell(paint_key)
+                last_stroke_key = paint_key
     elif event is InputEventScreenTouch:
         if event.pressed:
             touches[event.index] = event.position
@@ -333,15 +390,21 @@ func _unhandled_input(event: InputEvent) -> void:
                     _edit_cell(key)
             if touches.is_empty():
                 touch_moved = false
+                last_stroke_key = ""
             last_pinch = 0.0
     elif event is InputEventScreenDrag:
         touches[event.index] = event.position
         if touches.size() == 1:
             if touch_start.distance_to(event.position) > 8.0:
                 touch_moved = true
-            if touch_moved:
+            if touch_moved and active_tool == "camera":
                 orbit_angle -= event.relative.x * 0.006
                 _update_camera()
+            elif touch_moved and active_tool in ["forest", "clearing", "trail", "river", "bridge", "cliff", "passability"]:
+                var paint_key := _find_cell_at(event.position)
+                if paint_key != "" and paint_key != last_stroke_key:
+                    _edit_cell(paint_key)
+                    last_stroke_key = paint_key
         elif touches.size() == 2:
             touch_moved = true
             var points: Array = touches.values()
