@@ -151,7 +151,29 @@ func _build_ui() -> void:
     ui.add_child(palette_panel)
     var scroll := ScrollContainer.new()
     scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     palette_panel.add_child(scroll)
+    var palette_scrollbar: VScrollBar = scroll.get_v_scroll_bar()
+    palette_scrollbar.custom_minimum_size.x = 28.0
+    var scrollbar_track := StyleBoxFlat.new()
+    scrollbar_track.bg_color = Color("242821")
+    scrollbar_track.border_width_left = 2
+    scrollbar_track.border_width_right = 2
+    scrollbar_track.border_color = Color("514735")
+    palette_scrollbar.add_theme_stylebox_override("scroll", scrollbar_track)
+    var scrollbar_thumb := StyleBoxFlat.new()
+    scrollbar_thumb.bg_color = Color("c5a56c")
+    scrollbar_thumb.border_width_left = 2
+    scrollbar_thumb.border_width_right = 2
+    scrollbar_thumb.border_color = Color("e5ca91")
+    palette_scrollbar.add_theme_stylebox_override("grabber", scrollbar_thumb)
+    var scrollbar_thumb_hover := StyleBoxFlat.new()
+    scrollbar_thumb_hover.bg_color = Color("e0c184")
+    scrollbar_thumb_hover.border_width_left = 2
+    scrollbar_thumb_hover.border_width_right = 2
+    scrollbar_thumb_hover.border_color = Color("fff0c9")
+    palette_scrollbar.add_theme_stylebox_override("grabber_highlight", scrollbar_thumb_hover)
+    palette_scrollbar.add_theme_stylebox_override("grabber_pressed", scrollbar_thumb_hover)
     var column := VBoxContainer.new()
     column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     column.add_theme_constant_override("separation", 5)
@@ -162,6 +184,7 @@ func _build_ui() -> void:
     board_name.placeholder_text = "Board name"
     board_name.custom_minimum_size.y = 42
     column.add_child(board_name)
+    _add_button(column, "CLEAR SELECTED TILE", _clear_selection)
 
     _add_section(column, "1  •  LAY HEXES")
     _add_button(column, "ADD HEX", func(): _set_tool("add_hex"))
@@ -577,7 +600,9 @@ func _apply_tool_at(q: int, r: int) -> void:
         _remove_hex_disk(q, r, 0)
         return
     if not cells.has(key):
-        _set_status("Lay a hex here first.")
+        selected_key = ""
+        _refresh_selection()
+        _set_status("Selection cleared. Lay a hex here first.")
         return
     selected_key = key
     var cell: Dictionary = cells[key]
@@ -640,6 +665,11 @@ func _remove_hex_disk(q: int, r: int, radius: int) -> void:
     _rebuild_installed_grid()
     _refresh_selection()
     _set_status("Removed %d hexes." % removed)
+
+func _clear_selection() -> void:
+    selected_key = ""
+    _refresh_selection()
+    _set_status("Tile selection cleared.")
 
 func _refresh_selection() -> void:
     var mesh := ImmediateMesh.new()
