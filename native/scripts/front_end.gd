@@ -146,6 +146,17 @@ func _build_title() -> void:
     button.add_theme_font_size_override("font_size", 21)
     margin.add_child(button)
 
+    var workshop_button := _button("BOARD WORKSHOP", func(): get_tree().change_scene_to_file("res://scenes/BoardWorkshop.tscn"))
+    workshop_button.anchor_left = 1.0
+    workshop_button.anchor_right = 1.0
+    workshop_button.anchor_top = 0.0
+    workshop_button.anchor_bottom = 0.0
+    workshop_button.offset_left = -230.0
+    workshop_button.offset_right = -18.0
+    workshop_button.offset_top = 18.0
+    workshop_button.offset_bottom = 66.0
+    title_page.add_child(workshop_button)
+
 func _start_or_continue() -> void:
     if FileAccess.file_exists("user://chosen_hero.cfg"):
         _open_map()

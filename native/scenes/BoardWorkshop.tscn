@@ -1,0 +1,50 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/board_workshop.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_00.glb" id="2_section_00"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_01.glb" id="2_section_01"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_02.glb" id="2_section_02"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_03.glb" id="2_section_03"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_04.glb" id="2_section_04"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_05.glb" id="2_section_05"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_06.glb" id="2_section_06"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_07.glb" id="2_section_07"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_08.glb" id="2_section_08"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/ravenwood_section_09.glb" id="2_section_09"]
+[ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/generated/ravenwood_nav_surface.glb" id="3_nav"]
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 1
+background_color = Color(0.025, 0.047, 0.047, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.53, 0.65, 0.58, 1)
+ambient_light_energy = 0.9
+reflected_light_source = 2
+
+[node name="BoardWorkshop" type="Node3D"]
+script = ExtResource("1_script")
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+[node name="Daylight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-55, -28, 0)
+light_color = Color(0.91, 0.95, 0.78, 1)
+light_energy = 1.5
+shadow_enabled = true
+[node name="TerrainRoot" type="Node3D" parent="."]
+scale = Vector3(38, 38, 38)
+[node name="Terrain00" parent="TerrainRoot" instance=ExtResource("2_section_00")]
+[node name="Terrain01" parent="TerrainRoot" instance=ExtResource("2_section_01")]
+[node name="Terrain02" parent="TerrainRoot" instance=ExtResource("2_section_02")]
+[node name="Terrain03" parent="TerrainRoot" instance=ExtResource("2_section_03")]
+[node name="Terrain04" parent="TerrainRoot" instance=ExtResource("2_section_04")]
+[node name="Terrain05" parent="TerrainRoot" instance=ExtResource("2_section_05")]
+[node name="Terrain06" parent="TerrainRoot" instance=ExtResource("2_section_06")]
+[node name="Terrain07" parent="TerrainRoot" instance=ExtResource("2_section_07")]
+[node name="Terrain08" parent="TerrainRoot" instance=ExtResource("2_section_08")]
+[node name="Terrain09" parent="TerrainRoot" instance=ExtResource("2_section_09")]
+[node name="MovementRoot" type="Node3D" parent="."]
+visible = false
+scale = Vector3(38, 38, 38)
+[node name="NavSurface" parent="MovementRoot" instance=ExtResource("3_nav")]
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+fov = 63.0

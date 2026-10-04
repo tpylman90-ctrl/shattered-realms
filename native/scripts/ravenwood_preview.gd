@@ -1,6 +1,7 @@
 extends Node3D
 
 const GRID_PATH := "res://data/generated/ravenwood_nav_grid.json"
+const BOARD_SCRIPT := preload("res://scripts/board_definition.gd")
 const HERO_SCENE_PATH := "res://scenes/ChosenHeroPiece.tscn"
 const HEX_DIRECTIONS: Array[Vector2i] = [
     Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
@@ -114,25 +115,17 @@ func _prepare_navigation_collision() -> void:
         body.global_transform = mesh_node.global_transform
 
 func _load_grid() -> void:
-    var file := FileAccess.open(GRID_PATH, FileAccess.READ)
-    if file == null:
+    var definition: Dictionary = BOARD_SCRIPT.load_board("ravenwood", GRID_PATH)
+    var raw_cells: Variant = definition.get("cells", {})
+    if not (raw_cells is Dictionary):
         return
-    var parsed: Variant = JSON.parse_string(file.get_as_text())
-    if not (parsed is Dictionary):
-        return
-    var raw_tiles: Variant = parsed.get("tiles", {})
-    if not (raw_tiles is Dictionary):
-        return
-    for raw_key in raw_tiles.keys():
+    for raw_key in raw_cells.keys():
         var key := str(raw_key)
-        var parts := key.split(",")
-        if parts.size() != 2:
-            continue
-        var tile: Variant = raw_tiles[raw_key]
+        var tile: Variant = raw_cells[raw_key]
         if not (tile is Dictionary):
             continue
         tiles[key] = tile
-        axial_by_key[key] = Vector2i(int(parts[0]), int(parts[1]))
+        axial_by_key[key] = Vector2i(int(tile.get("q", 0)), int(tile.get("r", 0)))
 
 func _create_hero() -> void:
     hero_root = Node3D.new()
@@ -240,26 +233,26 @@ func _key_for_axial(axial: Vector2i) -> String:
 
 func _is_blocked(key: String) -> bool:
     var tile: Dictionary = tiles.get(key, {})
-    return bool(tile.get("auto_blocked", false))
+    return bool(tile.get("blocked", tile.get("auto_blocked", false)))
 
 func _reachable_from(start: String, max_cost: int) -> Dictionary:
     var costs: Dictionary = {start: 0}
     var parents: Dictionary = {start: ""}
     var queue: Array[String] = [start]
+    var queued: Dictionary = {start: true}
     var queue_index := 0
 
     while queue_index < queue.size():
         var key := queue[queue_index]
         queue_index += 1
+        queued.erase(key)
         var cost := int(costs[key])
-        if cost >= max_cost:
-            continue
         var axial: Vector2i = axial_by_key[key]
         var current_tile: Dictionary = tiles[key]
         var blocked_edges: Array = current_tile.get("blocked_edges", [])
         for direction in HEX_DIRECTIONS:
             var next_key := _key_for_axial(axial + direction)
-            if not tiles.has(next_key) or _is_blocked(next_key) or costs.has(next_key):
+            if not tiles.has(next_key) or _is_blocked(next_key):
                 continue
             if blocked_edges.has(next_key):
                 continue
@@ -267,9 +260,17 @@ func _reachable_from(start: String, max_cost: int) -> Dictionary:
             var reverse_edges: Array = next_tile.get("blocked_edges", [])
             if reverse_edges.has(key):
                 continue
-            costs[next_key] = cost + 1
+            var step_cost := maxi(1, int(next_tile.get("movement_cost", 1)))
+            var candidate_cost := cost + step_cost
+            if candidate_cost > max_cost:
+                continue
+            if costs.has(next_key) and int(costs[next_key]) <= candidate_cost:
+                continue
+            costs[next_key] = candidate_cost
             parents[next_key] = key
-            queue.append(next_key)
+            if not queued.has(next_key):
+                queued[next_key] = true
+                queue.append(next_key)
 
     return {"costs": costs, "parents": parents}
 
@@ -336,7 +337,7 @@ func _move_to(destination: String) -> void:
 
     var parents: Dictionary = movement["parents"]
     var path := _route_to(current_key, destination, parents)
-    var cost := path.size() - 1
+    var cost := int(costs[destination])
     if cost <= 0:
         return
 
