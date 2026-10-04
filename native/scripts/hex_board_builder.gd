@@ -35,12 +35,16 @@ var prop_materials: Dictionary = {}
 var board_name: LineEdit
 var status_label: Label
 var brush_radius_option: OptionButton
+var paint_brush_option: OptionButton
+var undo_button: Button
+var redo_button: Button
 var palette_panel: PanelContainer
 var grid_button: Button
 var play_button: Button
 var grid_visible := true
 var active_tool := "add_hex"
 var brush_radius := 3
+var paint_brush_radius := 0
 var prop_rotation := 0.0
 var selected_key := ""
 var is_playtesting := false
@@ -58,6 +62,11 @@ var touch_moved := false
 var last_pinch := 0.0
 var last_center := Vector2.ZERO
 var last_stroke_key := ""
+var undo_history: Array[Dictionary] = []
+var redo_history: Array[Dictionary] = []
+var history_action_active := false
+var history_action_before: Dictionary = {}
+const HISTORY_LIMIT := 60
 
 @onready var camera: Camera3D = $Camera3D
 
@@ -185,6 +194,13 @@ func _build_ui() -> void:
     board_name.custom_minimum_size.y = 42
     column.add_child(board_name)
     _add_button(column, "CLEAR SELECTED TILE", _clear_selection)
+    _add_section(column, "EDIT HISTORY")
+    var history_row := HBoxContainer.new()
+    column.add_child(history_row)
+    undo_button = _add_button(history_row, "UNDO", _undo)
+    redo_button = _add_button(history_row, "REDO", _redo)
+    undo_button.disabled = true
+    redo_button.disabled = true
 
     _add_section(column, "1  •  LAY HEXES")
     _add_button(column, "ADD HEX", func(): _set_tool("add_hex"))
@@ -206,6 +222,18 @@ func _build_ui() -> void:
     _add_section(column, "2  •  PAINT TERRAIN")
     for terrain in ["grass", "woodland", "dirt", "stone", "sand", "marsh"]:
         _add_button(column, TERRAIN_LABELS[terrain], func(): _set_tool("terrain:" + terrain))
+    var paint_row := HBoxContainer.new()
+    column.add_child(paint_row)
+    var paint_label := Label.new()
+    paint_label.text = "PAINT RADIUS"
+    paint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    paint_row.add_child(paint_label)
+    paint_brush_option = OptionButton.new()
+    for radius in range(0, 5):
+        paint_brush_option.add_item(str(radius))
+    paint_brush_option.select(0)
+    paint_brush_option.item_selected.connect(_on_paint_brush_changed)
+    paint_row.add_child(paint_brush_option)
 
     _add_section(column, "3  •  SHAPE THE GROUND")
     _add_button(column, "RAISE HEX", func(): _set_tool("raise"))
@@ -258,6 +286,10 @@ func _add_button(parent: Control, text_value: String, action: Callable) -> Butto
 func _on_brush_radius_changed(index: int) -> void:
     brush_radius = index
     _set_status("Hex disk radius: %d" % brush_radius)
+
+func _on_paint_brush_changed(index: int) -> void:
+    paint_brush_radius = index
+    _set_status("Terrain paint radius: %d hexes." % paint_brush_radius)
 
 func _set_tool(tool_id: String) -> void:
     active_tool = tool_id
@@ -556,6 +588,7 @@ func _cell_key(q: int, r: int) -> String:
     return "%d,%d" % [q, r]
 
 func _lay_hex_disk() -> void:
+    var before := _capture_editor_state()
     var center := Vector2i(0, 0)
     if selected_key != "" and cells.has(selected_key):
         var selected: Dictionary = cells[selected_key]
@@ -574,6 +607,7 @@ func _lay_hex_disk() -> void:
     board["cells"] = cells
     _rebuild_installed_grid()
     _set_status("Laid %d new hexes around %s." % [count, _cell_key(center.x, center.y)])
+    _record_history(before)
 
 func _new_cell(q: int, r: int) -> Dictionary:
     return {
@@ -583,6 +617,12 @@ func _new_cell(q: int, r: int) -> Dictionary:
     }
 
 func _apply_tool_at(q: int, r: int) -> void:
+    var before := _capture_editor_state()
+    _apply_tool_at_without_history(q, r)
+    if not history_action_active:
+        _record_history(before)
+
+func _apply_tool_at_without_history(q: int, r: int) -> void:
     var key := _cell_key(q, r)
     if active_tool == "camera":
         return
@@ -608,13 +648,23 @@ func _apply_tool_at(q: int, r: int) -> void:
     var cell: Dictionary = cells[key]
     if active_tool.begins_with("terrain:"):
         var terrain := active_tool.trim_prefix("terrain:")
-        cell["terrain"] = terrain
-        cell["blocked"] = terrain == "water"
-        cell["movement_cost"] = 99 if bool(cell["blocked"]) else (2 if terrain in ["woodland", "dirt", "stone", "sand", "marsh"] else 1)
-        cells[key] = cell
+        var painted_count := 0
+        for dq in range(-paint_brush_radius, paint_brush_radius + 1):
+            for dr in range(-paint_brush_radius, paint_brush_radius + 1):
+                if maxi(absi(dq), maxi(absi(dr), absi(dq + dr))) > paint_brush_radius:
+                    continue
+                var paint_key := _cell_key(q + dq, r + dr)
+                if not cells.has(paint_key):
+                    continue
+                var paint_cell: Dictionary = cells[paint_key]
+                paint_cell["terrain"] = terrain
+                paint_cell["blocked"] = terrain == "water"
+                paint_cell["movement_cost"] = 99 if bool(paint_cell["blocked"]) else (2 if terrain in ["woodland", "dirt", "stone", "sand", "marsh"] else 1)
+                cells[paint_key] = paint_cell
+                _refresh_cell_visual(paint_key)
+                painted_count += 1
         board["cells"] = cells
-        _refresh_cell_visual(key)
-        _set_status("%s terrain painted on hex %s." % [TERRAIN_LABELS[terrain], key])
+        _set_status("%s painted on %d hexes." % [TERRAIN_LABELS[terrain], painted_count])
     elif active_tool == "raise" or active_tool == "lower":
         var delta := 1 if active_tool == "raise" else -1
         cell["elevation"] = clampi(int(cell.get("elevation", 0)) + delta, -4, 8)
@@ -665,6 +715,68 @@ func _remove_hex_disk(q: int, r: int, radius: int) -> void:
     _rebuild_installed_grid()
     _refresh_selection()
     _set_status("Removed %d hexes." % removed)
+
+func _capture_editor_state() -> Dictionary:
+    return {
+        "cells": cells.duplicate(true),
+        "title": str(board.get("title", "New Board")),
+        "id": str(board.get("id", "new_board"))
+    }
+
+func _record_history(before: Dictionary) -> void:
+    if before.is_empty() or before.get("cells", {}) == cells:
+        return
+    undo_history.append(before)
+    if undo_history.size() > HISTORY_LIMIT:
+        undo_history.pop_front()
+    redo_history.clear()
+    _refresh_history_controls()
+
+func _begin_history_action() -> void:
+    if history_action_active:
+        return
+    history_action_active = true
+    history_action_before = _capture_editor_state()
+
+func _finish_history_action() -> void:
+    if not history_action_active:
+        return
+    _record_history(history_action_before)
+    history_action_before = {}
+    history_action_active = false
+
+func _restore_editor_state(state: Dictionary) -> void:
+    cells = state.get("cells", {}).duplicate(true)
+    board["cells"] = cells
+    board["title"] = str(state.get("title", board.get("title", "New Board")))
+    board["id"] = str(state.get("id", board.get("id", "new_board")))
+    selected_key = ""
+    if board_name:
+        board_name.text = str(board["title"])
+    _rebuild_board()
+    _refresh_history_controls()
+
+func _undo() -> void:
+    if undo_history.is_empty():
+        return
+    redo_history.append(_capture_editor_state())
+    var previous: Dictionary = undo_history.pop_back()
+    _restore_editor_state(previous)
+    _set_status("Undid last board edit.")
+
+func _redo() -> void:
+    if redo_history.is_empty():
+        return
+    undo_history.append(_capture_editor_state())
+    var next: Dictionary = redo_history.pop_back()
+    _restore_editor_state(next)
+    _set_status("Redid board edit.")
+
+func _refresh_history_controls() -> void:
+    if undo_button:
+        undo_button.disabled = undo_history.is_empty()
+    if redo_button:
+        redo_button.disabled = redo_history.is_empty()
 
 func _clear_selection() -> void:
     selected_key = ""
@@ -861,11 +973,14 @@ func _unhandled_input(event: InputEvent) -> void:
                 mouse_down = true
                 mouse_dragged = false
                 mouse_start = event.position
+                if not is_playtesting:
+                    _begin_history_action()
             elif mouse_down:
                 mouse_down = false
                 if not mouse_dragged:
                     _select_from_screen(event.position)
                 last_stroke_key = ""
+                _finish_history_action()
         elif event.button_index == MOUSE_BUTTON_RIGHT:
             pan_dragging = event.pressed
         elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -894,6 +1009,8 @@ func _unhandled_input(event: InputEvent) -> void:
             if touches.size() == 1:
                 touch_start = event.position
                 touch_moved = false
+                if not is_playtesting:
+                    _begin_history_action()
             elif touches.size() == 2:
                 var points: Array = touches.values()
                 last_center = ((points[0] as Vector2) + (points[1] as Vector2)) * 0.5
@@ -906,6 +1023,7 @@ func _unhandled_input(event: InputEvent) -> void:
             if touches.is_empty():
                 touch_moved = false
                 last_stroke_key = ""
+                _finish_history_action()
             last_pinch = 0.0
     elif event is InputEventScreenDrag:
         touches[event.index] = event.position
