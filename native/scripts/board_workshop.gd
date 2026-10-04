@@ -3,7 +3,7 @@ extends Node3D
 const BOARD_SCRIPT := preload("res://scripts/board_definition.gd")
 const GRID_PATH := "res://data/generated/ravenwood_nav_grid.json"
 const NAV_COLLISION_LAYER := 2
-const HEX_RADIUS := 0.35
+const HEX_RADIUS := 0.407
 const TERRAIN_COLORS := {
     "forest": Color(0.14, 0.39, 0.24, 0.34),
     "clearing": Color(0.76, 0.68, 0.43, 0.34),
@@ -21,6 +21,11 @@ var board: Dictionary = {}
 var cells: Dictionary = {}
 var overlay_root: Node3D
 var landmark_root: Node3D
+var grid_overlay: MeshInstance3D
+var selected_outline: MeshInstance3D
+var grid_button: Button
+var grid_visible := true
+var selected_cell_key := ""
 var active_tool := "forest"
 var edge_anchor_key := ""
 var last_stroke_key := ""
@@ -50,7 +55,11 @@ func _ready() -> void:
     landmark_root = Node3D.new()
     landmark_root.name = "Landmarks"
     add_child(landmark_root)
+    selected_outline = MeshInstance3D.new()
+    selected_outline.name = "SelectedHexOutline"
+    add_child(selected_outline)
     _build_hud()
+    _build_hex_grid()
     _draw_annotations()
     _update_camera()
     _set_status("Tap to edit hexes. Select CAMERA ORBIT to rotate; use two fingers to pan and zoom.")
@@ -111,6 +120,7 @@ func _build_hud() -> void:
     _add_button(row, "SAVE", _save_board)
     _add_button(row, "PLAY TEST", _play_test)
     _add_button(row, "WORLD MAP", _back_to_world)
+    grid_button = _add_button(row, "HEX GRID: ON", _toggle_hex_grid)
 
     var palette := PanelContainer.new()
     palette.anchor_left = 0.02
@@ -154,12 +164,13 @@ func _build_hud() -> void:
     status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     footer.add_child(status_label)
 
-func _add_button(parent: Control, text_value: String, action: Callable) -> void:
+func _add_button(parent: Control, text_value: String, action: Callable) -> Button:
     var button := Button.new()
     button.text = text_value
     button.custom_minimum_size = Vector2(0, 44)
     button.pressed.connect(action)
     parent.add_child(button)
+    return button
 
 func _set_tool(tool_id: String) -> void:
     active_tool = tool_id
@@ -181,6 +192,55 @@ func _play_test() -> void:
 
 func _back_to_world() -> void:
     get_tree().change_scene_to_file("res://scenes/FrontEnd.tscn")
+
+func _build_hex_grid() -> void:
+    var material := StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.albedo_color = Color(0.92, 0.82, 0.62, 0.38)
+    var mesh := ImmediateMesh.new()
+    mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+    for key_value in cells.keys():
+        var cell: Dictionary = cells[key_value]
+        var center := Vector3(float(cell.get("x", 0.0)), float(cell.get("y", 0.0)) + 0.18, float(cell.get("z", 0.0)))
+        for corner in range(6):
+            var angle_a := deg_to_rad(30.0 + 60.0 * corner)
+            var angle_b := deg_to_rad(30.0 + 60.0 * (corner + 1))
+            mesh.surface_add_vertex(center + Vector3(cos(angle_a) * HEX_RADIUS, 0.0, sin(angle_a) * HEX_RADIUS))
+            mesh.surface_add_vertex(center + Vector3(cos(angle_b) * HEX_RADIUS, 0.0, sin(angle_b) * HEX_RADIUS))
+    mesh.surface_end()
+    grid_overlay = MeshInstance3D.new()
+    grid_overlay.name = "HexGridOverlay"
+    grid_overlay.mesh = mesh
+    grid_overlay.material_override = material
+    grid_overlay.visible = grid_visible
+    add_child(grid_overlay)
+
+func _toggle_hex_grid() -> void:
+    grid_visible = not grid_visible
+    grid_overlay.visible = grid_visible
+    grid_button.text = "HEX GRID: ON" if grid_visible else "HEX GRID: OFF"
+
+func _set_selected_cell(key: String) -> void:
+    selected_cell_key = key
+    var mesh := ImmediateMesh.new()
+    if key != "" and cells.has(key):
+        var cell: Dictionary = cells[key]
+        var center := Vector3(float(cell.get("x", 0.0)), float(cell.get("y", 0.0)) + 0.23, float(cell.get("z", 0.0)))
+        var material := StandardMaterial3D.new()
+        material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        material.albedo_color = Color(1.0, 0.72, 0.26, 1.0)
+        material.emission_enabled = true
+        material.emission = Color(0.9, 0.43, 0.08)
+        material.emission_energy_multiplier = 1.2
+        mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+        for corner in range(6):
+            var angle_a := deg_to_rad(30.0 + 60.0 * corner)
+            var angle_b := deg_to_rad(30.0 + 60.0 * (corner + 1))
+            mesh.surface_add_vertex(center + Vector3(cos(angle_a) * HEX_RADIUS, 0.0, sin(angle_a) * HEX_RADIUS))
+            mesh.surface_add_vertex(center + Vector3(cos(angle_b) * HEX_RADIUS, 0.0, sin(angle_b) * HEX_RADIUS))
+        mesh.surface_end()
+    selected_outline.mesh = mesh
 
 func _draw_annotations() -> void:
     for child in overlay_root.get_children():
@@ -256,6 +316,7 @@ func _find_cell_at(screen_position: Vector2) -> String:
 func _edit_cell(key: String) -> void:
     if active_tool == "camera":
         return
+    _set_selected_cell(key)
     if active_tool == "edge_barrier":
         _edit_edge(key)
         return
