@@ -41,6 +41,8 @@ var redo_button: Button
 var palette_panel: PanelContainer
 var grid_button: Button
 var play_button: Button
+var camera_distance_slider: HSlider
+var camera_pitch_slider: HSlider
 var grid_visible := true
 var active_tool := "add_hex"
 var brush_radius := 3
@@ -52,6 +54,7 @@ var player_piece: Node3D
 var camera_target := Vector3(0.0, 0.0, 0.0)
 var orbit_angle := 0.0
 var camera_distance := 19.0
+var camera_pitch_degrees := 55.0
 var mouse_down := false
 var mouse_dragged := false
 var mouse_start := Vector2.ZERO
@@ -251,6 +254,7 @@ func _build_ui() -> void:
 
     _add_section(column, "VIEW")
     _add_button(column, "CAMERA ORBIT", func(): _set_tool("camera"))
+    _build_camera_controls(ui)
 
     var footer := PanelContainer.new()
     footer.anchor_left = 0.012
@@ -266,6 +270,70 @@ func _build_ui() -> void:
     status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     status_label.add_theme_font_size_override("font_size", 13)
     footer.add_child(status_label)
+
+func _build_camera_controls(ui: CanvasLayer) -> void:
+    var panel := PanelContainer.new()
+    panel.name = "CameraControls"
+    panel.anchor_left = 1.0
+    panel.anchor_right = 1.0
+    panel.anchor_top = 0.12
+    panel.anchor_bottom = 0.12
+    panel.offset_left = -290.0
+    panel.offset_right = -12.0
+    panel.offset_bottom = 238.0
+    ui.add_child(panel)
+
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 4)
+    panel.add_child(column)
+    var title := Label.new()
+    title.text = "CAMERA CONTROLS"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_color_override("font_color", Color("e0c184"))
+    column.add_child(title)
+
+    var zoom_row := HBoxContainer.new()
+    column.add_child(zoom_row)
+    _add_button(zoom_row, "−", func(): _zoom_camera(2.0))
+    var zoom_label := Label.new()
+    zoom_label.text = "ZOOM"
+    zoom_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    zoom_row.add_child(zoom_label)
+    camera_distance_slider = HSlider.new()
+    camera_distance_slider.min_value = 8.0
+    camera_distance_slider.max_value = 70.0
+    camera_distance_slider.step = 1.0
+    camera_distance_slider.value = camera_distance
+    camera_distance_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    camera_distance_slider.custom_minimum_size.x = 112.0
+    camera_distance_slider.value_changed.connect(_on_camera_distance_changed)
+    zoom_row.add_child(camera_distance_slider)
+    _add_button(zoom_row, "+", func(): _zoom_camera(-2.0))
+
+    var tilt_row := HBoxContainer.new()
+    column.add_child(tilt_row)
+    var tilt_label := Label.new()
+    tilt_label.text = "TILT"
+    tilt_label.custom_minimum_size.x = 42.0
+    tilt_row.add_child(tilt_label)
+    camera_pitch_slider = HSlider.new()
+    camera_pitch_slider.min_value = 30.0
+    camera_pitch_slider.max_value = 82.0
+    camera_pitch_slider.step = 1.0
+    camera_pitch_slider.value = camera_pitch_degrees
+    camera_pitch_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    camera_pitch_slider.value_changed.connect(_on_camera_pitch_changed)
+    tilt_row.add_child(camera_pitch_slider)
+
+    var action_row := HBoxContainer.new()
+    column.add_child(action_row)
+    _add_button(action_row, "TURN LEFT", func(): _rotate_camera(PI / 12.0))
+    _add_button(action_row, "TURN RIGHT", func(): _rotate_camera(-PI / 12.0))
+
+    var frame_row := HBoxContainer.new()
+    column.add_child(frame_row)
+    _add_button(frame_row, "FRAME BOARD", _frame_board)
+    _add_button(frame_row, "RESET VIEW", _reset_camera)
 
 func _add_section(parent: Control, text_value: String) -> void:
     var label := Label.new()
@@ -955,8 +1023,63 @@ func _select_from_screen(position: Vector2) -> void:
     else:
         _apply_tool_at(axial.x, axial.y)
 
+func _on_camera_distance_changed(value: float) -> void:
+    camera_distance = value
+    _update_camera()
+
+func _on_camera_pitch_changed(value: float) -> void:
+    camera_pitch_degrees = value
+    _update_camera()
+
+func _zoom_camera(distance_change: float) -> void:
+    camera_distance = clampf(camera_distance + distance_change, 8.0, 70.0)
+    if camera_distance_slider:
+        camera_distance_slider.value = camera_distance
+    _update_camera()
+
+func _rotate_camera(amount: float) -> void:
+    orbit_angle = wrapf(orbit_angle + amount, -PI, PI)
+    _update_camera()
+
+func _reset_camera() -> void:
+    camera_target = Vector3.ZERO
+    orbit_angle = 0.0
+    camera_distance = 19.0
+    camera_pitch_degrees = 55.0
+    if camera_distance_slider:
+        camera_distance_slider.value = camera_distance
+    if camera_pitch_slider:
+        camera_pitch_slider.value = camera_pitch_degrees
+    _update_camera()
+    _set_status("Camera reset to the board origin.")
+
+func _frame_board() -> void:
+    if cells.is_empty():
+        _reset_camera()
+        return
+    var min_point := Vector3(INF, INF, INF)
+    var max_point := Vector3(-INF, -INF, -INF)
+    for key_value in cells.keys():
+        var point := _cell_world(str(key_value))
+        min_point = min_point.min(point)
+        max_point = max_point.max(point)
+    camera_target = (min_point + max_point) * 0.5
+    var board_span := maxf(max_point.x - min_point.x, max_point.z - min_point.z)
+    camera_distance = clampf(maxf(10.0, board_span * 1.65), 8.0, 70.0)
+    if camera_distance_slider:
+        camera_distance_slider.value = camera_distance
+    _update_camera()
+    _set_status("Camera framed to %d hexes." % cells.size())
+
 func _update_camera() -> void:
-    camera.position = camera_target + Vector3(sin(orbit_angle) * camera_distance * 0.64, camera_distance * 0.92, cos(orbit_angle) * camera_distance * 0.64)
+    var pitch := deg_to_rad(camera_pitch_degrees)
+    var horizontal_distance := cos(pitch) * camera_distance
+    var vertical_distance := sin(pitch) * camera_distance
+    camera.position = camera_target + Vector3(
+        sin(orbit_angle) * horizontal_distance,
+        vertical_distance,
+        cos(orbit_angle) * horizontal_distance
+    )
     camera.look_at(camera_target, Vector3.UP)
 
 func _pan_camera(delta: Vector2) -> void:
