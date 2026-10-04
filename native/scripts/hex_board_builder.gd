@@ -7,7 +7,7 @@ const ACTIVE_PATH := "user://boards/active_board.board.json"
 const HEX_RADIUS := 1.0
 const ROOT_3 := 1.7320508
 const ELEVATION_STEP := 0.22
-const TILE_DEPTH := 0.2
+const TILE_DEPTH := 0.28
 const GHOST_RADIUS := 10
 const TERRAIN_IDS := {"grass": 0, "woodland": 1, "dirt": 2, "stone": 3, "sand": 4, "marsh": 5}
 const TERRAIN_LABELS := {
@@ -484,13 +484,13 @@ func _make_hex_mesh() -> ArrayMesh:
     for corner in range(6):
         var angle := deg_to_rad(30.0 + 60.0 * corner)
         top.append(Vector3(cos(angle) * HEX_RADIUS, 0.0, sin(angle) * HEX_RADIUS))
-        bottom.append(Vector3(cos(angle) * HEX_RADIUS * 0.91, -TILE_DEPTH, sin(angle) * HEX_RADIUS * 0.91))
+        bottom.append(Vector3(cos(angle) * HEX_RADIUS * 0.98, -TILE_DEPTH, sin(angle) * HEX_RADIUS * 0.98))
     var center := Vector3.ZERO
     for corner in range(6):
         var next := (corner + 1) % 6
         surface.add_vertex(center)
-        surface.add_vertex(top[next])
         surface.add_vertex(top[corner])
+        surface.add_vertex(top[next])
         surface.add_vertex(top[corner])
         surface.add_vertex(top[next])
         surface.add_vertex(bottom[next])
