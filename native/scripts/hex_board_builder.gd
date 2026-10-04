@@ -278,7 +278,7 @@ func _build_camera_controls(ui: CanvasLayer) -> void:
     panel.anchor_right = 1.0
     panel.anchor_top = 0.12
     panel.anchor_bottom = 0.12
-    panel.offset_left = -290.0
+    panel.offset_left = -374.0
     panel.offset_right = -12.0
     panel.offset_bottom = 238.0
     ui.add_child(panel)
@@ -305,7 +305,7 @@ func _build_camera_controls(ui: CanvasLayer) -> void:
     camera_distance_slider.step = 1.0
     camera_distance_slider.value = camera_distance
     camera_distance_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    camera_distance_slider.custom_minimum_size.x = 112.0
+    camera_distance_slider.custom_minimum_size.x = 150.0
     camera_distance_slider.value_changed.connect(_on_camera_distance_changed)
     zoom_row.add_child(camera_distance_slider)
     _add_button(zoom_row, "+", func(): _zoom_camera(-2.0))
