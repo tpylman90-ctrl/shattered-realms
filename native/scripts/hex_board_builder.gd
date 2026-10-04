@@ -435,8 +435,8 @@ func _build_tree(root: Node3D, pine: bool) -> void:
         var layer := float(index % 3)
         var center := Vector3(cos(angle) * 0.42, 1.55 + layer * 0.18, sin(angle) * 0.42)
         var size := 0.43 if index % 3 == 0 else 0.34
-        var material := prop_materials["leaf_mid"] if index % 3 == 0 else (prop_materials["leaf_light"] if index % 2 == 0 else prop_materials["leaf_dark"])
-        _add_mesh(root, foliage, material, center, Vector3(size, size * 0.88, size))
+        var foliage_material: Material = prop_materials["leaf_mid"] if index % 3 == 0 else (prop_materials["leaf_light"] if index % 2 == 0 else prop_materials["leaf_dark"])
+        _add_mesh(root, foliage, foliage_material, center, Vector3(size, size * 0.88, size))
     _add_mesh(root, foliage, prop_materials["leaf_mid"], Vector3(0.0, 1.85, 0.0), Vector3(0.43, 0.42, 0.43))
 
 func _build_house(root: Node3D) -> void:
