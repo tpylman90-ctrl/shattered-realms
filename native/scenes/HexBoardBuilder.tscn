@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/hex_board_builder.gd" id="1_script"]
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 1
+background_color = Color(0.045, 0.068, 0.062, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.72, 0.78, 0.69, 1)
+ambient_light_energy = 1.05
+tonemap_mode = 2
+
+[node name="HexBoardBuilder" type="Node3D"]
+script = ExtResource("1_script")
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-52, -24, 0)
+light_color = Color(1, 0.92, 0.74, 1)
+light_energy = 1.75
+shadow_enabled = true
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-28, 148, 0)
+light_color = Color(0.55, 0.70, 0.79, 1)
+light_energy = 0.6
+shadow_enabled = false
+[node name="Camera3D" type="Camera3D" parent="."]
+current = true
+fov = 58.0

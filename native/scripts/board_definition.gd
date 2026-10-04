@@ -5,6 +5,19 @@ const FORMAT := "shattered_realms_board"
 const VERSION := 1
 const BOARD_DIR := "user://boards/"
 
+static func create_empty(board_id: String, title: String) -> Dictionary:
+    return {
+        "format": FORMAT,
+        "version": VERSION,
+        "id": board_id,
+        "title": title,
+        "theme": "temperate realm",
+        "grid": {"type": "hex", "orientation": "pointy", "radius": 1.0, "elevation_step": 0.22},
+        "cells": {},
+        "landmarks": [],
+        "edge_objects": []
+    }
+
 static func load_board(board_id: String, fallback_nav_path: String) -> Dictionary:
     var user_path := BOARD_DIR + board_id + ".board.json"
     var source_path := "res://data/boards/" + board_id + ".board.json"
@@ -59,7 +72,7 @@ static func validate(definition: Dictionary) -> bool:
     if str(definition.get("format", "")) != FORMAT or int(definition.get("version", -1)) != VERSION:
         return false
     var cells: Variant = definition.get("cells", null)
-    return cells is Dictionary and not cells.is_empty()
+    return cells is Dictionary
 
 static func save_board(definition: Dictionary) -> bool:
     if not validate(definition):
