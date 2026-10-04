@@ -14,10 +14,10 @@
 [ext_resource type="PackedScene" path="res://assets/3d/game-ready/ravenwood-board/generated/ravenwood_nav_surface.glb" id="3_nav"]
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
-background_color = Color(0.025, 0.047, 0.047, 1)
+background_color = Color(0.065, 0.085, 0.078, 1)
 ambient_light_source = 3
-ambient_light_color = Color(0.53, 0.65, 0.58, 1)
-ambient_light_energy = 0.9
+ambient_light_color = Color(0.72, 0.78, 0.70, 1)
+ambient_light_energy = 1.05
 reflected_light_source = 2
 
 [node name="BoardWorkshop" type="Node3D"]
@@ -27,7 +27,7 @@ environment = SubResource("Environment_main")
 [node name="Daylight" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-55, -28, 0)
 light_color = Color(0.91, 0.95, 0.78, 1)
-light_energy = 1.5
+light_energy = 2.0
 shadow_enabled = true
 [node name="TerrainRoot" type="Node3D" parent="."]
 scale = Vector3(38, 38, 38)

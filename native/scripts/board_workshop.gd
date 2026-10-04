@@ -26,7 +26,7 @@ var edge_anchor_key := ""
 var last_stroke_key := ""
 var camera_target := Vector3(0.0, 4.5, 0.0)
 var orbit_angle := 0.0
-var distance := 36.0
+var distance := 44.0
 var mouse_down := false
 var mouse_dragged := false
 var pan_dragging := false
@@ -53,7 +53,8 @@ func _ready() -> void:
     _build_hud()
     _draw_annotations()
     _update_camera()
-    _set_status("Tap a hex to paint it. Drag to orbit; use two fingers to pan and zoom.")
+    _set_status("Tap to edit hexes. Select CAMERA ORBIT to rotate; use two fingers to pan and zoom.")
+    print("[board-workshop] ready: %d hexes, HUD=%s" % [cells.size(), str(status_label != null)])
 
 func _apply_terrain_material() -> void:
     var material := StandardMaterial3D.new()
@@ -61,7 +62,7 @@ func _apply_terrain_material() -> void:
     material.normal_enabled = true
     material.normal_texture = preload("res://assets/3d/game-ready/ravenwood-board/ravenwood_normal.jpg")
     var metal_rough := preload("res://assets/3d/game-ready/ravenwood-board/ravenwood_metal_rough.jpg")
-    material.metallic = 1.0
+    material.metallic = 0.18
     material.metallic_texture = metal_rough
     material.metallic_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_BLUE
     material.roughness = 1.0
@@ -317,7 +318,7 @@ func _edit_edge(key: String) -> void:
     _set_status("%s  •  %s" % [edited_edge, "blocked" if should_block else "opened"])
 
 func _update_camera() -> void:
-    camera.position = camera_target + Vector3(sin(orbit_angle) * distance * 0.72, distance * 0.72, cos(orbit_angle) * distance * 0.72)
+    camera.position = camera_target + Vector3(sin(orbit_angle) * distance * 0.52, distance * 0.90, cos(orbit_angle) * distance * 0.52)
     camera.look_at(camera_target, Vector3.UP)
 
 func _pan_camera(delta: Vector2) -> void:

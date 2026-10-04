@@ -131,6 +131,21 @@ jobs:
             echo "Godot validation exited with code $GODOT_EXIT."
             exit "$GODOT_EXIT"
           fi
+          for scene in "res://scenes/BoardWorkshop.tscn" "res://scenes/RavenwoodPreview.tscn"; do
+            echo "Smoke testing $scene"
+            set +e
+            timeout 90 "$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE/native" --scene "$scene" --quit-after 30 2>&1 | tee "$RUNNER_TEMP/godot-scene-smoke.log"
+            SCENE_EXIT=${PIPESTATUS[0]}
+            set -e
+            if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" "$RUNNER_TEMP/godot-scene-smoke.log"; then
+              echo "Godot scene smoke test reported a script error."
+              exit 1
+            fi
+            if [ "$SCENE_EXIT" -ne 0 ]; then
+              echo "Godot scene smoke test exited with code $SCENE_EXIT."
+              exit "$SCENE_EXIT"
+            fi
+          done
 
       - name: Set monotonic Android version
         shell: bash
