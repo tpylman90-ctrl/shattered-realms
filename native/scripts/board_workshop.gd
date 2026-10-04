@@ -329,14 +329,6 @@ func _pan_camera(delta: Vector2) -> void:
     camera_target += -right * delta.x * factor + up * delta.y * factor
     _update_camera()
 
-func _pan_camera(delta: Vector2) -> void:
-    var basis := camera.global_transform.basis
-    var right := Vector3(basis.x.x, 0.0, basis.x.z).normalized()
-    var up := Vector3(basis.y.x, 0.0, basis.y.z).normalized()
-    var factor := distance * 0.0015
-    camera_target += -right * delta.x * factor + up * delta.y * factor
-    _update_camera()
-
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventMouseButton:
         if event.button_index == MOUSE_BUTTON_LEFT:
