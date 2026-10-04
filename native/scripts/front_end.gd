@@ -63,7 +63,7 @@ func _process(delta: float) -> void:
     load_bar.value = fraction * 100.0
     var destination := "Ashenreach"
     if loading_path == RAVENWOOD_PREVIEW_SCENE:
-        destination = "Ravenwood preview"
+        destination = "Ravenwood 3D board"
     elif loading_path == IRON_PLAINS_PREVIEW_SCENE:
         destination = "Iron Plains preview"
     elif loading_path == GOLDEN_EXPANSE_PREVIEW_SCENE:
@@ -497,14 +497,15 @@ func _select_region(region_id: String) -> void:
     detail_name.text = str(region.get("name", region_id))
     var playable: bool = region_id == "ashen_wastes" and (region.get("boards", []) as Array).has("ashenreach")
     var has_preview := region_id in ["ravenwood", "iron_plains", "golden_expanse"]
+    var playable_board := playable or region_id == "ravenwood"
     var concept_ready := ResourceLoader.exists("res://assets/boards/concept/" + region_id + ".webp")
-    detail_type.text = "PLAYABLE STRONGHOLD" if playable else "3D BOARD PREVIEW" if has_preview else "LOCATION BOARD CONCEPT" if region.has("kind") and concept_ready else "TERRITORY BOARD CONCEPT" if concept_ready else "FUTURE CAMPAIGN"
+    detail_type.text = "PLAYABLE 3D BOARD" if playable_board else "3D BOARD PREVIEW" if has_preview else "LOCATION BOARD CONCEPT" if region.has("kind") and concept_ready else "TERRITORY BOARD CONCEPT" if concept_ready else "FUTURE CAMPAIGN"
     var guardian := str(region.get("legendary_monster", "")).replace("_", " ").capitalize()
     var stronghold := str(region.get("stronghold", "Uncharted stronghold"))
     detail_body.text = str(region.get("description", "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]))
-    enter_button.visible = playable or has_preview or concept_ready
+    enter_button.visible = playable_board or has_preview or concept_ready
     if region_id == "ravenwood":
-        enter_button.text = "PREVIEW RAVENWOOD"
+        enter_button.text = "ENTER RAVENWOOD"
     elif region_id == "iron_plains":
         enter_button.text = "PREVIEW IRON PLAINS"
     elif region_id == "golden_expanse":
@@ -558,7 +559,7 @@ func _enter_region() -> void:
     load_time = 0.0
     load_bar.value = 0
     if current_region == "ravenwood":
-        load_caption.text = "Preparing Ravenwood preview..."
+        load_caption.text = "Preparing Ravenwood 3D board..."
     elif current_region == "iron_plains":
         load_caption.text = "Preparing Iron Plains preview..."
     elif current_region == "golden_expanse":
