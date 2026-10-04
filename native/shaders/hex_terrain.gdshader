@@ -3,6 +3,7 @@ render_mode unshaded;
 
 uniform int terrain_id = 0;
 varying vec3 world_position;
+varying float tile_local_y;
 
 float hash21(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
@@ -34,6 +35,7 @@ float fbm(vec2 p) {
 
 void vertex() {
     world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    tile_local_y = VERTEX.y;
 }
 
 void fragment() {
@@ -71,5 +73,6 @@ void fragment() {
     }
 
     float value = 0.78 + broad * 0.40 + fine * 0.16;
-    ALBEDO = base * value;
+    float side_shade = mix(0.48, 1.0, smoothstep(-0.035, 0.0, tile_local_y));
+    ALBEDO = base * value * side_shade;
 }
