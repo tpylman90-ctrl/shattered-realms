@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode diffuse_burley, specular_schlick_ggx;
+render_mode unshaded;
 
 uniform int terrain_id = 0;
 varying vec3 world_position;
@@ -45,22 +45,22 @@ void fragment() {
     float rough = 0.93;
 
     if (terrain_id == 1) {
-        base = mix(vec3(0.18, 0.31, 0.13), vec3(0.40, 0.49, 0.23), grain);
+        base = mix(vec3(0.24, 0.40, 0.18), vec3(0.42, 0.58, 0.28), grain);
         float litter = smoothstep(0.66, 0.82, fine);
         base = mix(base, vec3(0.43, 0.31, 0.17), litter * 0.32);
     } else if (terrain_id == 2) {
-        base = mix(vec3(0.36, 0.24, 0.13), vec3(0.70, 0.49, 0.28), grain);
+        base = mix(vec3(0.37, 0.26, 0.14), vec3(0.71, 0.51, 0.30), grain);
         float pebbles = smoothstep(0.78, 0.92, fine);
         base = mix(base, vec3(0.66, 0.58, 0.43), pebbles * 0.34);
     } else if (terrain_id == 3) {
-        base = mix(vec3(0.36, 0.39, 0.38), vec3(0.68, 0.69, 0.63), grain);
+        base = mix(vec3(0.35, 0.39, 0.38), vec3(0.69, 0.71, 0.65), grain);
         base *= 0.78 + 0.35 * fine;
         rough = 0.98;
     } else if (terrain_id == 4) {
-        base = mix(vec3(0.62, 0.48, 0.27), vec3(0.92, 0.77, 0.47), grain);
+        base = mix(vec3(0.57, 0.45, 0.25), vec3(0.88, 0.75, 0.46), grain);
         base *= 0.82 + 0.28 * fine;
     } else if (terrain_id == 5) {
-        base = mix(vec3(0.15, 0.34, 0.29), vec3(0.40, 0.60, 0.47), grain);
+        base = mix(vec3(0.16, 0.32, 0.27), vec3(0.40, 0.59, 0.47), grain);
         float wet = smoothstep(0.54, 0.72, fine);
         base = mix(base, vec3(0.17, 0.31, 0.32), wet * 0.55);
         rough = 0.72;
@@ -70,8 +70,6 @@ void fragment() {
         base = mix(base, vec3(0.53, 0.58, 0.24), blades * 0.22);
     }
 
-    float value = 0.86 + broad * 0.42 + fine * 0.12;
+    float value = 0.78 + broad * 0.40 + fine * 0.16;
     ALBEDO = base * value;
-    EMISSION = base * 0.12;
-    ROUGHNESS = rough;
 }
