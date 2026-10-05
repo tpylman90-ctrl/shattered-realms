@@ -2,6 +2,12 @@ extends Node3D
 
 const BOARD_SCRIPT := preload("res://scripts/board_definition.gd")
 const TERRAIN_SHADER := preload("res://shaders/hex_terrain.gdshader")
+const GRASS_ALBEDO := preload("res://assets/terrain/ravenwood/grass_albedo.jpg")
+const WOODLAND_ALBEDO := preload("res://assets/terrain/ravenwood/woodland_albedo.jpg")
+const DIRT_ALBEDO := preload("res://assets/terrain/ravenwood/dirt_albedo.jpg")
+const STONE_ALBEDO := preload("res://assets/terrain/ravenwood/stone_albedo.jpg")
+const SAND_ALBEDO := preload("res://assets/terrain/ravenwood/sand_albedo.jpg")
+const MARSH_ALBEDO := preload("res://assets/terrain/ravenwood/marsh_albedo.jpg")
 const WOODLAND_ALBEDO := preload("res://assets/terrain/ravenwood/woodland_albedo.jpg")
 const BOARD_DIR := "user://boards/"
 const ACTIVE_PATH := "user://boards/active_board.board.json"
@@ -55,6 +61,7 @@ var prop_rotation := 0.0
 var selected_key := ""
 var selected_object_key := ""
 var selected_object_index := -1
+var editor_layer := "terrain"
 var last_world_tap_time_msec := -1000
 var last_world_tap_position := Vector2(-10000.0, -10000.0)
 var is_playtesting := false
@@ -119,7 +126,12 @@ func _create_materials() -> void:
         var material := ShaderMaterial.new()
         material.shader = TERRAIN_SHADER
         material.set_shader_parameter("terrain_id", int(TERRAIN_IDS[terrain]))
+        material.set_shader_parameter("grass_albedo", GRASS_ALBEDO)
         material.set_shader_parameter("woodland_albedo", WOODLAND_ALBEDO)
+        material.set_shader_parameter("dirt_albedo", DIRT_ALBEDO)
+        material.set_shader_parameter("stone_albedo", STONE_ALBEDO)
+        material.set_shader_parameter("sand_albedo", SAND_ALBEDO)
+        material.set_shader_parameter("marsh_albedo", MARSH_ALBEDO)
         terrain_materials[terrain] = material
     prop_materials["bark"] = _standard_material(Color("60412b"), 0.92)
     prop_materials["bark_light"] = _standard_material(Color("8a623b"), 0.9)
@@ -213,11 +225,11 @@ func _build_ui() -> void:
     scrollbar_thumb_hover.border_color = Color("fff0c9")
     palette_scrollbar.add_theme_stylebox_override("grabber_highlight", scrollbar_thumb_hover)
     palette_scrollbar.add_theme_stylebox_override("grabber_pressed", scrollbar_thumb_hover)
+
     var column := VBoxContainer.new()
     column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     column.add_theme_constant_override("separation", 5)
     scroll.add_child(column)
-
     board_name = LineEdit.new()
     board_name.text = str(board.get("title", "New Board"))
     board_name.placeholder_text = "Board name"
@@ -232,11 +244,22 @@ func _build_ui() -> void:
     undo_button.disabled = true
     redo_button.disabled = true
 
-    _add_section(column, "1  •  LAY HEXES")
-    _add_button(column, "ADD HEX", func(): _set_tool("add_hex"))
-    _add_button(column, "REMOVE HEX", func(): _set_tool("remove_hex"))
+    var layer_tabs := TabContainer.new()
+    layer_tabs.name = "EditorLayers"
+    layer_tabs.custom_minimum_size.y = 420.0
+    layer_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    column.add_child(layer_tabs)
+    layer_tabs.tab_changed.connect(_on_editor_layer_changed)
+
+    var terrain_page := VBoxContainer.new()
+    terrain_page.name = "TERRAIN"
+    terrain_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    layer_tabs.add_child(terrain_page)
+    _add_section(terrain_page, "1  •  LAY HEXES")
+    _add_button(terrain_page, "ADD HEX", func(): _set_tool("add_hex"))
+    _add_button(terrain_page, "REMOVE HEX", func(): _set_tool("remove_hex"))
     var brush_row := HBoxContainer.new()
-    column.add_child(brush_row)
+    terrain_page.add_child(brush_row)
     var radius_label := Label.new()
     radius_label.text = "DISK RADIUS"
     radius_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -247,15 +270,15 @@ func _build_ui() -> void:
     brush_radius_option.select(3)
     brush_radius_option.item_selected.connect(_on_brush_radius_changed)
     brush_row.add_child(brush_radius_option)
-    _add_button(column, "LAY HEX DISK", _lay_hex_disk)
+    _add_button(terrain_page, "LAY HEX DISK", _lay_hex_disk)
 
-    _add_section(column, "2  •  PAINT TERRAIN")
+    _add_section(terrain_page, "2  •  PAINT TERRAIN")
     for terrain in ["grass", "woodland", "dirt", "stone", "sand", "marsh"]:
-        _add_button(column, TERRAIN_LABELS[terrain], func(): _set_tool("terrain:" + terrain))
+        _add_button(terrain_page, TERRAIN_LABELS[terrain], func(): _set_tool("terrain:" + terrain))
     var paint_row := HBoxContainer.new()
-    column.add_child(paint_row)
+    terrain_page.add_child(paint_row)
     var paint_label := Label.new()
-    paint_label.text = "PAINT RADIUS"
+    paint_label.text = "TERRAIN BRUSH RADIUS"
     paint_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     paint_row.add_child(paint_label)
     paint_brush_option = OptionButton.new()
@@ -265,11 +288,18 @@ func _build_ui() -> void:
     paint_brush_option.item_selected.connect(_on_paint_brush_changed)
     paint_row.add_child(paint_brush_option)
 
-    _add_section(column, "3  •  SHAPE THE GROUND")
-    _add_button(column, "RAISE HEX", func(): _set_tool("raise"))
-    _add_button(column, "LOWER HEX", func(): _set_tool("lower"))
+    _add_section(terrain_page, "3  •  SHAPE TERRAIN")
+    _add_button(terrain_page, "RAISE HEX", func(): _set_tool("raise"))
+    _add_button(terrain_page, "LOWER HEX", func(): _set_tool("lower"))
+    _add_button(terrain_page, "MOUNTAIN RIDGE", func(): _set_tool("mountain"))
+    _add_button(terrain_page, "CLEAR MOUNTAIN FORM", func(): _set_tool("clear_mountain"))
+    _add_button(terrain_page, "TOGGLE PASSABILITY", func(): _set_tool("toggle_passable"))
 
-    _add_section(column, "4  •  PLACE OBJECTS")
+    var object_page := VBoxContainer.new()
+    object_page.name = "OBJECTS"
+    object_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    layer_tabs.add_child(object_page)
+    _add_section(object_page, "4  •  PLACE OBJECTS")
     for prop in [
         ["tree", "TREE"], ["pine", "PINE"], ["ancient_tree", "ANCIENT OAK"], ["dead_tree", "DEAD TREE"],
         ["house", "HOUSE"], ["fence", "FENCE"], ["rock", "ROCK"], ["bush", "BUSH"],
@@ -277,20 +307,20 @@ func _build_ui() -> void:
         ["signpost", "SIGNPOST"], ["well", "WELL"], ["ruins", "RUINS"], ["flowers", "FLOWERS"], ["mushrooms", "MUSHROOMS"]
     ]:
         var prop_id: String = prop[0]
-        _add_button(column, str(prop[1]), func(): _set_tool("prop:" + prop_id))
-    _add_button(column, "SELECT / MOVE OBJECT", func(): _set_tool("select_object"))
-    _add_button(column, "NEXT OBJECT ON HEX", _cycle_selected_object)
-    _add_button(column, "ERASE SELECTED / LAST", func(): _set_tool("erase_prop"))
+        _add_button(object_page, str(prop[1]), func(): _set_tool("prop:" + prop_id))
+    _add_button(object_page, "SELECT / MOVE OBJECT", func(): _set_tool("select_object"))
+    _add_button(object_page, "NEXT OBJECT ON HEX", _cycle_selected_object)
+    _add_button(object_page, "ERASE SELECTED / LAST", func(): _set_tool("erase_prop"))
     var rotate_row := HBoxContainer.new()
-    column.add_child(rotate_row)
+    object_page.add_child(rotate_row)
     _add_button(rotate_row, "ROTATE −", func(): _rotate_prop(-PI / 6.0))
     _add_button(rotate_row, "ROTATE +", func(): _rotate_prop(PI / 6.0))
     var nudge_row_x := HBoxContainer.new()
-    column.add_child(nudge_row_x)
+    object_page.add_child(nudge_row_x)
     _add_button(nudge_row_x, "X −", func(): _nudge_selected_object(Vector2(-0.12, 0.0)))
     _add_button(nudge_row_x, "X +", func(): _nudge_selected_object(Vector2(0.12, 0.0)))
     var nudge_row_z := HBoxContainer.new()
-    column.add_child(nudge_row_z)
+    object_page.add_child(nudge_row_z)
     _add_button(nudge_row_z, "Z −", func(): _nudge_selected_object(Vector2(0.0, -0.12)))
     _add_button(nudge_row_z, "Z +", func(): _nudge_selected_object(Vector2(0.0, 0.12)))
 
@@ -401,6 +431,18 @@ func _on_paint_brush_changed(index: int) -> void:
     paint_brush_radius = index
     _set_status("Terrain paint radius: %d hexes." % paint_brush_radius)
 
+func _on_editor_layer_changed(tab_index: int) -> void:
+    if tab_index == 1:
+        editor_layer = "objects"
+        if not active_tool.begins_with("prop:") and active_tool != "select_object" and active_tool != "erase_prop":
+            _set_tool("select_object")
+        _set_status("OBJECT LAYER • place, select, move, rotate, and erase props.")
+    else:
+        editor_layer = "terrain"
+        if active_tool.begins_with("prop:") or active_tool == "select_object" or active_tool == "erase_prop":
+            _set_tool("add_hex")
+        _set_status("TERRAIN LAYER • install hexes, paint surfaces, shape elevation, and sculpt mountains.")
+
 func _set_tool(tool_id: String) -> void:
     active_tool = tool_id
     _set_status("Tool: %s • tap or drag over the board" % tool_id.replace(":", " ").replace("_", " ").to_upper())
@@ -508,8 +550,9 @@ func _refresh_cell_visual(key: String) -> void:
         terrain = "grass"
     var tile := MeshInstance3D.new()
     tile.name = "Hex_" + key.replace(",", "_")
-    tile.mesh = shared_hex_mesh
-    tile.material_override = terrain_materials[terrain]
+    var has_mountain := str(cell.get("landform", "")) == "mountain"
+    tile.mesh = _make_mountain_mesh(cell) if has_mountain else shared_hex_mesh
+    tile.material_override = terrain_materials["stone"] if has_mountain else terrain_materials[terrain]
     tile.position = _axial_to_world(int(cell.get("q", 0)), int(cell.get("r", 0)))
     tile.position.y = float(cell.get("elevation", 0)) * ELEVATION_STEP
     cell_layer.add_child(tile)
@@ -563,6 +606,39 @@ func _make_hex_mesh() -> ArrayMesh:
         surface.add_vertex(center)
         surface.add_vertex(top[corner])
         surface.add_vertex(top[next])
+    surface.generate_normals()
+    return surface.commit()
+
+func _add_mountain_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) -> void:
+    # Reverse the ring order so generated normals face outward/upward.
+    surface.add_vertex(a)
+    surface.add_vertex(c)
+    surface.add_vertex(b)
+
+func _make_mountain_mesh(cell: Dictionary) -> ArrayMesh:
+    var surface := SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var outer: Array[Vector3] = []
+    var shoulder: Array[Vector3] = []
+    var summit: Array[Vector3] = []
+    var seed_value := float(int(cell.get("q", 0)) * 19 - int(cell.get("r", 0)) * 31)
+    for index in range(12):
+        var angle := deg_to_rad(30.0 + 30.0 * float(index))
+        var boundary_radius := HEX_RADIUS if index % 2 == 0 else HEX_RADIUS * ROOT_3 * 0.5
+        var jagged := absf(sin(seed_value * 0.17 + float(index) * 2.31))
+        var shoulder_height := 0.28 + jagged * 0.42
+        var summit_height := 0.78 + absf(cos(seed_value * 0.11 + float(index) * 1.67)) * 0.72
+        outer.append(Vector3(cos(angle) * boundary_radius, 0.0, sin(angle) * boundary_radius))
+        shoulder.append(Vector3(cos(angle) * 0.64, shoulder_height, sin(angle) * 0.64))
+        summit.append(Vector3(cos(angle) * 0.27, summit_height, sin(angle) * 0.27))
+    var peak := Vector3(0.0, 1.18 + absf(sin(seed_value * 0.07)) * 0.46, 0.0)
+    for index in range(12):
+        var next := (index + 1) % 12
+        _add_mountain_triangle(surface, outer[index], outer[next], shoulder[index])
+        _add_mountain_triangle(surface, outer[next], shoulder[next], shoulder[index])
+        _add_mountain_triangle(surface, shoulder[index], shoulder[next], summit[index])
+        _add_mountain_triangle(surface, shoulder[next], summit[next], summit[index])
+        _add_mountain_triangle(surface, summit[index], summit[next], peak)
     surface.generate_normals()
     return surface.commit()
 
@@ -1009,6 +1085,10 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
     var key := _cell_key(q, r)
     if active_tool == "camera":
         return
+    if editor_layer == "terrain" and (active_tool.begins_with("prop:") or active_tool == "select_object" or active_tool == "erase_prop"):
+        return
+    if editor_layer == "objects" and active_tool != "select_object" and active_tool != "erase_prop" and not active_tool.begins_with("prop:"):
+        return
     if active_tool == "select_object":
         _select_object_at(q, r)
         return
@@ -1061,6 +1141,16 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         board["cells"] = cells
         _rebuild_board()
         _set_status("Hex %s elevation: %d" % [key, int(cell["elevation"])])
+    elif active_tool == "mountain" or active_tool == "clear_mountain":
+        _apply_mountain_brush(q, r, active_tool == "mountain")
+        return
+    elif active_tool == "toggle_passable":
+        cell["blocked"] = not bool(cell.get("blocked", false))
+        cell["movement_cost"] = 99 if bool(cell["blocked"]) else 1
+        cells[key] = cell
+        board["cells"] = cells
+        _refresh_cell_visual(key)
+        _set_status("Hex %s is now %s." % [key, "blocked" if bool(cell["blocked"]) else "passable"])
     elif active_tool.begins_with("prop:"):
         var kind := active_tool.trim_prefix("prop:")
         var objects: Array = cell.get("objects", []).duplicate(true)
@@ -1086,6 +1176,31 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         _refresh_cell_visual(key)
         _set_status("Object removed from hex %s." % key)
     _refresh_selection()
+
+func _apply_mountain_brush(q: int, r: int, make_mountain: bool) -> void:
+    var changed := 0
+    for dq in range(-paint_brush_radius, paint_brush_radius + 1):
+        for dr in range(-paint_brush_radius, paint_brush_radius + 1):
+            if maxi(absi(dq), maxi(absi(dr), absi(dq + dr))) > paint_brush_radius:
+                continue
+            var key := _cell_key(q + dq, r + dr)
+            if not cells.has(key):
+                continue
+            var cell: Dictionary = cells[key]
+            if make_mountain:
+                cell["landform"] = "mountain"
+                cell["blocked"] = true
+                cell["movement_cost"] = 99
+            elif str(cell.get("landform", "")) == "mountain":
+                cell["landform"] = ""
+                cell["blocked"] = false
+                cell["movement_cost"] = 1
+            cells[key] = cell
+            _refresh_cell_visual(key)
+            changed += 1
+    board["cells"] = cells
+    _rebuild_installed_grid()
+    _set_status("%s mountain form on %d hexes." % ["Sculpted" if make_mountain else "Cleared", changed])
 
 func _remove_hex_disk(q: int, r: int, radius: int) -> void:
     var removed := 0
