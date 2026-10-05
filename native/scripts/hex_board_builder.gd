@@ -37,6 +37,7 @@ var selection_outline: MeshInstance3D
 var cell_nodes: Dictionary = {}
 var prop_nodes: Dictionary = {}
 var terrain_materials: Dictionary = {}
+var mountain_sources: Array[Dictionary] = []
 var shared_hex_mesh: ArrayMesh
 var board_foundation_y := -TILE_DEPTH
 var prop_materials: Dictionary = {}
@@ -559,6 +560,7 @@ func _rebuild_installed_grid() -> void:
     grid_layer.add_child(installed_grid)
 
 func _rebuild_board() -> void:
+    _rebuild_mountain_sources()
     var lowest_elevation := 0
     var has_cells := false
     for cell_value in cells.values():
@@ -664,14 +666,48 @@ func _add_mountain_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vec
     surface.add_vertex(c)
     surface.add_vertex(b)
 
+func _rebuild_mountain_sources() -> void:
+    mountain_sources.clear()
+    for cell_value in cells.values():
+        var cell: Dictionary = cell_value
+        var form := str(cell.get("landform", ""))
+        if form not in ["mountain", "peak", "ridge", "foothill"]:
+            continue
+        var center := _axial_to_world(int(cell.get("q", 0)), int(cell.get("r", 0)))
+        var axis_angle := deg_to_rad(float(posmod(int(cell.get("landform_axis", 0)), 3)) * 60.0)
+        mountain_sources.append({
+            "center": Vector2(center.x, center.z),
+            "form": "peak" if form == "mountain" else form,
+            "axis": Vector2(cos(axis_angle), sin(axis_angle))
+        })
+
+func _mountain_height_at(world_point: Vector2) -> float:
+    var height := 0.0
+    for source in mountain_sources:
+        var delta: Vector2 = world_point - source["center"]
+        if delta.length_squared() > 64.0:
+            continue
+        var form := str(source["form"])
+        var contribution := 0.0
+        if form == "ridge":
+            var axis: Vector2 = source["axis"]
+            var along := delta.dot(axis)
+            var across := delta.dot(Vector2(-axis.y, axis.x))
+            contribution = 1.48 * exp(-across * across * 2.4) * exp(-along * along * 0.13)
+        elif form == "foothill":
+            contribution = 0.46 * exp(-delta.length_squared() * 0.78)
+        else:
+            contribution = 1.72 * exp(-delta.length_squared() * 2.35)
+        height = maxf(height, contribution)
+    if height <= 0.001:
+        return 0.0
+    var rock_noise := sin(world_point.x * 8.7 + world_point.y * 5.9) * cos(world_point.y * 9.8 - world_point.x * 3.1)
+    return maxf(0.0, height + rock_noise * 0.045 * minf(height, 1.0))
+
 func _make_mountain_mesh(cell: Dictionary) -> ArrayMesh:
     var surface := SurfaceTool.new()
     surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-    var form := str(cell.get("landform", "peak"))
-    var axis_index := posmod(int(cell.get("landform_axis", 0)), 3)
-    var axis_angle := deg_to_rad(float(axis_index) * 60.0)
-    var ridge_axis := Vector2(cos(axis_angle), sin(axis_angle))
-    var seed_value := float(int(cell.get("q", 0)) * 19 - int(cell.get("r", 0)) * 31)
+    var center_world := _axial_to_world(int(cell.get("q", 0)), int(cell.get("r", 0)))
     var segment_count := 24
     var radial_steps := 6
     var rings: Array[Array] = []
@@ -684,23 +720,11 @@ func _make_mountain_mesh(cell: Dictionary) -> ArrayMesh:
             var boundary_radius := (ROOT_3 * 0.5) / cos(angle - nearest_face_normal)
             var x := cos(angle) * boundary_radius * radial
             var z := sin(angle) * boundary_radius * radial
-            var along := x * ridge_axis.x + z * ridge_axis.y
-            var across := -x * ridge_axis.y + z * ridge_axis.x
-            var detail := 0.5 + 0.25 * sin(seed_value * 0.19 + angle * 5.0) + 0.25 * sin(seed_value * 0.11 - angle * 9.0 + radial * 7.0)
-            var height := 0.0
-            if form == "ridge":
-                var spine := exp(-pow(across * 3.2, 2.0))
-                var crest_variation := 0.86 + 0.12 * sin(along * 9.0 + seed_value * 0.04) + detail * 0.08
-                height = (0.16 + spine * 1.30 + detail * 0.24) * crest_variation * pow(maxf(0.0, 1.0 - radial), 0.52)
-            elif form == "foothill":
-                height = (0.18 + detail * 0.30) * pow(maxf(0.0, 1.0 - radial), 0.68)
-            else:
-                var spur := 0.82 + 0.13 * sin(angle * 3.0 + seed_value * 0.07) + 0.08 * sin(angle * 7.0 - seed_value * 0.05)
-                height = (0.22 + 1.25 * pow(maxf(0.0, 1.0 - radial), 0.58) + detail * 0.28) * spur * pow(maxf(0.0, 1.0 - radial), 0.20)
-            ring.append(Vector3(x, height, z))
+            var world_point := Vector2(center_world.x + x, center_world.z + z)
+            ring.append(Vector3(x, _mountain_height_at(world_point), z))
         rings.append(ring)
 
-    var center := Vector3(0.0, 0.0, 0.0)
+    var center := Vector3(0.0, _mountain_height_at(Vector2(center_world.x, center_world.z)), 0.0)
     var first_ring: Array[Vector3] = rings[0]
     for segment in range(segment_count):
         var next := (segment + 1) % segment_count
@@ -723,32 +747,51 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
     var elevation := int(cell.get("elevation", 0))
     var cell_y := float(elevation) * ELEVATION_STEP
     var wall_base_y := board_foundation_y - cell_y
+    var is_mountain := str(cell.get("landform", "")) in ["mountain", "peak", "ridge", "foothill"]
+    var center_world := _axial_to_world(q, r)
     var added_wall := false
     for edge in range(6):
         var offset: Vector2i = HEX_EDGE_NEIGHBORS[edge]
         var neighbor_key := _cell_key(q + offset.x, r + offset.y)
         var wall_bottom_y := wall_base_y
+        var neighbor_is_mountain := false
         if cells.has(neighbor_key):
             var neighbor: Dictionary = cells[neighbor_key]
             var neighbor_elevation := int(neighbor.get("elevation", 0))
-            if neighbor_elevation >= elevation:
+            neighbor_is_mountain = str(neighbor.get("landform", "")) in ["mountain", "peak", "ridge", "foothill"]
+            if neighbor_elevation > elevation:
                 continue
-            wall_bottom_y = float(neighbor_elevation - elevation) * ELEVATION_STEP
-        if wall_bottom_y >= -0.001:
+            if neighbor_elevation == elevation:
+                if not is_mountain or neighbor_is_mountain:
+                    continue
+                wall_bottom_y = 0.0
+            else:
+                wall_bottom_y = float(neighbor_elevation - elevation) * ELEVATION_STEP
+        if wall_bottom_y >= -0.001 and not is_mountain:
             continue
-        var angle_a := deg_to_rad(30.0 + 60.0 * edge)
-        var angle_b := deg_to_rad(30.0 + 60.0 * ((edge + 1) % 6))
-        var upper_a := Vector3(cos(angle_a) * HEX_RADIUS, 0.0, sin(angle_a) * HEX_RADIUS)
-        var upper_b := Vector3(cos(angle_b) * HEX_RADIUS, 0.0, sin(angle_b) * HEX_RADIUS)
-        var lower_a := Vector3(upper_a.x * 0.98, wall_bottom_y, upper_a.z * 0.98)
-        var lower_b := Vector3(upper_b.x * 0.98, wall_bottom_y, upper_b.z * 0.98)
-        surface.add_vertex(upper_a)
-        surface.add_vertex(lower_a)
-        surface.add_vertex(upper_b)
-        surface.add_vertex(upper_b)
-        surface.add_vertex(lower_a)
-        surface.add_vertex(lower_b)
-        added_wall = true
+        for segment in range(4):
+            var angle_a := deg_to_rad(30.0 + 60.0 * float(edge) + 15.0 * float(segment))
+            var angle_b := deg_to_rad(30.0 + 60.0 * float(edge) + 15.0 * float(segment + 1))
+            var normal_a := roundf(angle_a / (PI / 3.0)) * (PI / 3.0)
+            var normal_b := roundf(angle_b / (PI / 3.0)) * (PI / 3.0)
+            var radius_a := (ROOT_3 * 0.5) / cos(angle_a - normal_a)
+            var radius_b := (ROOT_3 * 0.5) / cos(angle_b - normal_b)
+            var upper_a := Vector3(cos(angle_a) * radius_a, 0.0, sin(angle_a) * radius_a)
+            var upper_b := Vector3(cos(angle_b) * radius_b, 0.0, sin(angle_b) * radius_b)
+            if is_mountain:
+                upper_a.y = _mountain_height_at(Vector2(center_world.x + upper_a.x, center_world.z + upper_a.z))
+                upper_b.y = _mountain_height_at(Vector2(center_world.x + upper_b.x, center_world.z + upper_b.z))
+            if upper_a.y <= wall_bottom_y + 0.001 and upper_b.y <= wall_bottom_y + 0.001:
+                continue
+            var lower_a := Vector3(upper_a.x * 0.98, wall_bottom_y, upper_a.z * 0.98)
+            var lower_b := Vector3(upper_b.x * 0.98, wall_bottom_y, upper_b.z * 0.98)
+            surface.add_vertex(upper_a)
+            surface.add_vertex(lower_a)
+            surface.add_vertex(upper_b)
+            surface.add_vertex(upper_b)
+            surface.add_vertex(lower_a)
+            surface.add_vertex(lower_b)
+            added_wall = true
     if not added_wall:
         return null
     surface.generate_normals()
@@ -1283,10 +1326,9 @@ func _apply_mountain_brush(q: int, r: int, form: String, ridge_axis: int, make_m
                 cell["blocked"] = false
                 cell["movement_cost"] = 1
             cells[key] = cell
-            _refresh_cell_visual(key)
             changed += 1
     board["cells"] = cells
-    _rebuild_installed_grid()
+    _rebuild_board()
     var form_label := "cleared" if not make_mountain else form.capitalize()
     _set_status("%s landform painted on %d hexes." % [form_label, changed])
 
