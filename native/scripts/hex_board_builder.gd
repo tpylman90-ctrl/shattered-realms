@@ -528,7 +528,8 @@ func _refresh_cell_visual(key: String) -> void:
             var object_data: Dictionary = objects[object_index]
             var prop := _make_prop(str(object_data.get("type", "tree")))
             prop.rotation.y = float(object_data.get("rotation", 0.0))
-            prop.scale = Vector3.ONE * clampf(float(object_data.get("scale", 1.0)), 0.45, 1.8)
+            var type_scale := 1.28 if str(object_data.get("type", "")) == "ancient_tree" else 1.0
+            prop.scale = Vector3.ONE * clampf(float(object_data.get("scale", 1.0)), 0.45, 1.8) * type_scale
             prop.position = Vector3(float(object_data.get("offset_x", 0.0)), 0.0, float(object_data.get("offset_z", 0.0)))
             object_root.add_child(prop)
             prop.name = "PlacedObject_%d" % object_index
@@ -618,7 +619,6 @@ func _make_prop(kind: String) -> Node3D:
             _build_bush(root)
         "ancient_tree":
             _build_tree(root, false)
-            root.scale = Vector3.ONE * 1.28
         "dead_tree":
             _build_dead_tree(root)
         "stump":
@@ -825,8 +825,11 @@ func _build_lantern(root: Node3D) -> void:
     var lamp := BoxMesh.new()
     lamp.size = Vector3(0.22, 0.30, 0.22)
     _add_mesh(root, lamp, prop_materials["flame_light"], Vector3(0.40, 1.35, 0.0))
-    var cap := PyramidMesh.new()
-    cap.size = Vector3(0.32, 0.18, 0.32)
+    var cap := CylinderMesh.new()
+    cap.top_radius = 0.0
+    cap.bottom_radius = 0.19
+    cap.height = 0.18
+    cap.radial_segments = 4
     _add_mesh(root, cap, prop_materials["metal"], Vector3(0.40, 1.59, 0.0))
 
 func _build_signpost(root: Node3D) -> void:
@@ -1507,7 +1510,8 @@ func _update_object_visual(key: String, object_index: int) -> void:
     if visual:
         visual.position = Vector3(float(object_data.get("offset_x", 0.0)), 0.0, float(object_data.get("offset_z", 0.0)))
         visual.rotation.y = float(object_data.get("rotation", 0.0))
-        visual.scale = Vector3.ONE * clampf(float(object_data.get("scale", 1.0)), 0.45, 1.8)
+        var type_scale := 1.28 if str(object_data.get("type", "")) == "ancient_tree" else 1.0
+        visual.scale = Vector3.ONE * clampf(float(object_data.get("scale", 1.0)), 0.45, 1.8) * type_scale
     var marker := root.get_node_or_null("SelectedObjectMarker") as MeshInstance3D
     if marker and selected_object_key == key and selected_object_index == object_index:
         marker.position = Vector3(float(object_data.get("offset_x", 0.0)), 0.025, float(object_data.get("offset_z", 0.0)))
