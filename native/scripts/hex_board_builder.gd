@@ -2,6 +2,7 @@ extends Node3D
 
 const BOARD_SCRIPT := preload("res://scripts/board_definition.gd")
 const TERRAIN_SHADER := preload("res://shaders/hex_terrain.gdshader")
+const WOODLAND_ALBEDO := preload("res://assets/terrain/ravenwood/woodland_albedo.jpg")
 const BOARD_DIR := "user://boards/"
 const ACTIVE_PATH := "user://boards/active_board.board.json"
 const HEX_RADIUS := 1.0
@@ -116,6 +117,7 @@ func _create_materials() -> void:
         var material := ShaderMaterial.new()
         material.shader = TERRAIN_SHADER
         material.set_shader_parameter("terrain_id", int(TERRAIN_IDS[terrain]))
+        material.set_shader_parameter("woodland_albedo", WOODLAND_ALBEDO)
         terrain_materials[terrain] = material
     prop_materials["bark"] = _standard_material(Color("60412b"), 0.92)
     prop_materials["bark_light"] = _standard_material(Color("8a623b"), 0.9)

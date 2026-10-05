@@ -1,7 +1,8 @@
 shader_type spatial;
-render_mode unshaded;
 
 uniform int terrain_id = 0;
+uniform sampler2D woodland_albedo : source_color, repeat_enable;
+uniform float woodland_texture_scale = 0.42;
 varying vec3 world_position;
 varying float tile_local_y;
 
@@ -40,39 +41,53 @@ void vertex() {
 
 void fragment() {
     vec2 p = world_position.xz;
-    float broad = fbm(p * 1.7);
-    float grain = fbm(p * 12.0 + broad * 3.0);
-    float fine = noise2(p * 42.0);
+    float broad = fbm(p * 1.4);
+    float grain = fbm(p * 9.0 + broad * 3.0);
+    float fine = noise2(p * 38.0);
+    float micro_height = fbm(p * 24.0) * 0.025 + noise2(p * 72.0) * 0.009;
+
     vec3 base = vec3(0.20, 0.37, 0.16);
-    float rough = 0.93;
+    float rough = 0.92;
 
     if (terrain_id == 1) {
-        base = mix(vec3(0.24, 0.40, 0.18), vec3(0.42, 0.58, 0.28), grain);
-        float litter = smoothstep(0.66, 0.82, fine);
-        base = mix(base, vec3(0.43, 0.31, 0.17), litter * 0.32);
+        vec2 forest_uv = (tile_local_y < -0.01 ? world_position.xy : world_position.xz) * woodland_texture_scale;
+        vec3 forest = texture(woodland_albedo, forest_uv).rgb;
+        base = forest;
+        rough = 0.82 + grain * 0.10;
+        micro_height += dot(forest, vec3(0.299, 0.587, 0.114)) * 0.12;
     } else if (terrain_id == 2) {
-        base = mix(vec3(0.37, 0.26, 0.14), vec3(0.71, 0.51, 0.30), grain);
+        base = mix(vec3(0.27, 0.20, 0.12), vec3(0.62, 0.46, 0.27), grain);
         float pebbles = smoothstep(0.78, 0.92, fine);
-        base = mix(base, vec3(0.66, 0.58, 0.43), pebbles * 0.34);
+        base = mix(base, vec3(0.69, 0.61, 0.48), pebbles * 0.34);
+        rough = 0.94;
     } else if (terrain_id == 3) {
-        base = mix(vec3(0.35, 0.39, 0.38), vec3(0.69, 0.71, 0.65), grain);
+        base = mix(vec3(0.29, 0.32, 0.31), vec3(0.64, 0.67, 0.63), grain);
         base *= 0.78 + 0.35 * fine;
         rough = 0.98;
     } else if (terrain_id == 4) {
-        base = mix(vec3(0.57, 0.45, 0.25), vec3(0.88, 0.75, 0.46), grain);
+        base = mix(vec3(0.54, 0.41, 0.23), vec3(0.85, 0.72, 0.44), grain);
         base *= 0.82 + 0.28 * fine;
+        rough = 0.88;
     } else if (terrain_id == 5) {
-        base = mix(vec3(0.16, 0.32, 0.27), vec3(0.40, 0.59, 0.47), grain);
+        base = mix(vec3(0.13, 0.28, 0.23), vec3(0.36, 0.53, 0.41), grain);
         float wet = smoothstep(0.54, 0.72, fine);
-        base = mix(base, vec3(0.17, 0.31, 0.32), wet * 0.55);
-        rough = 0.72;
+        base = mix(base, vec3(0.13, 0.25, 0.27), wet * 0.48);
+        rough = mix(0.88, 0.58, wet);
     } else {
-        base = mix(vec3(0.20, 0.38, 0.15), vec3(0.44, 0.59, 0.25), grain);
+        base = mix(vec3(0.17, 0.34, 0.13), vec3(0.42, 0.58, 0.25), grain);
         float blades = smoothstep(0.70, 0.93, fine);
-        base = mix(base, vec3(0.53, 0.58, 0.24), blades * 0.22);
+        base = mix(base, vec3(0.50, 0.57, 0.23), blades * 0.22);
+        rough = 0.92;
     }
 
-    float value = 0.78 + broad * 0.40 + fine * 0.16;
-    float side_shade = mix(0.48, 1.0, smoothstep(-0.035, 0.0, tile_local_y));
-    ALBEDO = base * value * side_shade;
+    float face_light = mix(0.68, 1.0, smoothstep(-0.075, -0.01, tile_local_y));
+    float color_variation = 0.91 + broad * 0.14 + fine * 0.04;
+
+    // Add a restrained screen-space bump so fine surface variation responds to the scene lights.
+    vec2 bump_gradient = vec2(dFdx(micro_height), dFdy(micro_height));
+    NORMAL = normalize(NORMAL - vec3(bump_gradient * 1.25, 0.0));
+
+    ALBEDO = base * color_variation * face_light;
+    ROUGHNESS = rough;
+    SPECULAR = 0.18;
 }
