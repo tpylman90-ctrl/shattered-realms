@@ -9,6 +9,7 @@ const ROOT_3 := 1.7320508
 const ELEVATION_STEP := 0.22
 const TILE_DEPTH := 0.28
 const GHOST_RADIUS := 10
+const HEX_EDGE_NEIGHBORS := [Vector2i(0, 1), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, -1), Vector2i(1, 0)]
 const TERRAIN_IDS := {"grass": 0, "woodland": 1, "dirt": 2, "stone": 3, "sand": 4, "marsh": 5}
 const TERRAIN_LABELS := {
     "grass": "GRASS",
@@ -31,7 +32,9 @@ var cell_nodes: Dictionary = {}
 var prop_nodes: Dictionary = {}
 var terrain_materials: Dictionary = {}
 var shared_hex_mesh: ArrayMesh
+var board_foundation_y := -TILE_DEPTH
 var prop_materials: Dictionary = {}
+var selection_marker_material: StandardMaterial3D
 var board_name: LineEdit
 var status_label: Label
 var brush_radius_option: OptionButton
@@ -49,6 +52,8 @@ var brush_radius := 3
 var paint_brush_radius := 0
 var prop_rotation := 0.0
 var selected_key := ""
+var selected_object_key := ""
+var selected_object_index := -1
 var is_playtesting := false
 var player_piece: Node3D
 var camera_target := Vector3(0.0, 0.0, 0.0)
@@ -123,6 +128,11 @@ func _create_materials() -> void:
     prop_materials["stone"] = _standard_material(Color("77796e"), 0.96)
     prop_materials["window"] = _standard_material(Color("253b3d"), 0.44)
     prop_materials["water"] = _standard_material(Color("406c75"), 0.25)
+    selection_marker_material = _standard_material(Color("ffd16b"), 0.35)
+    selection_marker_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    selection_marker_material.emission_enabled = true
+    selection_marker_material.emission = Color("e6a53c")
+    selection_marker_material.emission_energy_multiplier = 1.3
 
 func _standard_material(color: Color, roughness_value: float) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -246,11 +256,21 @@ func _build_ui() -> void:
     for prop in [["tree", "TREE"], ["pine", "PINE"], ["house", "HOUSE"], ["fence", "FENCE"], ["rock", "ROCK"], ["bush", "BUSH"]]:
         var prop_id: String = prop[0]
         _add_button(column, str(prop[1]), func(): _set_tool("prop:" + prop_id))
-    _add_button(column, "ERASE LAST OBJECT", func(): _set_tool("erase_prop"))
+    _add_button(column, "SELECT / MOVE OBJECT", func(): _set_tool("select_object"))
+    _add_button(column, "NEXT OBJECT ON HEX", _cycle_selected_object)
+    _add_button(column, "ERASE SELECTED / LAST", func(): _set_tool("erase_prop"))
     var rotate_row := HBoxContainer.new()
     column.add_child(rotate_row)
     _add_button(rotate_row, "ROTATE −", func(): _rotate_prop(-PI / 6.0))
     _add_button(rotate_row, "ROTATE +", func(): _rotate_prop(PI / 6.0))
+    var nudge_row_x := HBoxContainer.new()
+    column.add_child(nudge_row_x)
+    _add_button(nudge_row_x, "X −", func(): _nudge_selected_object(Vector2(-0.12, 0.0)))
+    _add_button(nudge_row_x, "X +", func(): _nudge_selected_object(Vector2(0.12, 0.0)))
+    var nudge_row_z := HBoxContainer.new()
+    column.add_child(nudge_row_z)
+    _add_button(nudge_row_z, "Z −", func(): _nudge_selected_object(Vector2(0.0, -0.12)))
+    _add_button(nudge_row_z, "Z +", func(): _nudge_selected_object(Vector2(0.0, 0.12)))
 
     _add_section(column, "VIEW")
     _add_button(column, "CAMERA ORBIT", func(): _set_tool("camera"))
@@ -427,6 +447,15 @@ func _rebuild_installed_grid() -> void:
     grid_layer.add_child(installed_grid)
 
 func _rebuild_board() -> void:
+    var lowest_elevation := 0
+    var has_cells := false
+    for cell_value in cells.values():
+        var cell_data: Dictionary = cell_value
+        var elevation := int(cell_data.get("elevation", 0))
+        if not has_cells or elevation < lowest_elevation:
+            lowest_elevation = elevation
+            has_cells = true
+    board_foundation_y = float(lowest_elevation) * ELEVATION_STEP - TILE_DEPTH
     for key_value in cell_nodes.keys():
         var node: Node = cell_nodes[key_value]
         if is_instance_valid(node):
@@ -463,40 +492,92 @@ func _refresh_cell_visual(key: String) -> void:
     tile.position.y = float(cell.get("elevation", 0)) * ELEVATION_STEP
     cell_layer.add_child(tile)
     cell_nodes[key] = tile
+    var wall_mesh := _make_hex_wall_mesh(cell)
+    if wall_mesh:
+        var walls := MeshInstance3D.new()
+        walls.name = "ExposedHexWalls"
+        walls.mesh = wall_mesh
+        walls.material_override = terrain_materials[terrain]
+        tile.add_child(walls)
     var object_root := Node3D.new()
     object_root.name = "Objects_" + key.replace(",", "_")
     object_root.position = tile.position + Vector3.UP * 0.01
     prop_layer.add_child(object_root)
     prop_nodes[key] = object_root
-    for object_value in cell.get("objects", []):
-        if object_value is Dictionary:
-            var object_data: Dictionary = object_value
+    var objects: Array = cell.get("objects", [])
+    for object_index in range(objects.size()):
+        if objects[object_index] is Dictionary:
+            var object_data: Dictionary = objects[object_index]
             var prop := _make_prop(str(object_data.get("type", "tree")))
             prop.rotation.y = float(object_data.get("rotation", 0.0))
             prop.scale = Vector3.ONE * clampf(float(object_data.get("scale", 1.0)), 0.45, 1.8)
+            prop.position = Vector3(float(object_data.get("offset_x", 0.0)), 0.0, float(object_data.get("offset_z", 0.0)))
             object_root.add_child(prop)
+            if key == selected_object_key and object_index == selected_object_index:
+                var marker := MeshInstance3D.new()
+                marker.name = "SelectedObjectMarker"
+                var marker_mesh := TorusMesh.new()
+                marker_mesh.inner_radius = 0.27
+                marker_mesh.outer_radius = 0.32
+                marker_mesh.rings = 8
+                marker_mesh.ring_segments = 18
+                marker.mesh = marker_mesh
+                marker.material_override = selection_marker_material
+                marker.position = Vector3(prop.position.x, 0.025, prop.position.z)
+                object_root.add_child(marker)
 
 func _make_hex_mesh() -> ArrayMesh:
     var surface := SurfaceTool.new()
     surface.begin(Mesh.PRIMITIVE_TRIANGLES)
     var top: Array[Vector3] = []
-    var bottom: Array[Vector3] = []
     for corner in range(6):
         var angle := deg_to_rad(30.0 + 60.0 * corner)
         top.append(Vector3(cos(angle) * HEX_RADIUS, 0.0, sin(angle) * HEX_RADIUS))
-        bottom.append(Vector3(cos(angle) * HEX_RADIUS * 0.98, -TILE_DEPTH, sin(angle) * HEX_RADIUS * 0.98))
     var center := Vector3.ZERO
     for corner in range(6):
         var next := (corner + 1) % 6
         surface.add_vertex(center)
         surface.add_vertex(top[corner])
         surface.add_vertex(top[next])
-        surface.add_vertex(top[corner])
-        surface.add_vertex(top[next])
-        surface.add_vertex(bottom[next])
-        surface.add_vertex(top[corner])
-        surface.add_vertex(bottom[next])
-        surface.add_vertex(bottom[corner])
+    surface.generate_normals()
+    return surface.commit()
+
+func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
+    var surface := SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var q := int(cell.get("q", 0))
+    var r := int(cell.get("r", 0))
+    var elevation := int(cell.get("elevation", 0))
+    var cell_y := float(elevation) * ELEVATION_STEP
+    var wall_base_y := board_foundation_y - cell_y
+    var added_wall := false
+    for edge in range(6):
+        var offset: Vector2i = HEX_EDGE_NEIGHBORS[edge]
+        var neighbor_key := _cell_key(q + offset.x, r + offset.y)
+        var wall_bottom_y := wall_base_y
+        if cells.has(neighbor_key):
+            var neighbor: Dictionary = cells[neighbor_key]
+            var neighbor_elevation := int(neighbor.get("elevation", 0))
+            if neighbor_elevation >= elevation:
+                continue
+            wall_bottom_y = float(neighbor_elevation - elevation) * ELEVATION_STEP
+        if wall_bottom_y >= -0.001:
+            continue
+        var angle_a := deg_to_rad(30.0 + 60.0 * edge)
+        var angle_b := deg_to_rad(30.0 + 60.0 * ((edge + 1) % 6))
+        var upper_a := Vector3(cos(angle_a) * HEX_RADIUS, 0.0, sin(angle_a) * HEX_RADIUS)
+        var upper_b := Vector3(cos(angle_b) * HEX_RADIUS, 0.0, sin(angle_b) * HEX_RADIUS)
+        var lower_a := Vector3(upper_a.x * 0.98, wall_bottom_y, upper_a.z * 0.98)
+        var lower_b := Vector3(upper_b.x * 0.98, wall_bottom_y, upper_b.z * 0.98)
+        surface.add_vertex(upper_a)
+        surface.add_vertex(lower_a)
+        surface.add_vertex(upper_b)
+        surface.add_vertex(upper_b)
+        surface.add_vertex(lower_a)
+        surface.add_vertex(lower_b)
+        added_wall = true
+    if not added_wall:
+        return null
     surface.generate_normals()
     return surface.commit()
 
@@ -670,10 +751,10 @@ func _lay_hex_disk() -> void:
             if cells.has(key):
                 continue
             cells[key] = _new_cell(q, r)
-            _refresh_cell_visual(key)
             count += 1
     board["cells"] = cells
-    _rebuild_installed_grid()
+    if count > 0:
+        _rebuild_board()
     _set_status("Laid %d new hexes around %s." % [count, _cell_key(center.x, center.y)])
     _record_history(before)
 
@@ -694,12 +775,15 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
     var key := _cell_key(q, r)
     if active_tool == "camera":
         return
+    if active_tool == "select_object":
+        _select_object_at(q, r)
+        return
     if active_tool == "add_hex":
         if not cells.has(key):
             cells[key] = _new_cell(q, r)
             board["cells"] = cells
-            _refresh_cell_visual(key)
-            _rebuild_installed_grid()
+            _rebuild_board()
+        _clear_object_selection()
         selected_key = key
         _refresh_selection()
         _set_status("Hex %s installed. Paint, shape, or place objects." % key)
@@ -709,9 +793,12 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         return
     if not cells.has(key):
         selected_key = ""
+        _clear_object_selection()
         _refresh_selection()
         _set_status("Selection cleared. Lay a hex here first.")
         return
+    if not active_tool.begins_with("prop:") and active_tool != "erase_prop":
+        _clear_object_selection()
     selected_key = key
     var cell: Dictionary = cells[key]
     if active_tool.begins_with("terrain:"):
@@ -738,27 +825,32 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         cell["elevation"] = clampi(int(cell.get("elevation", 0)) + delta, -4, 8)
         cells[key] = cell
         board["cells"] = cells
-        _refresh_cell_visual(key)
-        _rebuild_installed_grid()
+        _rebuild_board()
         _set_status("Hex %s elevation: %d" % [key, int(cell["elevation"])])
     elif active_tool.begins_with("prop:"):
         var kind := active_tool.trim_prefix("prop:")
         var objects: Array = cell.get("objects", []).duplicate(true)
-        objects.append({"type": kind, "rotation": prop_rotation, "scale": 1.0})
+        objects.append({"type": kind, "rotation": prop_rotation, "scale": 1.0, "offset_x": 0.0, "offset_z": 0.0})
         cell["objects"] = objects
         cells[key] = cell
         board["cells"] = cells
+        selected_object_key = key
+        selected_object_index = objects.size() - 1
         _refresh_cell_visual(key)
-        _set_status("%s placed on hex %s." % [kind.capitalize(), key])
+        _set_status("%s placed on hex %s. %d object(s) on this hex." % [kind.capitalize(), key, objects.size()])
     elif active_tool == "erase_prop":
         var objects: Array = cell.get("objects", []).duplicate(true)
         if not objects.is_empty():
-            objects.pop_back()
+            var remove_index := objects.size() - 1
+            if selected_object_key == key and selected_object_index >= 0 and selected_object_index < objects.size():
+                remove_index = selected_object_index
+            objects.remove_at(remove_index)
         cell["objects"] = objects
         cells[key] = cell
         board["cells"] = cells
+        _clear_object_selection()
         _refresh_cell_visual(key)
-        _set_status("Last object removed from hex %s." % key)
+        _set_status("Object removed from hex %s." % key)
     _refresh_selection()
 
 func _remove_hex_disk(q: int, r: int, radius: int) -> void:
@@ -780,8 +872,9 @@ func _remove_hex_disk(q: int, r: int, radius: int) -> void:
     board["cells"] = cells
     if not cells.has(selected_key):
         selected_key = ""
-    _rebuild_installed_grid()
-    _refresh_selection()
+    if not cells.has(selected_object_key):
+        _clear_object_selection()
+    _rebuild_board()
     _set_status("Removed %d hexes." % removed)
 
 func _capture_editor_state() -> Dictionary:
@@ -819,6 +912,7 @@ func _restore_editor_state(state: Dictionary) -> void:
     board["title"] = str(state.get("title", board.get("title", "New Board")))
     board["id"] = str(state.get("id", board.get("id", "new_board")))
     selected_key = ""
+    _clear_object_selection()
     if board_name:
         board_name.text = str(board["title"])
     _rebuild_board()
@@ -848,6 +942,7 @@ func _refresh_history_controls() -> void:
 
 func _clear_selection() -> void:
     selected_key = ""
+    _clear_object_selection()
     _refresh_selection()
     _set_status("Tile selection cleared.")
 
@@ -1173,9 +1268,91 @@ func _unhandled_input(event: InputEvent) -> void:
             last_center = center
             last_pinch = pinch
 
+func _clear_object_selection() -> void:
+    selected_object_key = ""
+    selected_object_index = -1
+
+func _select_object_at(q: int, r: int) -> void:
+    var key := _cell_key(q, r)
+    if not cells.has(key):
+        _clear_object_selection()
+        selected_key = ""
+        _refresh_selection()
+        _set_status("No hex or object at this location.")
+        return
+    selected_key = key
+    var objects: Array = cells[key].get("objects", [])
+    if objects.is_empty():
+        _clear_object_selection()
+        _refresh_cell_visual(key)
+        _refresh_selection()
+        _set_status("This hex has no objects. Place one first.")
+        return
+    if selected_object_key == key and selected_object_index >= 0 and selected_object_index < objects.size():
+        selected_object_index = (selected_object_index + 1) % objects.size()
+    else:
+        selected_object_key = key
+        selected_object_index = objects.size() - 1
+    _refresh_cell_visual(key)
+    _refresh_selection()
+    _set_status("Selected object %d of %d on hex %s." % [selected_object_index + 1, objects.size(), key])
+
+func _cycle_selected_object() -> void:
+    if selected_object_key == "" or not cells.has(selected_object_key):
+        _set_status("Select an object on a hex first.")
+        return
+    var objects: Array = cells[selected_object_key].get("objects", [])
+    if objects.is_empty():
+        _clear_object_selection()
+        _set_status("No objects remain on this hex.")
+        return
+    selected_object_index = (selected_object_index + 1) % objects.size()
+    _refresh_cell_visual(selected_object_key)
+    _set_status("Selected object %d of %d." % [selected_object_index + 1, objects.size()])
+
+func _nudge_selected_object(offset: Vector2) -> void:
+    if selected_object_key == "" or not cells.has(selected_object_key):
+        _set_status("Select an object before moving it.")
+        return
+    var objects: Array = cells[selected_object_key].get("objects", []).duplicate(true)
+    if selected_object_index < 0 or selected_object_index >= objects.size():
+        _clear_object_selection()
+        _set_status("Selected object is no longer available.")
+        return
+    var before := _capture_editor_state()
+    var object_data: Dictionary = objects[selected_object_index]
+    var next_x := clampf(float(object_data.get("offset_x", 0.0)) + offset.x, -0.62, 0.62)
+    var next_z := clampf(float(object_data.get("offset_z", 0.0)) + offset.y, -0.62, 0.62)
+    object_data["offset_x"] = next_x
+    object_data["offset_z"] = next_z
+    objects[selected_object_index] = object_data
+    var cell: Dictionary = cells[selected_object_key]
+    cell["objects"] = objects
+    cells[selected_object_key] = cell
+    board["cells"] = cells
+    _refresh_cell_visual(selected_object_key)
+    _record_history(before)
+    _set_status("Object position: X %.2f, Z %.2f." % [next_x, next_z])
+
 func _rotate_prop(amount: float) -> void:
+    if selected_object_key != "" and cells.has(selected_object_key):
+        var objects: Array = cells[selected_object_key].get("objects", []).duplicate(true)
+        if selected_object_index >= 0 and selected_object_index < objects.size():
+            var before := _capture_editor_state()
+            var object_data: Dictionary = objects[selected_object_index]
+            var rotation := wrapf(float(object_data.get("rotation", 0.0)) + amount, -PI, PI)
+            object_data["rotation"] = rotation
+            objects[selected_object_index] = object_data
+            var cell: Dictionary = cells[selected_object_key]
+            cell["objects"] = objects
+            cells[selected_object_key] = cell
+            board["cells"] = cells
+            _refresh_cell_visual(selected_object_key)
+            _record_history(before)
+            _set_status("Selected object rotated to %d°." % int(rad_to_deg(rotation)))
+            return
     prop_rotation = wrapf(prop_rotation + amount, -PI, PI)
-    _set_status("Prop rotation: %d°" % int(rad_to_deg(prop_rotation)))
+    _set_status("New prop rotation: %d°." % int(rad_to_deg(prop_rotation)))
     
 func _back_to_world() -> void:
     get_tree().change_scene_to_file("res://scenes/FrontEnd.tscn")
