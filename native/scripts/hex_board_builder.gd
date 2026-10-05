@@ -8,7 +8,6 @@ const DIRT_ALBEDO := preload("res://assets/terrain/ravenwood/dirt_albedo.jpg")
 const STONE_ALBEDO := preload("res://assets/terrain/ravenwood/stone_albedo.jpg")
 const SAND_ALBEDO := preload("res://assets/terrain/ravenwood/sand_albedo.jpg")
 const MARSH_ALBEDO := preload("res://assets/terrain/ravenwood/marsh_albedo.jpg")
-const WOODLAND_ALBEDO := preload("res://assets/terrain/ravenwood/woodland_albedo.jpg")
 const BOARD_DIR := "user://boards/"
 const ACTIVE_PATH := "user://boards/active_board.board.json"
 const HEX_RADIUS := 1.0
