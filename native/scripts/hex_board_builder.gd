@@ -45,6 +45,11 @@ var board_name: LineEdit
 var status_label: Label
 var brush_radius_option: OptionButton
 var paint_brush_option: OptionButton
+var scatter_radius_option: OptionButton
+var scatter_density_option: OptionButton
+var scatter_brush_radius := 1
+var scatter_density := 2
+var scatter_nonce := 0
 var undo_button: Button
 var redo_button: Button
 var palette_panel: PanelContainer
@@ -290,7 +295,14 @@ func _build_ui() -> void:
     _add_section(terrain_page, "3  •  SHAPE TERRAIN")
     _add_button(terrain_page, "RAISE HEX", func(): _set_tool("raise"))
     _add_button(terrain_page, "LOWER HEX", func(): _set_tool("lower"))
-    _add_button(terrain_page, "MOUNTAIN RIDGE", func(): _set_tool("mountain"))
+    _add_button(terrain_page, "PEAK CLUSTER", func(): _set_tool("mountain_peak"))
+    _add_section(terrain_page, "RIDGE DIRECTION")
+    var ridge_row := HBoxContainer.new()
+    terrain_page.add_child(ridge_row)
+    _add_button(ridge_row, "↗", func(): _set_tool("mountain_ridge:1"))
+    _add_button(ridge_row, "→", func(): _set_tool("mountain_ridge:0"))
+    _add_button(ridge_row, "↘", func(): _set_tool("mountain_ridge:2"))
+    _add_button(terrain_page, "FOOTHILLS", func(): _set_tool("mountain_foothill"))
     _add_button(terrain_page, "CLEAR MOUNTAIN FORM", func(): _set_tool("clear_mountain"))
     _add_button(terrain_page, "TOGGLE PASSABILITY", func(): _set_tool("toggle_passable"))
 
@@ -310,6 +322,35 @@ func _build_ui() -> void:
     _add_button(object_page, "SELECT / MOVE OBJECT", func(): _set_tool("select_object"))
     _add_button(object_page, "NEXT OBJECT ON HEX", _cycle_selected_object)
     _add_button(object_page, "ERASE SELECTED / LAST", func(): _set_tool("erase_prop"))
+    _add_section(object_page, "5  •  PAINT ENVIRONMENT")
+    var scatter_controls := HBoxContainer.new()
+    object_page.add_child(scatter_controls)
+    var scatter_radius_label := Label.new()
+    scatter_radius_label.text = "RADIUS"
+    scatter_radius_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scatter_controls.add_child(scatter_radius_label)
+    scatter_radius_option = OptionButton.new()
+    for radius in range(0, 5):
+        scatter_radius_option.add_item(str(radius))
+    scatter_radius_option.select(1)
+    scatter_radius_option.item_selected.connect(_on_scatter_radius_changed)
+    scatter_controls.add_child(scatter_radius_option)
+    var density_controls := HBoxContainer.new()
+    object_page.add_child(density_controls)
+    var density_label := Label.new()
+    density_label.text = "OBJECTS / HEX"
+    density_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    density_controls.add_child(density_label)
+    scatter_density_option = OptionButton.new()
+    for density in range(1, 5):
+        scatter_density_option.add_item(str(density))
+    scatter_density_option.select(1)
+    scatter_density_option.item_selected.connect(_on_scatter_density_changed)
+    density_controls.add_child(scatter_density_option)
+    _add_button(object_page, "WOODLAND CLUSTER", func(): _set_tool("scatter:forest"))
+    _add_button(object_page, "ROCKY DEBRIS", func(): _set_tool("scatter:rocky"))
+    _add_button(object_page, "MARSH UNDERGROWTH", func(): _set_tool("scatter:marsh"))
+    _add_button(object_page, "DEADFALL", func(): _set_tool("scatter:deadfall"))
     var rotate_row := HBoxContainer.new()
     object_page.add_child(rotate_row)
     _add_button(rotate_row, "ROTATE −", func(): _rotate_prop(-PI / 6.0))
@@ -430,15 +471,23 @@ func _on_paint_brush_changed(index: int) -> void:
     paint_brush_radius = index
     _set_status("Terrain paint radius: %d hexes." % paint_brush_radius)
 
+func _on_scatter_radius_changed(index: int) -> void:
+    scatter_brush_radius = index
+    _set_status("Environment brush radius: %d hexes." % scatter_brush_radius)
+
+func _on_scatter_density_changed(index: int) -> void:
+    scatter_density = index + 1
+    _set_status("Environment density: %d objects per hex." % scatter_density)
+
 func _on_editor_layer_changed(tab_index: int) -> void:
     if tab_index == 1:
         editor_layer = "objects"
-        if not active_tool.begins_with("prop:") and active_tool != "select_object" and active_tool != "erase_prop":
+        if not active_tool.begins_with("prop:") and not active_tool.begins_with("scatter:") and active_tool != "select_object" and active_tool != "erase_prop":
             _set_tool("select_object")
         _set_status("OBJECT LAYER • place, select, move, rotate, and erase props.")
     else:
         editor_layer = "terrain"
-        if active_tool.begins_with("prop:") or active_tool == "select_object" or active_tool == "erase_prop":
+        if active_tool.begins_with("prop:") or active_tool.begins_with("scatter:") or active_tool == "select_object" or active_tool == "erase_prop":
             _set_tool("add_hex")
         _set_status("TERRAIN LAYER • install hexes, paint surfaces, shape elevation, and sculpt mountains.")
 
@@ -549,7 +598,8 @@ func _refresh_cell_visual(key: String) -> void:
         terrain = "grass"
     var tile := MeshInstance3D.new()
     tile.name = "Hex_" + key.replace(",", "_")
-    var has_mountain := str(cell.get("landform", "")) == "mountain"
+    var landform := str(cell.get("landform", ""))
+    var has_mountain := landform in ["mountain", "peak", "ridge", "foothill"]
     tile.mesh = _make_mountain_mesh(cell) if has_mountain else shared_hex_mesh
     tile.material_override = terrain_materials["stone"] if has_mountain else terrain_materials[terrain]
     tile.position = _axial_to_world(int(cell.get("q", 0)), int(cell.get("r", 0)))
@@ -617,27 +667,51 @@ func _add_mountain_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vec
 func _make_mountain_mesh(cell: Dictionary) -> ArrayMesh:
     var surface := SurfaceTool.new()
     surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-    var outer: Array[Vector3] = []
-    var shoulder: Array[Vector3] = []
-    var summit: Array[Vector3] = []
+    var form := str(cell.get("landform", "peak"))
+    var axis_index := posmod(int(cell.get("landform_axis", 0)), 3)
+    var axis_angle := deg_to_rad(float(axis_index) * 60.0)
+    var ridge_axis := Vector2(cos(axis_angle), sin(axis_angle))
     var seed_value := float(int(cell.get("q", 0)) * 19 - int(cell.get("r", 0)) * 31)
-    for index in range(12):
-        var angle := deg_to_rad(30.0 + 30.0 * float(index))
-        var boundary_radius := HEX_RADIUS if index % 2 == 0 else HEX_RADIUS * ROOT_3 * 0.5
-        var jagged := absf(sin(seed_value * 0.17 + float(index) * 2.31))
-        var shoulder_height := 0.28 + jagged * 0.42
-        var summit_height := 0.78 + absf(cos(seed_value * 0.11 + float(index) * 1.67)) * 0.72
-        outer.append(Vector3(cos(angle) * boundary_radius, 0.0, sin(angle) * boundary_radius))
-        shoulder.append(Vector3(cos(angle) * 0.64, shoulder_height, sin(angle) * 0.64))
-        summit.append(Vector3(cos(angle) * 0.27, summit_height, sin(angle) * 0.27))
-    var peak := Vector3(0.0, 1.18 + absf(sin(seed_value * 0.07)) * 0.46, 0.0)
-    for index in range(12):
-        var next := (index + 1) % 12
-        _add_mountain_triangle(surface, outer[index], outer[next], shoulder[index])
-        _add_mountain_triangle(surface, outer[next], shoulder[next], shoulder[index])
-        _add_mountain_triangle(surface, shoulder[index], shoulder[next], summit[index])
-        _add_mountain_triangle(surface, shoulder[next], summit[next], summit[index])
-        _add_mountain_triangle(surface, summit[index], summit[next], peak)
+    var segment_count := 24
+    var radial_steps := 6
+    var rings: Array[Array] = []
+    for radial_step in range(1, radial_steps + 1):
+        var radial := float(radial_step) / float(radial_steps)
+        var ring: Array[Vector3] = []
+        for segment in range(segment_count):
+            var angle := deg_to_rad(30.0) + TAU * float(segment) / float(segment_count)
+            var nearest_face_normal := roundf(angle / (PI / 3.0)) * (PI / 3.0)
+            var boundary_radius := (ROOT_3 * 0.5) / cos(angle - nearest_face_normal)
+            var x := cos(angle) * boundary_radius * radial
+            var z := sin(angle) * boundary_radius * radial
+            var along := x * ridge_axis.x + z * ridge_axis.y
+            var across := -x * ridge_axis.y + z * ridge_axis.x
+            var detail := 0.5 + 0.25 * sin(seed_value * 0.19 + angle * 5.0) + 0.25 * sin(seed_value * 0.11 - angle * 9.0 + radial * 7.0)
+            var height := 0.0
+            if form == "ridge":
+                var spine := exp(-pow(across * 3.2, 2.0))
+                var crest_variation := 0.86 + 0.12 * sin(along * 9.0 + seed_value * 0.04) + detail * 0.08
+                height = (0.16 + spine * 1.30 + detail * 0.24) * crest_variation * pow(maxf(0.0, 1.0 - radial), 0.52)
+            elif form == "foothill":
+                height = (0.18 + detail * 0.30) * pow(maxf(0.0, 1.0 - radial), 0.68)
+            else:
+                var spur := 0.82 + 0.13 * sin(angle * 3.0 + seed_value * 0.07) + 0.08 * sin(angle * 7.0 - seed_value * 0.05)
+                height = (0.22 + 1.25 * pow(maxf(0.0, 1.0 - radial), 0.58) + detail * 0.28) * spur * pow(maxf(0.0, 1.0 - radial), 0.20)
+            ring.append(Vector3(x, height, z))
+        rings.append(ring)
+
+    var center := Vector3(0.0, 0.0, 0.0)
+    var first_ring: Array[Vector3] = rings[0]
+    for segment in range(segment_count):
+        var next := (segment + 1) % segment_count
+        _add_mountain_triangle(surface, center, first_ring[segment], first_ring[next])
+    for ring_index in range(rings.size() - 1):
+        var inner_ring: Array[Vector3] = rings[ring_index]
+        var outer_ring: Array[Vector3] = rings[ring_index + 1]
+        for segment in range(segment_count):
+            var next := (segment + 1) % segment_count
+            _add_mountain_triangle(surface, inner_ring[segment], outer_ring[segment], inner_ring[next])
+            _add_mountain_triangle(surface, outer_ring[segment], outer_ring[next], inner_ring[next])
     surface.generate_normals()
     return surface.commit()
 
@@ -1084,9 +1158,9 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
     var key := _cell_key(q, r)
     if active_tool == "camera":
         return
-    if editor_layer == "terrain" and (active_tool.begins_with("prop:") or active_tool == "select_object" or active_tool == "erase_prop"):
+    if editor_layer == "terrain" and (active_tool.begins_with("prop:") or active_tool.begins_with("scatter:") or active_tool == "select_object" or active_tool == "erase_prop"):
         return
-    if editor_layer == "objects" and active_tool != "select_object" and active_tool != "erase_prop" and not active_tool.begins_with("prop:"):
+    if editor_layer == "objects" and active_tool != "select_object" and active_tool != "erase_prop" and not active_tool.begins_with("prop:") and not active_tool.begins_with("scatter:"):
         return
     if active_tool == "select_object":
         _select_object_at(q, r)
@@ -1140,8 +1214,15 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         board["cells"] = cells
         _rebuild_board()
         _set_status("Hex %s elevation: %d" % [key, int(cell["elevation"])])
-    elif active_tool == "mountain" or active_tool == "clear_mountain":
-        _apply_mountain_brush(q, r, active_tool == "mountain")
+    elif active_tool == "mountain" or active_tool == "mountain_peak" or active_tool.begins_with("mountain_ridge:") or active_tool == "mountain_foothill" or active_tool == "clear_mountain":
+        var form := "peak"
+        var ridge_axis := 0
+        if active_tool.begins_with("mountain_ridge:"):
+            form = "ridge"
+            ridge_axis = clampi(active_tool.get_slice(":", 1).to_int(), 0, 2)
+        elif active_tool == "mountain_foothill":
+            form = "foothill"
+        _apply_mountain_brush(q, r, form, ridge_axis, active_tool != "clear_mountain")
         return
     elif active_tool == "toggle_passable":
         cell["blocked"] = not bool(cell.get("blocked", false))
@@ -1150,6 +1231,9 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         board["cells"] = cells
         _refresh_cell_visual(key)
         _set_status("Hex %s is now %s." % [key, "blocked" if bool(cell["blocked"]) else "passable"])
+    elif active_tool.begins_with("scatter:"):
+        _apply_scatter_brush(q, r, active_tool.trim_prefix("scatter:"))
+        return
     elif active_tool.begins_with("prop:"):
         var kind := active_tool.trim_prefix("prop:")
         var objects: Array = cell.get("objects", []).duplicate(true)
@@ -1176,7 +1260,7 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         _set_status("Object removed from hex %s." % key)
     _refresh_selection()
 
-func _apply_mountain_brush(q: int, r: int, make_mountain: bool) -> void:
+func _apply_mountain_brush(q: int, r: int, form: String, ridge_axis: int, make_mountain: bool) -> void:
     var changed := 0
     for dq in range(-paint_brush_radius, paint_brush_radius + 1):
         for dr in range(-paint_brush_radius, paint_brush_radius + 1):
@@ -1187,11 +1271,15 @@ func _apply_mountain_brush(q: int, r: int, make_mountain: bool) -> void:
                 continue
             var cell: Dictionary = cells[key]
             if make_mountain:
-                cell["landform"] = "mountain"
-                cell["blocked"] = true
-                cell["movement_cost"] = 99
-            elif str(cell.get("landform", "")) == "mountain":
+                cell["landform"] = form
+                cell["landform_axis"] = ridge_axis
+                cell["terrain"] = "stone"
+                var blocks_movement := form != "foothill"
+                cell["blocked"] = blocks_movement
+                cell["movement_cost"] = 99 if blocks_movement else 3
+            elif str(cell.get("landform", "")) in ["mountain", "peak", "ridge", "foothill"]:
                 cell["landform"] = ""
+                cell.erase("landform_axis")
                 cell["blocked"] = false
                 cell["movement_cost"] = 1
             cells[key] = cell
@@ -1199,7 +1287,58 @@ func _apply_mountain_brush(q: int, r: int, make_mountain: bool) -> void:
             changed += 1
     board["cells"] = cells
     _rebuild_installed_grid()
-    _set_status("%s mountain form on %d hexes." % ["Sculpted" if make_mountain else "Cleared", changed])
+    var form_label := "cleared" if not make_mountain else form.capitalize()
+    _set_status("%s landform painted on %d hexes." % [form_label, changed])
+
+func _random_hex_offset(rng: RandomNumberGenerator) -> Vector2:
+    for attempt in range(20):
+        var candidate := Vector2(rng.randf_range(-0.78, 0.78), rng.randf_range(-0.92, 0.92))
+        if absf(candidate.x) * ROOT_3 / 3.0 + absf(candidate.y) <= 0.94:
+            return candidate
+    return Vector2.ZERO
+
+func _apply_scatter_brush(q: int, r: int, preset: String) -> void:
+    var pools := {
+        "forest": ["tree", "tree", "pine", "ancient_tree", "bush", "flowers", "mushrooms", "log"],
+        "rocky": ["rock", "rock", "rock", "stump", "dead_tree", "log"],
+        "marsh": ["dead_tree", "bush", "mushrooms", "mushrooms", "rock", "log"],
+        "deadfall": ["dead_tree", "dead_tree", "stump", "log", "log", "rock"]
+    }
+    if not pools.has(preset):
+        return
+    var changed := 0
+    var placed := 0
+    var pool: Array = pools[preset]
+    for dq in range(-scatter_brush_radius, scatter_brush_radius + 1):
+        for dr in range(-scatter_brush_radius, scatter_brush_radius + 1):
+            if maxi(absi(dq), maxi(absi(dr), absi(dq + dr))) > scatter_brush_radius:
+                continue
+            var key := _cell_key(q + dq, r + dr)
+            if not cells.has(key):
+                continue
+            var cell: Dictionary = cells[key]
+            var objects: Array = cell.get("objects", []).duplicate(true)
+            var rng := RandomNumberGenerator.new()
+            rng.seed = int((q + dq) * 73856093) ^ int((r + dr) * 19349663) ^ int(scatter_nonce * 83492791)
+            for object_number in range(scatter_density):
+                var kind: String = str(pool[rng.randi_range(0, pool.size() - 1)])
+                var offset := _random_hex_offset(rng)
+                objects.append({
+                    "type": kind,
+                    "rotation": rng.randf_range(0.0, TAU),
+                    "scale": rng.randf_range(0.72, 1.24),
+                    "offset_x": offset.x,
+                    "offset_z": offset.y
+                })
+                placed += 1
+            cell["objects"] = objects
+            cells[key] = cell
+            _refresh_cell_visual(key)
+            changed += 1
+    scatter_nonce += 1
+    board["cells"] = cells
+    _refresh_selection()
+    _set_status("%s scatter added %d details across %d hexes." % [preset.capitalize(), placed, changed])
 
 func _remove_hex_disk(q: int, r: int, radius: int) -> void:
     var removed := 0
