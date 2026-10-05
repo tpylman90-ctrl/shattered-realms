@@ -128,6 +128,19 @@ func _create_materials() -> void:
     prop_materials["stone"] = _standard_material(Color("77796e"), 0.96)
     prop_materials["window"] = _standard_material(Color("253b3d"), 0.44)
     prop_materials["water"] = _standard_material(Color("406c75"), 0.25)
+    prop_materials["metal"] = _standard_material(Color("525b58"), 0.48)
+    prop_materials["flame"] = _standard_material(Color("e87929"), 0.38)
+    prop_materials["flame_light"] = _standard_material(Color("ffd064"), 0.32)
+    prop_materials["flower"] = _standard_material(Color("d87d9c"), 0.55)
+    prop_materials["flame"].emission_enabled = true
+    prop_materials["flame"].emission = Color("e87929")
+    prop_materials["flame"].emission_energy_multiplier = 1.1
+    prop_materials["flame_light"].emission_enabled = true
+    prop_materials["flame_light"].emission = Color("ffd064")
+    prop_materials["flame_light"].emission_energy_multiplier = 1.5
+    prop_materials["flower_gold"] = _standard_material(Color("f2c951"), 0.55)
+    prop_materials["mushroom"] = _standard_material(Color("bd5546"), 0.56)
+    prop_materials["mushroom_light"] = _standard_material(Color("e7d9b5"), 0.65)
     selection_marker_material = _standard_material(Color("ffd16b"), 0.35)
     selection_marker_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     selection_marker_material.emission_enabled = true
@@ -253,7 +266,12 @@ func _build_ui() -> void:
     _add_button(column, "LOWER HEX", func(): _set_tool("lower"))
 
     _add_section(column, "4  •  PLACE OBJECTS")
-    for prop in [["tree", "TREE"], ["pine", "PINE"], ["house", "HOUSE"], ["fence", "FENCE"], ["rock", "ROCK"], ["bush", "BUSH"]]:
+    for prop in [
+        ["tree", "TREE"], ["pine", "PINE"], ["ancient_tree", "ANCIENT OAK"], ["dead_tree", "DEAD TREE"],
+        ["house", "HOUSE"], ["fence", "FENCE"], ["rock", "ROCK"], ["bush", "BUSH"],
+        ["stump", "STUMP"], ["log", "FALLEN LOG"], ["campfire", "CAMPFIRE"], ["lantern", "LANTERN"],
+        ["signpost", "SIGNPOST"], ["well", "WELL"], ["ruins", "RUINS"], ["flowers", "FLOWERS"], ["mushrooms", "MUSHROOMS"]
+    ]:
         var prop_id: String = prop[0]
         _add_button(column, str(prop[1]), func(): _set_tool("prop:" + prop_id))
     _add_button(column, "SELECT / MOVE OBJECT", func(): _set_tool("select_object"))
@@ -513,6 +531,7 @@ func _refresh_cell_visual(key: String) -> void:
             prop.scale = Vector3.ONE * clampf(float(object_data.get("scale", 1.0)), 0.45, 1.8)
             prop.position = Vector3(float(object_data.get("offset_x", 0.0)), 0.0, float(object_data.get("offset_z", 0.0)))
             object_root.add_child(prop)
+            prop.name = "PlacedObject_%d" % object_index
             if key == selected_object_key and object_index == selected_object_index:
                 var marker := MeshInstance3D.new()
                 marker.name = "SelectedObjectMarker"
@@ -597,6 +616,29 @@ func _make_prop(kind: String) -> Node3D:
             _build_rock(root)
         "bush":
             _build_bush(root)
+        "ancient_tree":
+            _build_tree(root, false)
+            root.scale = Vector3.ONE * 1.28
+        "dead_tree":
+            _build_dead_tree(root)
+        "stump":
+            _build_stump(root)
+        "log":
+            _build_log(root)
+        "campfire":
+            _build_campfire(root)
+        "lantern":
+            _build_lantern(root)
+        "signpost":
+            _build_signpost(root)
+        "well":
+            _build_well(root)
+        "ruins":
+            _build_ruins(root)
+        "flowers":
+            _build_flowers(root)
+        "mushrooms":
+            _build_mushrooms(root)
         _:
             _build_tree(root, false)
     return root
@@ -694,6 +736,191 @@ func _build_rock(root: Node3D) -> void:
     smaller.rings = 8
     _add_mesh(root, smaller, prop_materials["stone"], Vector3(0.32, 0.22, 0.12), Vector3(0.29, 0.25, 0.3))
     _add_mesh(root, smaller, prop_materials["stone"], Vector3(-0.28, 0.18, -0.1), Vector3(0.24, 0.2, 0.28))
+
+func _build_dead_tree(root: Node3D) -> void:
+    var trunk := CylinderMesh.new()
+    trunk.top_radius = 0.11
+    trunk.bottom_radius = 0.22
+    trunk.height = 1.65
+    trunk.radial_segments = 10
+    _add_mesh(root, trunk, prop_materials["bark"], Vector3(0.0, 0.82, 0.0))
+    for branch in range(6):
+        var angle := float(branch) * TAU / 6.0
+        var base := Vector3(0.0, 0.55 + float(branch % 3) * 0.27, 0.0)
+        var end := Vector3(cos(angle) * (0.52 if branch % 2 == 0 else 0.36), base.y + 0.45, sin(angle) * (0.52 if branch % 2 == 0 else 0.36))
+        _add_beam(root, base, end, 0.055, prop_materials["bark_light"])
+        if branch % 2 == 0:
+            var fork := end + Vector3(cos(angle + 0.5) * 0.22, 0.28, sin(angle + 0.5) * 0.22)
+            _add_beam(root, end, fork, 0.032, prop_materials["bark"])
+
+func _build_stump(root: Node3D) -> void:
+    var stump := CylinderMesh.new()
+    stump.top_radius = 0.22
+    stump.bottom_radius = 0.29
+    stump.height = 0.48
+    stump.radial_segments = 10
+    _add_mesh(root, stump, prop_materials["bark"], Vector3(0.0, 0.24, 0.0))
+    var cut := CylinderMesh.new()
+    cut.top_radius = 0.20
+    cut.bottom_radius = 0.20
+    cut.height = 0.035
+    cut.radial_segments = 10
+    _add_mesh(root, cut, prop_materials["bark_light"], Vector3(0.0, 0.49, 0.0))
+
+func _build_log(root: Node3D) -> void:
+    var log := CylinderMesh.new()
+    log.top_radius = 0.18
+    log.bottom_radius = 0.20
+    log.height = 1.15
+    log.radial_segments = 12
+    var body := _add_mesh(root, log, prop_materials["bark"], Vector3(0.0, 0.2, 0.0))
+    body.rotation.z = PI * 0.5
+    var cut := CylinderMesh.new()
+    cut.top_radius = 0.16
+    cut.bottom_radius = 0.16
+    cut.height = 0.025
+    cut.radial_segments = 12
+    var end_a := _add_mesh(root, cut, prop_materials["bark_light"], Vector3(-0.57, 0.2, 0.0))
+    var end_b := _add_mesh(root, cut, prop_materials["bark_light"], Vector3(0.57, 0.2, 0.0))
+    end_a.rotation.z = PI * 0.5
+    end_b.rotation.z = PI * 0.5
+
+func _build_campfire(root: Node3D) -> void:
+    var stones := SphereMesh.new()
+    stones.radial_segments = 10
+    stones.rings = 6
+    for index in range(7):
+        var angle := float(index) * TAU / 7.0
+        var pos := Vector3(cos(angle) * 0.34, 0.10, sin(angle) * 0.34)
+        _add_mesh(root, stones, prop_materials["stone"], pos, Vector3(0.14, 0.11, 0.14))
+    var log_mesh := BoxMesh.new()
+    log_mesh.size = Vector3(0.72, 0.11, 0.12)
+    var log_a := _add_mesh(root, log_mesh, prop_materials["bark"], Vector3(0.0, 0.17, 0.0))
+    log_a.rotation.y = 0.65
+    var log_b := _add_mesh(root, log_mesh, prop_materials["bark_light"], Vector3(0.0, 0.22, 0.0))
+    log_b.rotation.y = -0.65
+    var flame := CylinderMesh.new()
+    flame.top_radius = 0.015
+    flame.bottom_radius = 0.19
+    flame.height = 0.46
+    flame.radial_segments = 6
+    _add_mesh(root, flame, prop_materials["flame"], Vector3(0.0, 0.44, 0.0))
+    var inner_flame := CylinderMesh.new()
+    inner_flame.top_radius = 0.0
+    inner_flame.bottom_radius = 0.10
+    inner_flame.height = 0.30
+    inner_flame.radial_segments = 6
+    _add_mesh(root, inner_flame, prop_materials["flame_light"], Vector3(0.0, 0.47, 0.0))
+
+func _build_lantern(root: Node3D) -> void:
+    var post := CylinderMesh.new()
+    post.top_radius = 0.045
+    post.bottom_radius = 0.07
+    post.height = 1.65
+    post.radial_segments = 8
+    _add_mesh(root, post, prop_materials["wood"], Vector3(0.0, 0.82, 0.0))
+    var arm := BoxMesh.new()
+    arm.size = Vector3(0.48, 0.06, 0.06)
+    _add_mesh(root, arm, prop_materials["metal"], Vector3(0.20, 1.55, 0.0))
+    var lamp := BoxMesh.new()
+    lamp.size = Vector3(0.22, 0.30, 0.22)
+    _add_mesh(root, lamp, prop_materials["flame_light"], Vector3(0.40, 1.35, 0.0))
+    var cap := PyramidMesh.new()
+    cap.size = Vector3(0.32, 0.18, 0.32)
+    _add_mesh(root, cap, prop_materials["metal"], Vector3(0.40, 1.59, 0.0))
+
+func _build_signpost(root: Node3D) -> void:
+    var post := CylinderMesh.new()
+    post.top_radius = 0.055
+    post.bottom_radius = 0.085
+    post.height = 1.45
+    post.radial_segments = 8
+    _add_mesh(root, post, prop_materials["wood"], Vector3(0.0, 0.72, 0.0))
+    var board := BoxMesh.new()
+    board.size = Vector3(0.82, 0.20, 0.12)
+    _add_mesh(root, board, prop_materials["bark_light"], Vector3(0.25, 1.12, 0.0))
+    var lower_board := BoxMesh.new()
+    lower_board.size = Vector3(0.62, 0.17, 0.11)
+    _add_mesh(root, lower_board, prop_materials["wood"], Vector3(-0.16, 0.82, 0.0))
+
+func _build_well(root: Node3D) -> void:
+    var ring := TorusMesh.new()
+    ring.inner_radius = 0.38
+    ring.outer_radius = 0.50
+    ring.rings = 10
+    ring.ring_segments = 16
+    _add_mesh(root, ring, prop_materials["stone"], Vector3(0.0, 0.40, 0.0))
+    var water := CylinderMesh.new()
+    water.top_radius = 0.36
+    water.bottom_radius = 0.36
+    water.height = 0.04
+    _add_mesh(root, water, prop_materials["water"], Vector3(0.0, 0.31, 0.0))
+    for x in [-0.42, 0.42]:
+        var post := CylinderMesh.new()
+        post.top_radius = 0.045
+        post.bottom_radius = 0.06
+        post.height = 0.82
+        post.radial_segments = 8
+        _add_mesh(root, post, prop_materials["wood"], Vector3(x, 0.78, 0.0))
+    var roof := BoxMesh.new()
+    roof.size = Vector3(1.10, 0.08, 0.65)
+    var roof_left := _add_mesh(root, roof, prop_materials["roof"], Vector3(-0.26, 1.22, 0.0))
+    var roof_right := _add_mesh(root, roof, prop_materials["roof"], Vector3(0.26, 1.22, 0.0))
+    roof_left.rotation.z = -0.48
+    roof_right.rotation.z = 0.48
+
+func _build_ruins(root: Node3D) -> void:
+    for index in range(3):
+        var pillar := BoxMesh.new()
+        pillar.size = Vector3(0.25, 0.72 + float(index % 2) * 0.35, 0.25)
+        _add_mesh(root, pillar, prop_materials["stone"], Vector3(-0.46 + float(index) * 0.46, pillar.size.y * 0.5, -0.16))
+    var fallen := BoxMesh.new()
+    fallen.size = Vector3(0.92, 0.20, 0.26)
+    var lintel := _add_mesh(root, fallen, prop_materials["stone"], Vector3(0.0, 1.0, -0.16))
+    lintel.rotation.z = -0.12
+    var rubble := SphereMesh.new()
+    rubble.radial_segments = 10
+    rubble.rings = 6
+    for index in range(4):
+        _add_mesh(root, rubble, prop_materials["stone"], Vector3(-0.40 + float(index) * 0.25, 0.12, 0.30), Vector3(0.18, 0.14, 0.17))
+
+func _build_flowers(root: Node3D) -> void:
+    var stem := CylinderMesh.new()
+    stem.top_radius = 0.012
+    stem.bottom_radius = 0.02
+    stem.height = 0.30
+    stem.radial_segments = 5
+    var bloom := SphereMesh.new()
+    bloom.radial_segments = 8
+    bloom.rings = 5
+    for index in range(7):
+        var angle := float(index) * TAU / 7.0
+        var x := cos(angle) * 0.38
+        var z := sin(angle) * 0.38
+        var y := 0.24 + float(index % 3) * 0.05
+        _add_mesh(root, stem, prop_materials["leaf_mid"], Vector3(x, y * 0.5, z))
+        _add_mesh(root, bloom, prop_materials["flower"] if index % 2 == 0 else prop_materials["flower_gold"], Vector3(x, y, z), Vector3(0.10, 0.10, 0.10))
+
+func _build_mushrooms(root: Node3D) -> void:
+    var stem := CylinderMesh.new()
+    stem.top_radius = 0.045
+    stem.bottom_radius = 0.06
+    stem.height = 0.20
+    stem.radial_segments = 8
+    var cap := SphereMesh.new()
+    cap.radial_segments = 10
+    cap.rings = 6
+    for index in range(5):
+        var angle := float(index) * TAU / 5.0
+        var x := cos(angle) * 0.30
+        var z := sin(angle) * 0.30
+        var size := 0.12 + float(index % 2) * 0.05
+        _add_mesh(root, stem, prop_materials["mushroom_light"], Vector3(x, 0.10, z))
+        _add_mesh(root, cap, prop_materials["mushroom"], Vector3(x, 0.23, z), Vector3(size, size * 0.55, size))
+        var spot := SphereMesh.new()
+        spot.radial_segments = 6
+        spot.rings = 4
+        _add_mesh(root, spot, prop_materials["mushroom_light"], Vector3(x, 0.29, z), Vector3(0.035, 0.02, 0.035))
 
 func _build_bush(root: Node3D) -> void:
     var leaf := SphereMesh.new()
@@ -1268,6 +1495,23 @@ func _unhandled_input(event: InputEvent) -> void:
             last_center = center
             last_pinch = pinch
 
+func _update_object_visual(key: String, object_index: int) -> void:
+    if not prop_nodes.has(key) or not is_instance_valid(prop_nodes[key]) or not cells.has(key):
+        return
+    var objects: Array = cells[key].get("objects", [])
+    if object_index < 0 or object_index >= objects.size():
+        return
+    var object_data: Dictionary = objects[object_index]
+    var root: Node3D = prop_nodes[key]
+    var visual := root.get_node_or_null("PlacedObject_%d" % object_index) as Node3D
+    if visual:
+        visual.position = Vector3(float(object_data.get("offset_x", 0.0)), 0.0, float(object_data.get("offset_z", 0.0)))
+        visual.rotation.y = float(object_data.get("rotation", 0.0))
+        visual.scale = Vector3.ONE * clampf(float(object_data.get("scale", 1.0)), 0.45, 1.8)
+    var marker := root.get_node_or_null("SelectedObjectMarker") as MeshInstance3D
+    if marker and selected_object_key == key and selected_object_index == object_index:
+        marker.position = Vector3(float(object_data.get("offset_x", 0.0)), 0.025, float(object_data.get("offset_z", 0.0)))
+
 func _clear_object_selection() -> void:
     var previous_key := selected_object_key
     selected_object_key = ""
@@ -1333,7 +1577,7 @@ func _nudge_selected_object(offset: Vector2) -> void:
     cell["objects"] = objects
     cells[selected_object_key] = cell
     board["cells"] = cells
-    _refresh_cell_visual(selected_object_key)
+    _update_object_visual(selected_object_key, selected_object_index)
     _record_history(before)
     _set_status("Object position: X %.2f, Z %.2f." % [next_x, next_z])
 
@@ -1350,7 +1594,7 @@ func _rotate_prop(amount: float) -> void:
             cell["objects"] = objects
             cells[selected_object_key] = cell
             board["cells"] = cells
-            _refresh_cell_visual(selected_object_key)
+            _update_object_visual(selected_object_key, selected_object_index)
             _record_history(before)
             _set_status("Selected object rotated to %d°." % int(rad_to_deg(rotation)))
             return
