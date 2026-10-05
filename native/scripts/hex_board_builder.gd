@@ -1269,8 +1269,11 @@ func _unhandled_input(event: InputEvent) -> void:
             last_pinch = pinch
 
 func _clear_object_selection() -> void:
+    var previous_key := selected_object_key
     selected_object_key = ""
     selected_object_index = -1
+    if previous_key != "" and cells.has(previous_key):
+        _refresh_cell_visual(previous_key)
 
 func _select_object_at(q: int, r: int) -> void:
     var key := _cell_key(q, r)
