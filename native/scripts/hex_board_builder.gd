@@ -55,6 +55,8 @@ var prop_rotation := 0.0
 var selected_key := ""
 var selected_object_key := ""
 var selected_object_index := -1
+var last_world_tap_time_msec := -1000
+var last_world_tap_position := Vector2(-10000.0, -10000.0)
 var is_playtesting := false
 var player_piece: Node3D
 var camera_target := Vector3(0.0, 0.0, 0.0)
@@ -1342,6 +1344,16 @@ func _axial_at_screen(screen_position: Vector2) -> Vector2i:
     var point := origin + direction * distance_to_ground
     return _world_to_axial(Vector2(point.x, point.z))
 
+func _process_world_tap(position: Vector2) -> void:
+    # Android can deliver one physical tap as both touch and emulated mouse input.
+    # Treat paired releases at the same screen point as one board action.
+    var now := Time.get_ticks_msec()
+    if now - last_world_tap_time_msec < 140 and position.distance_to(last_world_tap_position) < 10.0:
+        return
+    last_world_tap_time_msec = now
+    last_world_tap_position = position
+    _select_from_screen(position)
+
 func _select_from_screen(position: Vector2) -> void:
     var axial := _axial_at_screen(position)
     var key := _cell_key(axial.x, axial.y)
@@ -1428,7 +1440,7 @@ func _unhandled_input(event: InputEvent) -> void:
             elif mouse_down:
                 mouse_down = false
                 if not mouse_dragged:
-                    _select_from_screen(event.position)
+                    _process_world_tap(event.position)
                 last_stroke_key = ""
                 _finish_history_action()
         elif event.button_index == MOUSE_BUTTON_RIGHT:
@@ -1469,7 +1481,7 @@ func _unhandled_input(event: InputEvent) -> void:
             var tapped := touches.size() == 1 and not touch_moved
             touches.erase(event.index)
             if tapped:
-                _select_from_screen(event.position)
+                _process_world_tap(event.position)
             if touches.is_empty():
                 touch_moved = false
                 last_stroke_key = ""
@@ -1541,9 +1553,9 @@ func _select_object_at(q: int, r: int) -> void:
         _refresh_selection()
         _set_status("This hex has no objects. Place one first.")
         return
-    if selected_object_key == key and selected_object_index >= 0 and selected_object_index < objects.size():
-        selected_object_index = (selected_object_index + 1) % objects.size()
-    else:
+    # Keep the current prop selected when tapping its hex again.
+    # Cycling is an explicit action via NEXT OBJECT ON HEX.
+    if selected_object_key != key or selected_object_index < 0 or selected_object_index >= objects.size():
         selected_object_key = key
         selected_object_index = objects.size() - 1
     _refresh_cell_visual(key)
