@@ -8,6 +8,12 @@ const DIRT_ALBEDO := preload("res://assets/terrain/ravenwood/dirt_albedo.jpg")
 const STONE_ALBEDO := preload("res://assets/terrain/ravenwood/stone_albedo.jpg")
 const SAND_ALBEDO := preload("res://assets/terrain/ravenwood/sand_albedo.jpg")
 const MARSH_ALBEDO := preload("res://assets/terrain/ravenwood/marsh_albedo.jpg")
+const PROP_WOOD_ALBEDO := preload("res://assets/props/materials/weathered_wood.jpg")
+const PROP_BARK_ALBEDO := preload("res://assets/props/materials/bark.jpg")
+const PROP_STONE_ALBEDO := preload("res://assets/props/materials/masonry.jpg")
+const PROP_PLASTER_ALBEDO := preload("res://assets/props/materials/aged_plaster.jpg")
+const PROP_ROOF_ALBEDO := preload("res://assets/props/materials/clay_roof.jpg")
+const PROP_THATCH_ALBEDO := preload("res://assets/props/materials/thatch.jpg")
 const BOARD_DIR := "user://boards/"
 const ACTIVE_PATH := "user://boards/active_board.board.json"
 const HEX_RADIUS := 1.0
@@ -63,6 +69,8 @@ var active_tool := "add_hex"
 var brush_radius := 3
 var paint_brush_radius := 0
 var prop_rotation := 0.0
+var wall_run_last_cell := Vector2i.ZERO
+var wall_run_has_anchor := false
 var selected_key := ""
 var selected_object_key := ""
 var selected_object_index := -1
@@ -171,11 +179,25 @@ func _create_materials() -> void:
     prop_materials["flower_gold"] = _standard_material(Color("f2c951"), 0.55)
     prop_materials["mushroom"] = _standard_material(Color("bd5546"), 0.56)
     prop_materials["mushroom_light"] = _standard_material(Color("e7d9b5"), 0.65)
+    _apply_prop_texture(["wood", "wood_dark", "bark_light"], PROP_WOOD_ALBEDO, Color("e8d8bd"), Vector3(1.7, 1.7, 1.7))
+    _apply_prop_texture(["bark"], PROP_BARK_ALBEDO, Color("d9c7a8"), Vector3(2.2, 2.2, 2.2))
+    _apply_prop_texture(["stone", "stone_light", "stone_dark", "brick"], PROP_STONE_ALBEDO, Color("ded9ca"), Vector3(1.9, 1.9, 1.9))
+    _apply_prop_texture(["wall", "plaster", "plaster_light"], PROP_PLASTER_ALBEDO, Color("eee2c8"), Vector3(1.6, 1.6, 1.6))
+    _apply_prop_texture(["roof", "roof_red", "roof_moss"], PROP_ROOF_ALBEDO, Color("e1d0ba"), Vector3(1.8, 1.8, 1.8))
+    _apply_prop_texture(["thatch"], PROP_THATCH_ALBEDO, Color("e8d4a7"), Vector3(2.0, 2.0, 2.0))
     selection_marker_material = _standard_material(Color("ffd16b"), 0.35)
     selection_marker_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     selection_marker_material.emission_enabled = true
     selection_marker_material.emission = Color("e6a53c")
     selection_marker_material.emission_energy_multiplier = 1.3
+
+func _apply_prop_texture(material_keys: Array, texture: Texture2D, tint: Color, texture_scale: Vector3) -> void:
+    for material_key in material_keys:
+        var material: StandardMaterial3D = prop_materials[material_key]
+        material.albedo_texture = texture
+        material.albedo_color = tint
+        material.uv1_triplanar = true
+        material.uv1_scale = texture_scale
 
 func _standard_material(color: Color, roughness_value: float) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -337,10 +359,15 @@ func _build_ui() -> void:
     ]:
         var building_id: String = building[0]
         _add_button(object_page, str(building[1]), func(): _set_tool("prop:" + building_id))
+    _add_section(object_page, "SNAPPED WALL RUNS")
+    _add_button(object_page, "STONE WALL RUN", func(): _set_tool("wall_run:stone_wall"))
+    _add_button(object_page, "PALISADE RUN", func(): _set_tool("wall_run:palisade_wall"))
+    _add_button(object_page, "FENCE RUN", func(): _set_tool("wall_run:fence"))
+    _add_button(object_page, "START NEW RUN", _start_new_wall_run)
     _add_section(object_page, "WALLS & GATES")
     for fortification in [
         ["stone_wall", "STONE WALL"], ["palisade_wall", "PALISADE WALL"],
-        ["wooden_gate", "WOODEN GATE"], ["stone_gate", "STONE GATE"]
+        ["wooden_gate", "WOODEN GATE"], ["stone_gate", "STONE GATE"], ["fence", "SINGLE FENCE"]
     ]:
         var fortification_id: String = fortification[0]
         _add_button(object_page, str(fortification[1]), func(): _set_tool("prop:" + fortification_id))
@@ -507,16 +534,18 @@ func _on_scatter_density_changed(index: int) -> void:
 func _on_editor_layer_changed(tab_index: int) -> void:
     if tab_index == 1:
         editor_layer = "objects"
-        if not active_tool.begins_with("prop:") and not active_tool.begins_with("scatter:") and active_tool != "select_object" and active_tool != "erase_prop":
+        if not active_tool.begins_with("prop:") and not active_tool.begins_with("wall_run:") and not active_tool.begins_with("scatter:") and active_tool != "select_object" and active_tool != "erase_prop":
             _set_tool("select_object")
         _set_status("OBJECT LAYER • place, select, move, rotate, and erase props.")
     else:
         editor_layer = "terrain"
-        if active_tool.begins_with("prop:") or active_tool.begins_with("scatter:") or active_tool == "select_object" or active_tool == "erase_prop":
+        if active_tool.begins_with("prop:") or active_tool.begins_with("wall_run:") or active_tool.begins_with("scatter:") or active_tool == "select_object" or active_tool == "erase_prop":
             _set_tool("add_hex")
         _set_status("TERRAIN LAYER • install hexes, paint surfaces, shape elevation, and sculpt mountains.")
 
 func _set_tool(tool_id: String) -> void:
+    if tool_id != active_tool or not tool_id.begins_with("wall_run:"):
+        _reset_wall_run()
     active_tool = tool_id
     _set_status("Tool: %s • tap or drag over the board" % tool_id.replace(":", " ").replace("_", " ").to_upper())
 
@@ -652,7 +681,7 @@ func _refresh_cell_visual(key: String) -> void:
             prop.rotation.y = float(object_data.get("rotation", 0.0))
             var type_scale := 1.28 if str(object_data.get("type", "")) == "ancient_tree" else 1.0
             prop.scale = Vector3.ONE * clampf(float(object_data.get("scale", 1.0)), 0.45, 1.8) * type_scale
-            prop.position = Vector3(float(object_data.get("offset_x", 0.0)), 0.0, float(object_data.get("offset_z", 0.0)))
+            prop.position = Vector3(float(object_data.get("offset_x", 0.0)), float(object_data.get("offset_y", 0.0)), float(object_data.get("offset_z", 0.0)))
             object_root.add_child(prop)
             prop.name = "PlacedObject_%d" % object_index
             if key == selected_object_key and object_index == selected_object_index:
@@ -1244,7 +1273,7 @@ func _build_house(root: Node3D) -> void:
     _add_mesh(root, chimney, prop_materials["stone"], Vector3(0.24, 1.08, -0.24))
 
 func _build_fence(root: Node3D) -> void:
-    for x in [-0.72, 0.0, 0.72]:
+    for x in [-0.86, 0.0, 0.86]:
         var post := CylinderMesh.new()
         post.top_radius = 0.055
         post.bottom_radius = 0.075
@@ -1253,7 +1282,7 @@ func _build_fence(root: Node3D) -> void:
         _add_mesh(root, post, prop_materials["wood"], Vector3(x, 0.44, 0.0))
     for y in [0.28, 0.62]:
         var rail := BoxMesh.new()
-        rail.size = Vector3(1.5, 0.11, 0.12)
+        rail.size = Vector3(1.76, 0.11, 0.12)
         _add_mesh(root, rail, prop_materials["bark_light"], Vector3(0.0, y, 0.0))
 
 func _build_rock(root: Node3D) -> void:
@@ -1535,9 +1564,9 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
     var key := _cell_key(q, r)
     if active_tool == "camera":
         return
-    if editor_layer == "terrain" and (active_tool.begins_with("prop:") or active_tool.begins_with("scatter:") or active_tool == "select_object" or active_tool == "erase_prop"):
+    if editor_layer == "terrain" and (active_tool.begins_with("prop:") or active_tool.begins_with("wall_run:") or active_tool.begins_with("scatter:") or active_tool == "select_object" or active_tool == "erase_prop"):
         return
-    if editor_layer == "objects" and active_tool != "select_object" and active_tool != "erase_prop" and not active_tool.begins_with("prop:") and not active_tool.begins_with("scatter:"):
+    if editor_layer == "objects" and active_tool != "select_object" and active_tool != "erase_prop" and not active_tool.begins_with("prop:") and not active_tool.begins_with("wall_run:") and not active_tool.begins_with("scatter:"):
         return
     if active_tool == "select_object":
         _select_object_at(q, r)
@@ -1561,7 +1590,7 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         _refresh_selection()
         _set_status("Selection cleared. Lay a hex here first.")
         return
-    if not active_tool.begins_with("prop:") and active_tool != "erase_prop":
+    if not active_tool.begins_with("prop:") and not active_tool.begins_with("wall_run:") and active_tool != "erase_prop":
         _clear_object_selection()
     selected_key = key
     var cell: Dictionary = cells[key]
@@ -1608,6 +1637,9 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         board["cells"] = cells
         _refresh_cell_visual(key)
         _set_status("Hex %s is now %s." % [key, "blocked" if bool(cell["blocked"]) else "passable"])
+    elif active_tool.begins_with("wall_run:"):
+        _continue_wall_run(q, r, active_tool.trim_prefix("wall_run:"))
+        return
     elif active_tool.begins_with("scatter:"):
         _apply_scatter_brush(q, r, active_tool.trim_prefix("scatter:"))
         return
@@ -1636,6 +1668,96 @@ func _apply_tool_at_without_history(q: int, r: int) -> void:
         _refresh_cell_visual(key)
         _set_status("Object removed from hex %s." % key)
     _refresh_selection()
+
+func _start_new_wall_run() -> void:
+    _reset_wall_run()
+    _set_status("Wall run reset. Tap a start hex, then tap neighboring hexes to extend it.")
+
+func _reset_wall_run() -> void:
+    wall_run_has_anchor = false
+    wall_run_last_cell = Vector2i.ZERO
+
+func _continue_wall_run(q: int, r: int, kind: String) -> void:
+    var current := Vector2i(q, r)
+    var current_key := _cell_key(q, r)
+    if not cells.has(current_key):
+        _reset_wall_run()
+        selected_key = ""
+        _refresh_selection()
+        _set_status("Wall runs need installed hexes. Lay a continuous row of hexes first.")
+        return
+    if not wall_run_has_anchor:
+        wall_run_last_cell = current
+        wall_run_has_anchor = true
+        _clear_object_selection()
+        selected_key = current_key
+        _refresh_selection()
+        _set_status("%s run started at %s. Tap a neighboring hex to place the first segment." % [kind.replace("_", " ").capitalize(), current_key])
+        return
+    if current == wall_run_last_cell:
+        return
+    var previous := wall_run_last_cell
+    var delta := current - previous
+    var distance := maxi(absi(delta.x), maxi(absi(delta.y), absi(delta.x + delta.y)))
+    if distance != 1:
+        wall_run_last_cell = current
+        selected_key = current_key
+        _refresh_selection()
+        _set_status("Run start moved to %s. Tap one of its neighboring hexes to continue." % current_key)
+        return
+    var previous_key := _cell_key(previous.x, previous.y)
+    if not cells.has(previous_key):
+        wall_run_last_cell = current
+        _set_status("Previous hex is missing. Run start moved to %s." % current_key)
+        return
+    var placed := _place_wall_segment_between(previous, current, kind)
+    wall_run_last_cell = current
+    selected_key = current_key
+    _refresh_selection()
+    if placed:
+        _set_status("%s segment snapped between %s and %s. Continue to extend the run." % [kind.replace("_", " ").capitalize(), previous_key, current_key])
+
+func _place_wall_segment_between(from_cell: Vector2i, to_cell: Vector2i, kind: String) -> bool:
+    var from_key := _cell_key(from_cell.x, from_cell.y)
+    var to_key := _cell_key(to_cell.x, to_cell.y)
+    var anchor_coord := from_cell
+    var other_coord := to_cell
+    if from_key > to_key:
+        anchor_coord = to_cell
+        other_coord = from_cell
+    var anchor_key := _cell_key(anchor_coord.x, anchor_coord.y)
+    var other_key := _cell_key(other_coord.x, other_coord.y)
+    var edge_id := "%s|%s|%s" % [kind, anchor_key, other_key]
+    var anchor_data: Dictionary = cells[anchor_key]
+    var objects: Array = anchor_data.get("objects", []).duplicate(true)
+    for object_data in objects:
+        if object_data is Dictionary and str(object_data.get("wall_link", "")) == edge_id:
+            return false
+    var from_world := _axial_to_world(from_cell.x, from_cell.y)
+    var to_world := _axial_to_world(to_cell.x, to_cell.y)
+    var anchor_world := _axial_to_world(anchor_coord.x, anchor_coord.y)
+    var midpoint := (from_world + to_world) * 0.5
+    var from_elevation := int((cells[from_key] as Dictionary).get("elevation", 0))
+    var to_elevation := int((cells[to_key] as Dictionary).get("elevation", 0))
+    var anchor_elevation := int(anchor_data.get("elevation", 0))
+    var direction := to_world - from_world
+    var snapped_rotation := roundf(atan2(-direction.z, direction.x) / (PI / 3.0)) * (PI / 3.0)
+    objects.append({
+        "type": kind,
+        "rotation": snapped_rotation,
+        "scale": 1.0,
+        "offset_x": midpoint.x - anchor_world.x,
+        "offset_y": (float(from_elevation + to_elevation) * 0.5 - float(anchor_elevation)) * ELEVATION_STEP,
+        "offset_z": midpoint.z - anchor_world.z,
+        "wall_link": edge_id
+    })
+    anchor_data["objects"] = objects
+    cells[anchor_key] = anchor_data
+    board["cells"] = cells
+    selected_object_key = anchor_key
+    selected_object_index = objects.size() - 1
+    _refresh_cell_visual(anchor_key)
+    return true
 
 func _apply_mountain_brush(q: int, r: int, form: String, ridge_axis: int, make_mountain: bool) -> void:
     var changed := 0
