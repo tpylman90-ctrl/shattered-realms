@@ -834,108 +834,6 @@ func _make_mountain_mesh(cell: Dictionary) -> ArrayMesh:
     surface.generate_normals()
     return surface.commit()
 
-func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
-    _init_cliff_noise()
-    var surface := SurfaceTool.new()
-    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-    var q := int(cell.get("q", 0))
-    var r := int(cell.get("r", 0))
-    var elevation := int(cell.get("elevation", 0))
-    var cell_y := float(elevation) * ELEVATION_STEP
-    var wall_base_y := board_foundation_y - cell_y
-    var is_mountain := str(cell.get("landform", "")) in ["mountain", "peak", "ridge", "foothill"]
-    var center_world := _axial_to_world(q, r)
-    var cliff_rng := RandomNumberGenerator.new()
-    cliff_rng.seed = posmod(q * 73856093 + r * 19349663 + elevation * 83492791, 2147483647)
-    var added_wall := false
-
-    for edge in range(6):
-        var offset: Vector2i = HEX_EDGE_NEIGHBORS[edge]
-        var neighbor_key := _cell_key(q + offset.x, r + offset.y)
-        var wall_bottom_y := wall_base_y
-        if cells.has(neighbor_key):
-            var neighbor: Dictionary = cells[neighbor_key]
-            var neighbor_elevation := int(neighbor.get("elevation", 0))
-            var neighbor_is_mountain := str(neighbor.get("landform", "")) in ["mountain", "peak", "ridge", "foothill"]
-            if neighbor_elevation > elevation:
-                continue
-            if neighbor_elevation == elevation:
-                if not is_mountain or neighbor_is_mountain:
-                    continue
-                wall_bottom_y = 0.0
-            else:
-                wall_bottom_y = float(neighbor_elevation - elevation) * ELEVATION_STEP
-        if wall_bottom_y >= -0.001 and not is_mountain:
-            continue
-
-        var angle_a := deg_to_rad(30.0 + 60.0 * float(edge))
-        var angle_b := deg_to_rad(30.0 + 60.0 * float(edge + 1))
-        var upper_a := Vector3(cos(angle_a) * HEX_RADIUS, 0.0, sin(angle_a) * HEX_RADIUS)
-        var upper_b := Vector3(cos(angle_b) * HEX_RADIUS, 0.0, sin(angle_b) * HEX_RADIUS)
-        if is_mountain:
-            upper_a.y = _mountain_height_at(Vector2(center_world.x + upper_a.x, center_world.z + upper_a.z))
-            upper_b.y = _mountain_height_at(Vector2(center_world.x + upper_b.x, center_world.z + upper_b.z))
-        if upper_a.y <= wall_bottom_y + 0.001 and upper_b.y <= wall_bottom_y + 0.001:
-            continue
-
-        var lower_a := Vector3(upper_a.x, wall_bottom_y, upper_a.z)
-        var lower_b := Vector3(upper_b.x, wall_bottom_y, upper_b.z)
-        var face_normal := Vector3(upper_a.x + upper_b.x, 0.0, upper_a.z + upper_b.z).normalized()
-        var backing := Color(0.095, 0.088, 0.073, 1.0)
-        _add_cliff_triangle(surface, upper_a, lower_a, upper_b, backing)
-        _add_cliff_triangle(surface, upper_b, lower_a, lower_b, backing)
-        added_wall = true
-
-        var wall_height := maxf(0.02, ((upper_a.y - wall_bottom_y) + (upper_b.y - wall_bottom_y)) * 0.5)
-        var rock_columns := 3
-        var rock_rows := clampi(ceili(wall_height / 0.43), 1, 6)
-        for row in range(rock_rows):
-            for column in range(rock_columns):
-                var center_u := (float(column) + 0.5) / float(rock_columns) + cliff_rng.randf_range(-0.075, 0.075)
-                var center_v := (float(row) + 0.5) / float(rock_rows) + cliff_rng.randf_range(-0.12, 0.12) / float(rock_rows)
-                center_u = clampf(center_u, 0.12, 0.88)
-                center_v = clampf(center_v, 0.12, 0.88)
-                var radius_u := cliff_rng.randf_range(0.145, 0.205)
-                var radius_v := cliff_rng.randf_range(0.43, 0.64) / float(rock_rows)
-                var rock_depth := cliff_rng.randf_range(0.10, 0.19)
-                var point_count: int = cliff_rng.randi_range(5, 7)
-                var angle_offset := cliff_rng.randf_range(0.0, TAU)
-                var rock_points: Array[Vector3] = []
-                for point_index in range(point_count):
-                    var angle := angle_offset + TAU * float(point_index) / float(point_count) + cliff_rng.randf_range(-0.18, 0.18)
-                    var radial_scale := cliff_rng.randf_range(0.78, 1.16)
-                    var point_u := clampf(center_u + cos(angle) * radius_u * radial_scale, 0.018, 0.982)
-                    var point_v := clampf(center_v + sin(angle) * radius_v * radial_scale, 0.018, 0.982)
-                    var rock_point := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, point_u, point_v)
-                    rock_point += face_normal * (rock_depth * cliff_rng.randf_range(0.36, 0.62))
-                    rock_point = _displace_cliff_vertex(rock_point, face_normal, center_world, cell_y, wall_bottom_y, wall_height)
-                    rock_points.append(rock_point)
-
-                var rock_center := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, center_u, center_v)
-                rock_center += face_normal * rock_depth
-                rock_center = _displace_cliff_vertex(rock_center, face_normal, center_world, cell_y, wall_bottom_y, wall_height)
-                var stone_r := cliff_rng.randf_range(0.31, 0.49)
-                var stone_g := stone_r * cliff_rng.randf_range(0.88, 0.98)
-                var stone_b := stone_r * cliff_rng.randf_range(0.76, 0.90)
-                var color_noise := _cliff_noise_at(rock_center, center_world, cell_y)
-                var shade_factor := clampf(0.82 + color_noise * 0.30, 0.58, 1.04)
-                var stone_tint := Color(stone_r * shade_factor, stone_g * shade_factor, stone_b * shade_factor, 1.0)
-                for point_index in range(point_count):
-                    var next_point := (point_index + 1) % point_count
-                    var facet_tint := stone_tint
-                    match cliff_rng.randi_range(0, 3):
-                        0:
-                            facet_tint = stone_tint.lightened(cliff_rng.randf_range(0.08, 0.20))
-                        1:
-                            facet_tint = stone_tint.darkened(cliff_rng.randf_range(0.08, 0.22))
-                        _:
-                            facet_tint = stone_tint
-                    _add_cliff_triangle(surface, rock_points[point_index], rock_points[next_point], rock_center, facet_tint)
-    if not added_wall:
-        return null
-    surface.generate_normals()
-    return surface.commit()
-
 func _init_cliff_noise() -> void:
     if _cliff_noise != null:
         return
@@ -945,9 +843,11 @@ func _init_cliff_noise() -> void:
     _cliff_noise.fractal_type = FastNoiseLite.FRACTAL_FBM
     _cliff_noise.fractal_octaves = 3
 
+
 func _cliff_noise_at(local_pos: Vector3, center_world: Vector3, tile_height: float) -> float:
     var world_pos := Vector3(center_world.x + local_pos.x, tile_height + local_pos.y, center_world.z + local_pos.z)
     return _cliff_noise.get_noise_3d(world_pos.x * 1.8, world_pos.y * 1.2, world_pos.z * 1.8)
+
 
 func _displace_cliff_angular(local_pos: Vector3, face_normal: Vector3, across: float, height_ratio: float, center_world: Vector3, tile_height: float) -> Vector3:
     # Broad quantized noise gives a few large chiseled shelves instead of pebble-like bumps.
@@ -971,6 +871,19 @@ func _angular_cliff_color(local_pos: Vector3, center_world: Vector3, tile_height
     return shadow_rock.lerp(base_rock, shade)
 
 
+func _cliff_surface_point(top_a: Vector3, top_b: Vector3, base_y: float, across: float, height_ratio: float) -> Vector3:
+    var point := top_a.lerp(top_b, across)
+    point.y = lerpf(base_y, point.y, height_ratio)
+    return point
+
+
+func _add_cliff_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, tint: Color) -> void:
+    surface.set_color(tint)
+    surface.add_vertex(a)
+    surface.add_vertex(b)
+    surface.add_vertex(c)
+
+
 func _add_angular_cliff_face(surface: SurfaceTool, top_a: Vector3, top_b: Vector3, bottom_y: float, face_normal: Vector3, center_world: Vector3, tile_height: float) -> void:
     var total_height := maxf(0.02, ((top_a.y - bottom_y) + (top_b.y - bottom_y)) * 0.5)
     var rows := 1 if total_height <= 0.8 else 2
@@ -984,7 +897,7 @@ func _add_angular_cliff_face(surface: SurfaceTool, top_a: Vector3, top_b: Vector
             var height_ratio := float(row) / float(rows)
             if column == 1:
                 var across_noise := _cliff_noise_at(Vector3(top_a.x, 0.0, top_a.z), center_world, tile_height)
-                across += across_noise * 0.10 * (0.5 if row == 0 or row == rows else 1.0)
+                across += across_noise * 0.10
             if row > 0 and row < rows:
                 var row_noise := _cliff_noise_at(top_a.lerp(top_b, float(column) / float(columns)), center_world, tile_height)
                 height_ratio += row_noise * 0.12
@@ -1011,7 +924,7 @@ func _add_angular_cliff_face(surface: SurfaceTool, top_a: Vector3, top_b: Vector
             var b: Vector3 = points[row][column + 1]
             var c: Vector3 = points[row + 1][column]
             var d: Vector3 = points[row + 1][column + 1]
-            # Alternate the diagonal so the face reads as fractured strata, not a regular brick grid.
+            # Alternate the diagonal to break up long regular seams between facets.
             if (row + column) % 2 == 0:
                 _add_cliff_triangle(surface, a, c, d, _angular_cliff_color((a + c + d) / 3.0, center_world, tile_height))
                 _add_cliff_triangle(surface, a, d, b, _angular_cliff_color((a + d + b) / 3.0, center_world, tile_height))
@@ -1070,6 +983,8 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
         return null
     surface.generate_normals()
     return surface.commit()
+
+
 
 func _init_cliff_noise() -> void:
     if _cliff_noise != null:
