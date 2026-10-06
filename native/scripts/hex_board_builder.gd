@@ -197,6 +197,7 @@ func _apply_prop_texture(material_keys: Array, texture: Texture2D, tint: Color, 
         material.albedo_texture = texture
         material.albedo_color = tint
         material.uv1_triplanar = true
+        material.uv1_triplanar_sharpness = 8.0
         material.uv1_scale = texture_scale
 
 func _standard_material(color: Color, roughness_value: float) -> StandardMaterial3D:
@@ -592,7 +593,7 @@ func _rebuild_installed_grid() -> void:
     var material := StandardMaterial3D.new()
     material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-    material.albedo_color = Color(0.90, 0.78, 0.52, 0.42)
+    material.albedo_color = Color(0.80, 0.70, 0.52, 0.24)
     var mesh := ImmediateMesh.new()
     mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
     for key_value in cells.keys():
@@ -959,16 +960,19 @@ func _build_tree(root: Node3D, pine: bool) -> void:
     _add_mesh(root, foliage, prop_materials["leaf_mid"], Vector3(0.0, 1.85, 0.0), Vector3(0.43, 0.42, 0.43))
 
 func _build_gable_roof(root: Node3D, width: float, depth: float, eaves_y: float, ridge_y: float, material: Material) -> void:
-    var half_span := width * 0.28
-    var slope := atan2(ridge_y - eaves_y, half_span)
+    var half_span := width * 0.5
+    var rise := maxf(ridge_y - eaves_y, 0.05)
+    var slope := atan2(rise, half_span)
+    var panel_length := Vector2(half_span, rise).length() + 0.08
     var panel := BoxMesh.new()
-    panel.size = Vector3(width * 0.60, 0.11, depth)
-    var left := _add_mesh(root, panel, material, Vector3(-half_span * 0.5, (ridge_y + eaves_y) * 0.5, 0.0))
-    left.rotation.z = -slope
-    var right := _add_mesh(root, panel, material, Vector3(half_span * 0.5, (ridge_y + eaves_y) * 0.5, 0.0))
-    right.rotation.z = slope
+    panel.size = Vector3(panel_length, 0.12, depth + 0.12)
+    var panel_center_y := (ridge_y + eaves_y) * 0.5
+    var left := _add_mesh(root, panel, material, Vector3(-half_span * 0.5, panel_center_y, 0.0))
+    left.rotation.z = slope
+    var right := _add_mesh(root, panel, material, Vector3(half_span * 0.5, panel_center_y, 0.0))
+    right.rotation.z = -slope
     var ridge_cap := BoxMesh.new()
-    ridge_cap.size = Vector3(0.12, 0.10, depth + 0.08)
+    ridge_cap.size = Vector3(0.15, 0.12, depth + 0.20)
     _add_mesh(root, ridge_cap, material, Vector3(0.0, ridge_y, 0.0))
 
 func _build_cottage(root: Node3D) -> void:
@@ -1262,12 +1266,7 @@ func _build_house(root: Node3D) -> void:
     window.size = Vector3(0.17, 0.18, 0.035)
     _add_mesh(root, window, prop_materials["window"], Vector3(-0.24, 0.62, 0.38))
     _add_mesh(root, window, prop_materials["window"], Vector3(0.24, 0.62, 0.38))
-    var roof_panel := BoxMesh.new()
-    roof_panel.size = Vector3(0.61, 0.09, 0.98)
-    var left := _add_mesh(root, roof_panel, prop_materials["roof"], Vector3(-0.22, 0.98, 0.0))
-    left.rotation.z = -0.58
-    var right := _add_mesh(root, roof_panel, prop_materials["roof"], Vector3(0.22, 0.98, 0.0))
-    right.rotation.z = 0.58
+    _build_gable_roof(root, 1.08, 1.02, 0.90, 1.38, prop_materials["roof"])
     var chimney := BoxMesh.new()
     chimney.size = Vector3(0.16, 0.52, 0.18)
     _add_mesh(root, chimney, prop_materials["stone"], Vector3(0.24, 1.08, -0.24))
@@ -1411,7 +1410,8 @@ func _build_well(root: Node3D) -> void:
     ring.outer_radius = 0.50
     ring.rings = 10
     ring.ring_segments = 16
-    _add_mesh(root, ring, prop_materials["stone"], Vector3(0.0, 0.40, 0.0))
+    var well_stone_ring := _add_mesh(root, ring, prop_materials["stone"], Vector3(0.0, 0.40, 0.0))
+    well_stone_ring.rotation.x = PI * 0.5
     var water := CylinderMesh.new()
     water.top_radius = 0.36
     water.bottom_radius = 0.36
@@ -1424,12 +1424,7 @@ func _build_well(root: Node3D) -> void:
         post.height = 0.82
         post.radial_segments = 8
         _add_mesh(root, post, prop_materials["wood"], Vector3(x, 0.78, 0.0))
-    var roof := BoxMesh.new()
-    roof.size = Vector3(1.10, 0.08, 0.65)
-    var roof_left := _add_mesh(root, roof, prop_materials["roof"], Vector3(-0.26, 1.22, 0.0))
-    var roof_right := _add_mesh(root, roof, prop_materials["roof"], Vector3(0.26, 1.22, 0.0))
-    roof_left.rotation.z = -0.48
-    roof_right.rotation.z = 0.48
+    _build_gable_roof(root, 1.18, 0.78, 1.20, 1.52, prop_materials["roof"])
 
 func _build_ruins(root: Node3D) -> void:
     for index in range(3):
