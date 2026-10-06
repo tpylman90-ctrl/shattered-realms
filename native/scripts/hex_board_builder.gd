@@ -975,7 +975,7 @@ func _make_grass_clump_mesh() -> ArrayMesh:
         var tip := base + direction * (0.035 + float(blade % 3) * 0.018) + Vector3(0.0, height, 0.0)
         var left := base - side
         var right := base + side
-        var color := blade_colors[blade]
+        var color: Color = blade_colors[blade]
         surface.set_color(color.darkened(0.08))
         surface.add_vertex(left)
         surface.set_color(color.lightened(0.05))
