@@ -59,6 +59,7 @@ var mountain_sources: Array[Dictionary] = []
 var shared_hex_mesh: ArrayMesh
 var board_foundation_y := -TILE_DEPTH
 var prop_materials: Dictionary = {}
+var _cliff_noise: FastNoiseLite
 var selection_marker_material: StandardMaterial3D
 var terrain_grass_mesh: ArrayMesh
 var terrain_grass_material: StandardMaterial3D
@@ -834,6 +835,7 @@ func _make_mountain_mesh(cell: Dictionary) -> ArrayMesh:
     return surface.commit()
 
 func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
+    _init_cliff_noise()
     var surface := SurfaceTool.new()
     surface.begin(Mesh.PRIMITIVE_TRIANGLES)
     var q := int(cell.get("q", 0))
@@ -906,14 +908,18 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
                     var point_v := clampf(center_v + sin(angle) * radius_v * radial_scale, 0.018, 0.982)
                     var rock_point := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, point_u, point_v)
                     rock_point += face_normal * (rock_depth * cliff_rng.randf_range(0.36, 0.62))
+                    rock_point = _displace_cliff_vertex(rock_point, face_normal, center_world, cell_y, wall_bottom_y, wall_height)
                     rock_points.append(rock_point)
 
                 var rock_center := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, center_u, center_v)
                 rock_center += face_normal * rock_depth
+                rock_center = _displace_cliff_vertex(rock_center, face_normal, center_world, cell_y, wall_bottom_y, wall_height)
                 var stone_r := cliff_rng.randf_range(0.31, 0.49)
                 var stone_g := stone_r * cliff_rng.randf_range(0.88, 0.98)
                 var stone_b := stone_r * cliff_rng.randf_range(0.76, 0.90)
-                var stone_tint := Color(stone_r, stone_g, stone_b, 1.0)
+                var color_noise := _cliff_noise_at(rock_center, center_world, cell_y)
+                var shade_factor := clampf(0.82 + color_noise * 0.30, 0.58, 1.04)
+                var stone_tint := Color(stone_r * shade_factor, stone_g * shade_factor, stone_b * shade_factor, 1.0)
                 for point_index in range(point_count):
                     var next_point := (point_index + 1) % point_count
                     var facet_tint := stone_tint
@@ -929,6 +935,30 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
         return null
     surface.generate_normals()
     return surface.commit()
+
+func _init_cliff_noise() -> void:
+    if _cliff_noise != null:
+        return
+    _cliff_noise = FastNoiseLite.new()
+    _cliff_noise.seed = 1337
+    _cliff_noise.frequency = 0.12
+    _cliff_noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+    _cliff_noise.fractal_octaves = 3
+
+func _cliff_noise_at(local_pos: Vector3, center_world: Vector3, tile_height: float) -> float:
+    var world_pos := Vector3(center_world.x + local_pos.x, tile_height + local_pos.y, center_world.z + local_pos.z)
+    return _cliff_noise.get_noise_3d(world_pos.x * 1.8, world_pos.y * 1.2, world_pos.z * 1.8)
+
+func _displace_cliff_vertex(local_pos: Vector3, face_normal: Vector3, center_world: Vector3, tile_height: float, wall_bottom_y: float, wall_height: float) -> Vector3:
+    var height_ratio := clampf((local_pos.y - wall_bottom_y) / maxf(wall_height, 0.01), 0.0, 1.0)
+    var edge_fade := sin(height_ratio * PI)
+    if edge_fade <= 0.001:
+        return local_pos
+    var noise_value := _cliff_noise_at(local_pos, center_world, tile_height)
+    var radial_offset := noise_value * 0.16 * edge_fade
+    var vertical_offset := signf(noise_value) * noise_value * noise_value * 0.07 * edge_fade
+    return local_pos + face_normal * radial_offset + Vector3.UP * vertical_offset
+
 
 func _cliff_surface_point(top_a: Vector3, top_b: Vector3, base_y: float, across: float, height_ratio: float) -> Vector3:
     var point := top_a.lerp(top_b, across)
