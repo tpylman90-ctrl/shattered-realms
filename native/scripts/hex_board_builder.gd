@@ -1083,7 +1083,7 @@ func _build_chapel(root: Node3D) -> void:
     var arch := BoxMesh.new()
     arch.size = Vector3(0.28, 0.42, 0.04)
     _add_mesh(root, arch, prop_materials["window"], Vector3(0.0, 1.48, 0.79))
-    var spire := ConeMesh.new()
+    var spire := CylinderMesh.new()
     spire.top_radius = 0.02
     spire.bottom_radius = 0.36
     spire.height = 0.68
@@ -1116,7 +1116,7 @@ func _build_watchtower(root: Node3D) -> void:
             post.height = 0.64
             post.radial_segments = 7
             _add_mesh(root, post, prop_materials["wood"], Vector3(x, 2.18, z))
-    var roof := ConeMesh.new()
+    var roof := CylinderMesh.new()
     roof.top_radius = 0.02
     roof.bottom_radius = 0.72
     roof.height = 0.70
