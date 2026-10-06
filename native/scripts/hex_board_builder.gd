@@ -839,54 +839,58 @@ func _init_cliff_noise() -> void:
         return
     _cliff_noise = FastNoiseLite.new()
     _cliff_noise.seed = 1337
-    _cliff_noise.frequency = 0.12
+    _cliff_noise.frequency = 0.18
     _cliff_noise.fractal_type = FastNoiseLite.FRACTAL_FBM
-    _cliff_noise.fractal_octaves = 3
+    _cliff_noise.fractal_octaves = 2
 
 
 func _cliff_noise_at(local_pos: Vector3, center_world: Vector3, tile_height: float) -> float:
     var world_pos := Vector3(center_world.x + local_pos.x, tile_height + local_pos.y, center_world.z + local_pos.z)
-    return _cliff_noise.get_noise_3d(world_pos.x * 1.8, world_pos.y * 1.2, world_pos.z * 1.8)
+    return _cliff_noise.get_noise_3d(world_pos.x * 1.5, world_pos.y, world_pos.z * 1.5)
 
 
 func _displace_cliff_angular(local_pos: Vector3, face_normal: Vector3, across: float, height_ratio: float, center_world: Vector3, tile_height: float) -> Vector3:
-    # Broad quantized noise gives a few large chiseled shelves instead of pebble-like bumps.
     var noise_value := _cliff_noise_at(local_pos, center_world, tile_height)
     var stepped_noise := floorf(noise_value * 4.0) / 4.0
-    # Keep all six tile corners and the cap/base seams fixed so neighboring faces still meet.
-    var side_fade := clampf(minf(across, 1.0 - across) / 0.16, 0.0, 1.0)
-    var height_fade := clampf(minf(height_ratio, 1.0 - height_ratio) / 0.12, 0.0, 1.0)
+    # Fade deformation at tile corners and cap/base seams so adjacent geometry stays joined.
+    var side_fade := clampf(minf(across, 1.0 - across) / 0.18, 0.0, 1.0)
+    var height_fade := sin(height_ratio * PI)
     var fade := side_fade * height_fade
-    var radial_offset := stepped_noise * 0.28 * fade
-    var vertical_offset := signf(stepped_noise) * stepped_noise * stepped_noise * 0.12 * fade
+    var radial_offset := stepped_noise * 0.72 * fade
+    var vertical_offset := signf(stepped_noise) * stepped_noise * 0.22 * fade
     return local_pos + face_normal * radial_offset + Vector3.UP * vertical_offset
 
 
-func _angular_cliff_color(local_pos: Vector3, center_world: Vector3, tile_height: float) -> Color:
-    var noise_value := _cliff_noise_at(local_pos, center_world, tile_height)
-    var stepped_noise := floorf(noise_value * 4.0) / 4.0
-    var base_rock := Color(0.36, 0.33, 0.29, 1.0)
-    var shadow_rock := Color(0.14, 0.125, 0.11, 1.0)
-    var shade := clampf(0.62 + stepped_noise * 0.62, 0.22, 0.94)
-    return shadow_rock.lerp(base_rock, shade)
+func _get_facet_color(pos: Vector3, normal: Vector3, center_world: Vector3, tile_height: float) -> Color:
+    var light_dir := Vector3(-0.38, 0.78, 0.50).normalized()
+    var light_factor := clampf(0.48 + maxf(normal.dot(light_dir), 0.0) * 0.60, 0.28, 1.0)
+    var world_pos := Vector3(center_world.x + pos.x, tile_height + pos.y, center_world.z + pos.z)
+    var color_noise := _cliff_noise.get_noise_3d(world_pos.x * 0.42, world_pos.y * 0.32, world_pos.z * 0.42) * 0.12
+    var base_rock := Color(0.47, 0.43, 0.37, 1.0)
+    var shadow_rock := Color(0.105, 0.095, 0.082, 1.0)
+    return shadow_rock.lerp(base_rock, clampf(light_factor + color_noise, 0.22, 1.0))
 
 
-func _cliff_surface_point(top_a: Vector3, top_b: Vector3, base_y: float, across: float, height_ratio: float) -> Vector3:
-    var point := top_a.lerp(top_b, across)
-    point.y = lerpf(base_y, point.y, height_ratio)
-    return point
-
-
-func _add_cliff_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, tint: Color) -> void:
-    surface.set_color(tint)
+func _add_angular_cliff_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, face_normal: Vector3, center_world: Vector3, tile_height: float) -> void:
+    var normal := (b - a).cross(c - a).normalized()
+    if normal.dot(face_normal) < 0.0:
+        normal = -normal
+    var color := _get_facet_color((a + b + c) / 3.0, normal, center_world, tile_height)
+    surface.set_normal(normal)
+    surface.set_color(color)
     surface.add_vertex(a)
+    surface.set_normal(normal)
+    surface.set_color(color)
     surface.add_vertex(b)
+    surface.set_normal(normal)
+    surface.set_color(color)
     surface.add_vertex(c)
 
 
 func _add_angular_cliff_face(surface: SurfaceTool, top_a: Vector3, top_b: Vector3, bottom_y: float, face_normal: Vector3, center_world: Vector3, tile_height: float) -> void:
     var total_height := maxf(0.02, ((top_a.y - bottom_y) + (top_b.y - bottom_y)) * 0.5)
-    var rows := 1 if total_height <= 0.8 else 2
+    # Always include an interior row; short raised hexes otherwise stayed perfectly flat when both seams were anchored.
+    var rows := clampi(ceili(total_height / 1.0), 2, 3)
     var columns := 2
     var points: Array[Array] = []
 
@@ -895,14 +899,14 @@ func _add_angular_cliff_face(surface: SurfaceTool, top_a: Vector3, top_b: Vector
         for column in range(columns + 1):
             var across := float(column) / float(columns)
             var height_ratio := float(row) / float(rows)
-            if column == 1:
-                var across_noise := _cliff_noise_at(Vector3(top_a.x, 0.0, top_a.z), center_world, tile_height)
-                across += across_noise * 0.10
+            if column > 0 and column < columns:
+                var side_sample := Vector3(top_a.x, bottom_y + total_height * height_ratio, top_a.z)
+                across += _cliff_noise_at(side_sample, center_world, tile_height) * 0.12
             if row > 0 and row < rows:
-                var row_noise := _cliff_noise_at(top_a.lerp(top_b, float(column) / float(columns)), center_world, tile_height)
-                height_ratio += row_noise * 0.12
-            across = clampf(across, 0.02, 0.98)
-            height_ratio = clampf(height_ratio, 0.02, 0.98)
+                var row_sample := top_a.lerp(top_b, float(column) / float(columns))
+                height_ratio += _cliff_noise_at(row_sample, center_world, tile_height) * 0.16
+            across = clampf(across, 0.04, 0.96)
+            height_ratio = clampf(height_ratio, 0.04, 0.96)
             if column == 0:
                 across = 0.0
             elif column == columns:
@@ -924,13 +928,12 @@ func _add_angular_cliff_face(surface: SurfaceTool, top_a: Vector3, top_b: Vector
             var b: Vector3 = points[row][column + 1]
             var c: Vector3 = points[row + 1][column]
             var d: Vector3 = points[row + 1][column + 1]
-            # Alternate the diagonal to break up long regular seams between facets.
             if (row + column) % 2 == 0:
-                _add_cliff_triangle(surface, a, c, d, _angular_cliff_color((a + c + d) / 3.0, center_world, tile_height))
-                _add_cliff_triangle(surface, a, d, b, _angular_cliff_color((a + d + b) / 3.0, center_world, tile_height))
+                _add_angular_cliff_triangle(surface, a, c, d, face_normal, center_world, tile_height)
+                _add_angular_cliff_triangle(surface, a, d, b, face_normal, center_world, tile_height)
             else:
-                _add_cliff_triangle(surface, a, c, b, _angular_cliff_color((a + c + b) / 3.0, center_world, tile_height))
-                _add_cliff_triangle(surface, b, c, d, _angular_cliff_color((b + c + d) / 3.0, center_world, tile_height))
+                _add_angular_cliff_triangle(surface, a, c, b, face_normal, center_world, tile_height)
+                _add_angular_cliff_triangle(surface, b, c, d, face_normal, center_world, tile_height)
 
 
 func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
@@ -981,9 +984,8 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
 
     if not added_wall:
         return null
-    surface.generate_normals()
+    # Vertices carry explicit per-triangle normals for crisp low-poly lighting.
     return surface.commit()
-
 
 
 func _make_prop(kind: String) -> Node3D:
