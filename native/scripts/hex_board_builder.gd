@@ -174,7 +174,7 @@ func _create_materials() -> void:
     prop_materials["stone_light"] = _standard_material(Color("a19d8c"), 0.94)
     prop_materials["stone_dark"] = _standard_material(Color("535750"), 0.98)
     var cliff_material := StandardMaterial3D.new()
-    cliff_material.albedo_color = Color.WHITE
+    cliff_material.albedo_color = Color(0.86, 0.81, 0.71)
     cliff_material.roughness = 0.98
     cliff_material.vertex_color_use_as_albedo = true
     cliff_material.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -846,6 +846,7 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
     var cliff_rng := RandomNumberGenerator.new()
     cliff_rng.seed = posmod(q * 73856093 + r * 19349663 + elevation * 83492791, 2147483647)
     var added_wall := false
+
     for edge in range(6):
         var offset: Vector2i = HEX_EDGE_NEIGHBORS[edge]
         var neighbor_key := _cell_key(q + offset.x, r + offset.y)
@@ -865,49 +866,65 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
         if wall_bottom_y >= -0.001 and not is_mountain:
             continue
 
-        for segment in range(3):
-            var angle_a := deg_to_rad(30.0 + 60.0 * float(edge) + 20.0 * float(segment))
-            var angle_b := deg_to_rad(30.0 + 60.0 * float(edge) + 20.0 * float(segment + 1))
-            var normal_a := roundf(angle_a / (PI / 3.0)) * (PI / 3.0)
-            var normal_b := roundf(angle_b / (PI / 3.0)) * (PI / 3.0)
-            var radius_a := (ROOT_3 * 0.5) / cos(angle_a - normal_a)
-            var radius_b := (ROOT_3 * 0.5) / cos(angle_b - normal_b)
-            var upper_a := Vector3(cos(angle_a) * radius_a, 0.0, sin(angle_a) * radius_a)
-            var upper_b := Vector3(cos(angle_b) * radius_b, 0.0, sin(angle_b) * radius_b)
-            if is_mountain:
-                upper_a.y = _mountain_height_at(Vector2(center_world.x + upper_a.x, center_world.z + upper_a.z))
-                upper_b.y = _mountain_height_at(Vector2(center_world.x + upper_b.x, center_world.z + upper_b.z))
-            if upper_a.y <= wall_bottom_y + 0.001 and upper_b.y <= wall_bottom_y + 0.001:
-                continue
+        var angle_a := deg_to_rad(30.0 + 60.0 * float(edge))
+        var angle_b := deg_to_rad(30.0 + 60.0 * float(edge + 1))
+        var upper_a := Vector3(cos(angle_a) * HEX_RADIUS, 0.0, sin(angle_a) * HEX_RADIUS)
+        var upper_b := Vector3(cos(angle_b) * HEX_RADIUS, 0.0, sin(angle_b) * HEX_RADIUS)
+        if is_mountain:
+            upper_a.y = _mountain_height_at(Vector2(center_world.x + upper_a.x, center_world.z + upper_a.z))
+            upper_b.y = _mountain_height_at(Vector2(center_world.x + upper_b.x, center_world.z + upper_b.z))
+        if upper_a.y <= wall_bottom_y + 0.001 and upper_b.y <= wall_bottom_y + 0.001:
+            continue
 
-            var lower_a := Vector3(upper_a.x, wall_bottom_y, upper_a.z)
-            var lower_b := Vector3(upper_b.x, wall_bottom_y, upper_b.z)
-            var dark_backing := Color(0.19, 0.20, 0.19, 1.0)
-            _add_cliff_triangle(surface, upper_a, lower_a, upper_b, dark_backing)
-            _add_cliff_triangle(surface, upper_b, lower_a, lower_b, dark_backing)
-            added_wall = true
+        var lower_a := Vector3(upper_a.x, wall_bottom_y, upper_a.z)
+        var lower_b := Vector3(upper_b.x, wall_bottom_y, upper_b.z)
+        var face_normal := Vector3(upper_a.x + upper_b.x, 0.0, upper_a.z + upper_b.z).normalized()
+        var backing := Color(0.095, 0.088, 0.073, 1.0)
+        _add_cliff_triangle(surface, upper_a, lower_a, upper_b, backing)
+        _add_cliff_triangle(surface, upper_b, lower_a, lower_b, backing)
+        added_wall = true
 
-            var wall_height := maxf(0.02, ((upper_a.y - wall_bottom_y) + (upper_b.y - wall_bottom_y)) * 0.5)
-            var row_count := clampi(ceili(wall_height / 0.62), 1, 6)
-            var face_normal := Vector3(upper_a.x + upper_b.x, 0.0, upper_a.z + upper_b.z).normalized()
-            for row in range(row_count):
-                var row_start := (float(row) + 0.045) / float(row_count)
-                var row_end := (float(row + 1) - 0.045) / float(row_count)
-                var panel_top_left := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, 0.045, row_end)
-                var panel_top_right := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, 0.955, row_end)
-                var panel_bottom_left := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, 0.045, row_start)
-                var panel_bottom_right := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, 0.955, row_start)
-                var panel_center := (panel_top_left + panel_top_right + panel_bottom_left + panel_bottom_right) * 0.25
-                panel_center += face_normal * cliff_rng.randf_range(0.075, 0.145)
-                panel_center.y += cliff_rng.randf_range(-0.07, 0.07)
-                var stone_r := cliff_rng.randf_range(0.38, 0.62)
-                var stone_g := stone_r * cliff_rng.randf_range(0.96, 1.04)
-                var stone_b := stone_r * cliff_rng.randf_range(0.89, 0.99)
-                var panel_tint := Color(stone_r, stone_g, stone_b, 1.0)
-                _add_cliff_triangle(surface, panel_top_left, panel_bottom_left, panel_center, panel_tint.lightened(0.04))
-                _add_cliff_triangle(surface, panel_bottom_left, panel_bottom_right, panel_center, panel_tint.darkened(0.12))
-                _add_cliff_triangle(surface, panel_bottom_right, panel_top_right, panel_center, panel_tint.lightened(0.02))
-                _add_cliff_triangle(surface, panel_top_right, panel_top_left, panel_center, panel_tint.darkened(0.08))
+        var wall_height := maxf(0.02, ((upper_a.y - wall_bottom_y) + (upper_b.y - wall_bottom_y)) * 0.5)
+        var rock_columns := 3
+        var rock_rows := clampi(ceili(wall_height / 0.43), 1, 6)
+        for row in range(rock_rows):
+            for column in range(rock_columns):
+                var center_u := (float(column) + 0.5) / float(rock_columns) + cliff_rng.randf_range(-0.075, 0.075)
+                var center_v := (float(row) + 0.5) / float(rock_rows) + cliff_rng.randf_range(-0.12, 0.12) / float(rock_rows)
+                center_u = clampf(center_u, 0.12, 0.88)
+                center_v = clampf(center_v, 0.12, 0.88)
+                var radius_u := cliff_rng.randf_range(0.145, 0.205)
+                var radius_v := cliff_rng.randf_range(0.43, 0.64) / float(rock_rows)
+                var rock_depth := cliff_rng.randf_range(0.10, 0.19)
+                var point_count: int = cliff_rng.randi_range(5, 7)
+                var angle_offset := cliff_rng.randf_range(0.0, TAU)
+                var rock_points: Array[Vector3] = []
+                for point_index in range(point_count):
+                    var angle := angle_offset + TAU * float(point_index) / float(point_count) + cliff_rng.randf_range(-0.18, 0.18)
+                    var radial_scale := cliff_rng.randf_range(0.78, 1.16)
+                    var point_u := clampf(center_u + cos(angle) * radius_u * radial_scale, 0.018, 0.982)
+                    var point_v := clampf(center_v + sin(angle) * radius_v * radial_scale, 0.018, 0.982)
+                    var rock_point := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, point_u, point_v)
+                    rock_point += face_normal * (rock_depth * cliff_rng.randf_range(0.36, 0.62))
+                    rock_points.append(rock_point)
+
+                var rock_center := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, center_u, center_v)
+                rock_center += face_normal * rock_depth
+                var stone_r := cliff_rng.randf_range(0.31, 0.49)
+                var stone_g := stone_r * cliff_rng.randf_range(0.88, 0.98)
+                var stone_b := stone_r * cliff_rng.randf_range(0.76, 0.90)
+                var stone_tint := Color(stone_r, stone_g, stone_b, 1.0)
+                for point_index in range(point_count):
+                    var next_point := (point_index + 1) % point_count
+                    var facet_tint := stone_tint
+                    match cliff_rng.randi_range(0, 3):
+                        0:
+                            facet_tint = stone_tint.lightened(cliff_rng.randf_range(0.08, 0.20))
+                        1:
+                            facet_tint = stone_tint.darkened(cliff_rng.randf_range(0.08, 0.22))
+                        _:
+                            facet_tint = stone_tint
+                    _add_cliff_triangle(surface, rock_points[point_index], rock_points[next_point], rock_center, facet_tint)
     if not added_wall:
         return null
     surface.generate_normals()
