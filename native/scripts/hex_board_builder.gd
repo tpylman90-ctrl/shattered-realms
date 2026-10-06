@@ -60,6 +60,10 @@ var shared_hex_mesh: ArrayMesh
 var board_foundation_y := -TILE_DEPTH
 var prop_materials: Dictionary = {}
 var selection_marker_material: StandardMaterial3D
+var terrain_grass_mesh: ArrayMesh
+var terrain_grass_material: StandardMaterial3D
+var terrain_flower_mesh: SphereMesh
+var terrain_flower_material: StandardMaterial3D
 var board_name: LineEdit
 var status_label: Label
 var brush_radius_option: OptionButton
@@ -160,9 +164,9 @@ func _create_materials() -> void:
         terrain_materials[terrain] = material
     prop_materials["bark"] = _standard_material(Color("60412b"), 0.92)
     prop_materials["bark_light"] = _standard_material(Color("8a623b"), 0.9)
-    prop_materials["leaf_dark"] = _standard_material(Color("24452a"), 0.92)
-    prop_materials["leaf_mid"] = _standard_material(Color("38683a"), 0.9)
-    prop_materials["leaf_light"] = _standard_material(Color("567e3b"), 0.88)
+    prop_materials["leaf_dark"] = _standard_material(Color("28502d"), 0.92)
+    prop_materials["leaf_mid"] = _standard_material(Color("477f3c"), 0.9)
+    prop_materials["leaf_light"] = _standard_material(Color("76a94c"), 0.88)
     prop_materials["roof"] = _standard_material(Color("49332c"), 0.91)
     prop_materials["wall"] = _standard_material(Color("a18a60"), 0.9)
     prop_materials["wood"] = _standard_material(Color("765335"), 0.92)
@@ -197,6 +201,17 @@ func _create_materials() -> void:
     _apply_prop_texture(["wall", "plaster", "plaster_light"], PROP_PLASTER_ALBEDO, Color("eee2c8"), Vector3(1.6, 1.6, 1.6), PROP_AGED_PLASTER_NORMAL, PROP_AGED_PLASTER_ROUGHNESS, 0.24)
     _apply_prop_texture(["roof", "roof_red", "roof_moss"], PROP_ROOF_ALBEDO, Color("e1d0ba"), Vector3(1.8, 1.8, 1.8), PROP_CLAY_ROOF_NORMAL, PROP_CLAY_ROOF_ROUGHNESS, 0.30)
     _apply_prop_texture(["thatch"], PROP_THATCH_ALBEDO, Color("e8d4a7"), Vector3(2.0, 2.0, 2.0), PROP_THATCH_NORMAL, PROP_THATCH_ROUGHNESS, 0.34)
+    terrain_grass_mesh = _make_grass_clump_mesh()
+    terrain_grass_material = StandardMaterial3D.new()
+    terrain_grass_material.vertex_color_use_as_albedo = true
+    terrain_grass_material.roughness = 1.0
+    terrain_grass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    terrain_flower_mesh = SphereMesh.new()
+    terrain_flower_mesh.radial_segments = 8
+    terrain_flower_mesh.rings = 5
+    terrain_flower_material = StandardMaterial3D.new()
+    terrain_flower_material.vertex_color_use_as_albedo = true
+    terrain_flower_material.roughness = 0.82
     selection_marker_material = _standard_material(Color("ffd16b"), 0.35)
     selection_marker_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     selection_marker_material.emission_enabled = true
@@ -685,6 +700,8 @@ func _refresh_cell_visual(key: String) -> void:
         walls.mesh = wall_mesh
         walls.material_override = terrain_materials[terrain]
         tile.add_child(walls)
+    if not has_mountain:
+        _build_terrain_dressing(tile, terrain, int(cell.get("q", 0)), int(cell.get("r", 0)))
     var object_root := Node3D.new()
     object_root.name = "Objects_" + key.replace(",", "_")
     object_root.position = tile.position + Vector3.UP * 0.01
@@ -941,6 +958,90 @@ func _add_mesh(parent: Node3D, mesh: Mesh, material: Material, position: Vector3
     instance.scale = scale_value
     parent.add_child(instance)
     return instance
+
+func _make_grass_clump_mesh() -> ArrayMesh:
+    var surface := SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    var blade_colors := [
+        Color("a4bd55"), Color("88ad45"), Color("d0c45f"),
+        Color("739b3d"), Color("b6bd58"), Color("739e54")
+    ]
+    for blade in range(6):
+        var angle := TAU * float(blade) / 6.0 + float(blade % 2) * 0.31
+        var direction := Vector3(cos(angle), 0.0, sin(angle))
+        var side := Vector3(-direction.z, 0.0, direction.x) * (0.025 + float(blade % 3) * 0.006)
+        var base := direction * (0.025 + float(blade % 2) * 0.025)
+        var height := 0.13 + float((blade * 17) % 5) * 0.035
+        var tip := base + direction * (0.035 + float(blade % 3) * 0.018) + Vector3(0.0, height, 0.0)
+        var left := base - side
+        var right := base + side
+        var color := blade_colors[blade]
+        surface.set_color(color.darkened(0.08))
+        surface.add_vertex(left)
+        surface.set_color(color.lightened(0.05))
+        surface.add_vertex(right)
+        surface.set_color(color.lightened(0.16))
+        surface.add_vertex(tip)
+        surface.set_color(color.darkened(0.10))
+        surface.add_vertex(right)
+        surface.set_color(color.lightened(0.05))
+        surface.add_vertex(base + direction * 0.02 - side * 0.45)
+        surface.set_color(color.lightened(0.16))
+        surface.add_vertex(tip + side * 0.12)
+    surface.generate_normals()
+    return surface.commit()
+
+func _build_terrain_dressing(tile: Node3D, terrain: String, q: int, r: int) -> void:
+    if terrain not in ["grass", "woodland", "marsh"]:
+        return
+    var rng := RandomNumberGenerator.new()
+    rng.seed = posmod(q * 73856093 + r * 19349663 + int(TERRAIN_IDS[terrain]) * 83492791, 2147483647)
+    var grass_count := 13 if terrain == "woodland" else (5 if terrain == "marsh" else 9)
+    var grass_batch := MultiMesh.new()
+    grass_batch.transform_format = MultiMesh.TRANSFORM_3D
+    grass_batch.use_colors = true
+    grass_batch.mesh = terrain_grass_mesh
+    grass_batch.instance_count = grass_count
+    for index in range(grass_count):
+        var angle := rng.randf_range(0.0, TAU)
+        var radius := sqrt(rng.randf()) * 0.76
+        var position := Vector3(cos(angle) * radius, 0.012, sin(angle) * radius)
+        var height := rng.randf_range(0.72, 1.35) * (0.82 if terrain == "marsh" else 1.0)
+        var width := rng.randf_range(0.72, 1.22)
+        var basis := Basis(Vector3.UP, rng.randf_range(0.0, TAU)).scaled(Vector3(width, height, width))
+        grass_batch.set_instance_transform(index, Transform3D(basis, position))
+        grass_batch.set_instance_color(index, Color.from_hsv(rng.randf_range(0.20, 0.28), 0.18, rng.randf_range(0.82, 1.0)))
+    var grass_instance := MultiMeshInstance3D.new()
+    grass_instance.name = "MeadowGrass"
+    grass_instance.multimesh = grass_batch
+    grass_instance.material_override = terrain_grass_material
+    tile.add_child(grass_instance)
+    var flower_chance := 0.42 if terrain == "grass" else (0.09 if terrain == "woodland" else 0.04)
+    if rng.randf() > flower_chance:
+        return
+    var flower_count := rng.randi_range(4, 8)
+    var flower_batch := MultiMesh.new()
+    flower_batch.transform_format = MultiMesh.TRANSFORM_3D
+    flower_batch.use_colors = true
+    flower_batch.mesh = terrain_flower_mesh
+    flower_batch.instance_count = flower_count
+    var flower_palette := [
+        Color("e8c84f"), Color("a884ce"), Color("d87989"),
+        Color("f0e6c8"), Color("e7a446")
+    ]
+    for index in range(flower_count):
+        var angle := rng.randf_range(0.0, TAU)
+        var radius := rng.randf_range(0.12, 0.38)
+        var position := Vector3(cos(angle) * radius, rng.randf_range(0.11, 0.19), sin(angle) * radius)
+        var scale := Vector3(rng.randf_range(0.035, 0.055), rng.randf_range(0.05, 0.09), rng.randf_range(0.035, 0.055))
+        var basis := Basis(Vector3.UP, rng.randf_range(0.0, TAU)).scaled(scale)
+        flower_batch.set_instance_transform(index, Transform3D(basis, position))
+        flower_batch.set_instance_color(index, flower_palette[rng.randi_range(0, flower_palette.size() - 1)])
+    var flower_instance := MultiMeshInstance3D.new()
+    flower_instance.name = "WildflowerPatch"
+    flower_instance.multimesh = flower_batch
+    flower_instance.material_override = terrain_flower_material
+    tile.add_child(flower_instance)
 
 func _build_tree(root: Node3D, pine: bool) -> void:
     var trunk := CylinderMesh.new()
@@ -1402,15 +1503,41 @@ func _build_fence(root: Node3D) -> void:
         _add_mesh(root, picket, prop_materials["bark_light"], Vector3(x, 0.45, 0.0))
 
 func _build_rock(root: Node3D) -> void:
-    var boulder := SphereMesh.new()
-    boulder.radial_segments = 18
-    boulder.rings = 10
-    _add_mesh(root, boulder, prop_materials["stone"], Vector3(0.0, 0.3, 0.0), Vector3(0.58, 0.43, 0.5))
-    var smaller := SphereMesh.new()
-    smaller.radial_segments = 14
-    smaller.rings = 8
-    _add_mesh(root, smaller, prop_materials["stone"], Vector3(0.32, 0.22, 0.12), Vector3(0.29, 0.25, 0.3))
-    _add_mesh(root, smaller, prop_materials["stone"], Vector3(-0.28, 0.18, -0.1), Vector3(0.24, 0.2, 0.28))
+    var main_stone := CylinderMesh.new()
+    main_stone.top_radius = 0.40
+    main_stone.bottom_radius = 0.56
+    main_stone.height = 0.55
+    main_stone.radial_segments = 7
+    main_stone.rings = 1
+    var main_instance := _add_mesh(root, main_stone, prop_materials["stone"], Vector3(0.0, 0.27, 0.0), Vector3(1.0, 0.82, 0.94))
+    main_instance.rotation.y = 0.19
+    main_instance.rotation.z = -0.08
+    var shoulder := CylinderMesh.new()
+    shoulder.top_radius = 0.31
+    shoulder.bottom_radius = 0.42
+    shoulder.height = 0.39
+    shoulder.radial_segments = 6
+    shoulder.rings = 1
+    var shoulder_instance := _add_mesh(root, shoulder, prop_materials["stone_light"], Vector3(0.31, 0.19, 0.12), Vector3(0.76, 0.83, 0.72))
+    shoulder_instance.rotation.y = -0.36
+    shoulder_instance.rotation.z = 0.12
+    var broken_face := CylinderMesh.new()
+    broken_face.top_radius = 0.22
+    broken_face.bottom_radius = 0.30
+    broken_face.height = 0.31
+    broken_face.radial_segments = 5
+    broken_face.rings = 1
+    var face_instance := _add_mesh(root, broken_face, prop_materials["stone_dark"], Vector3(-0.28, 0.15, 0.22), Vector3(0.82, 0.78, 0.76))
+    face_instance.rotation.y = 0.48
+    face_instance.rotation.x = -0.13
+    var chip := CylinderMesh.new()
+    chip.top_radius = 0.10
+    chip.bottom_radius = 0.16
+    chip.height = 0.15
+    chip.radial_segments = 6
+    chip.rings = 1
+    var chip_instance := _add_mesh(root, chip, prop_materials["stone_light"], Vector3(-0.48, 0.075, -0.08), Vector3(0.9, 0.72, 0.82))
+    chip_instance.rotation.y = -0.25
 
 func _build_dead_tree(root: Node3D) -> void:
     var trunk := CylinderMesh.new()

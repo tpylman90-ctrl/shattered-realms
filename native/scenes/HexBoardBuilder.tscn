@@ -1,12 +1,24 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/hex_board_builder.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/environment/ravenwood_cloud_cover.png" id="2_cloud_cover"]
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_editor"]
+sky_top_color = Color(0.12, 0.38, 0.75, 1)
+sky_horizon_color = Color(0.66, 0.84, 0.91, 1)
+sky_curve = 0.28
+sky_energy_multiplier = 1.0
+sky_cover = ExtResource("2_cloud_cover")
+sky_cover_modulate = Color(1, 1, 1, 0.78)
+ground_bottom_color = Color(0.24, 0.38, 0.23, 1)
+ground_horizon_color = Color(0.64, 0.77, 0.67, 1)
+[sub_resource type="Sky" id="Sky_editor"]
+sky_material = SubResource("SkyMaterial_editor")
 [sub_resource type="Environment" id="Environment_main"]
-background_mode = 1
-background_color = Color(0.045, 0.068, 0.062, 1)
+background_mode = 2
+sky = SubResource("Sky_editor")
 ambient_light_source = 3
 ambient_light_color = Color(0.72, 0.78, 0.69, 1)
-ambient_light_energy = 1.05
+ambient_light_energy = 0.92
 tonemap_mode = 2
 
 [node name="HexBoardBuilder" type="Node3D"]
@@ -15,13 +27,13 @@ script = ExtResource("1_script")
 environment = SubResource("Environment_main")
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-52, -24, 0)
-light_color = Color(1, 0.92, 0.74, 1)
-light_energy = 1.75
+light_color = Color(1, 0.95, 0.82, 1)
+light_energy = 1.48
 shadow_enabled = true
 [node name="FillLight" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-28, 148, 0)
-light_color = Color(0.55, 0.70, 0.79, 1)
-light_energy = 0.6
+light_color = Color(0.58, 0.75, 0.86, 1)
+light_energy = 0.48
 shadow_enabled = false
 [node name="Camera3D" type="Camera3D" parent="."]
 current = true
