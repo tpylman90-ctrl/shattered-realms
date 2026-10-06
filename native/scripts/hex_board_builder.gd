@@ -201,6 +201,7 @@ func _create_materials() -> void:
     _apply_prop_texture(["wall", "plaster", "plaster_light"], PROP_PLASTER_ALBEDO, Color("eee2c8"), Vector3(1.6, 1.6, 1.6), PROP_AGED_PLASTER_NORMAL, PROP_AGED_PLASTER_ROUGHNESS, 0.24)
     _apply_prop_texture(["roof", "roof_red", "roof_moss"], PROP_ROOF_ALBEDO, Color("e1d0ba"), Vector3(1.8, 1.8, 1.8), PROP_CLAY_ROOF_NORMAL, PROP_CLAY_ROOF_ROUGHNESS, 0.30)
     _apply_prop_texture(["thatch"], PROP_THATCH_ALBEDO, Color("e8d4a7"), Vector3(2.0, 2.0, 2.0), PROP_THATCH_NORMAL, PROP_THATCH_ROUGHNESS, 0.34)
+    prop_materials["stone"].vertex_color_use_as_albedo = true
     terrain_grass_mesh = _make_grass_clump_mesh()
     terrain_grass_material = StandardMaterial3D.new()
     terrain_grass_material.vertex_color_use_as_albedo = true
@@ -698,7 +699,7 @@ func _refresh_cell_visual(key: String) -> void:
         var walls := MeshInstance3D.new()
         walls.name = "ExposedHexWalls"
         walls.mesh = wall_mesh
-        walls.material_override = terrain_materials[terrain]
+        walls.material_override = prop_materials["stone"]
         tile.add_child(walls)
     if not has_mountain:
         _build_terrain_dressing(tile, terrain, int(cell.get("q", 0)), int(cell.get("r", 0)))
@@ -836,16 +837,17 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
     var wall_base_y := board_foundation_y - cell_y
     var is_mountain := str(cell.get("landform", "")) in ["mountain", "peak", "ridge", "foothill"]
     var center_world := _axial_to_world(q, r)
+    var cliff_rng := RandomNumberGenerator.new()
+    cliff_rng.seed = posmod(q * 73856093 + r * 19349663 + elevation * 83492791, 2147483647)
     var added_wall := false
     for edge in range(6):
         var offset: Vector2i = HEX_EDGE_NEIGHBORS[edge]
         var neighbor_key := _cell_key(q + offset.x, r + offset.y)
         var wall_bottom_y := wall_base_y
-        var neighbor_is_mountain := false
         if cells.has(neighbor_key):
             var neighbor: Dictionary = cells[neighbor_key]
             var neighbor_elevation := int(neighbor.get("elevation", 0))
-            neighbor_is_mountain = str(neighbor.get("landform", "")) in ["mountain", "peak", "ridge", "foothill"]
+            var neighbor_is_mountain := str(neighbor.get("landform", "")) in ["mountain", "peak", "ridge", "foothill"]
             if neighbor_elevation > elevation:
                 continue
             if neighbor_elevation == elevation:
@@ -856,6 +858,7 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
                 wall_bottom_y = float(neighbor_elevation - elevation) * ELEVATION_STEP
         if wall_bottom_y >= -0.001 and not is_mountain:
             continue
+
         for segment in range(4):
             var angle_a := deg_to_rad(30.0 + 60.0 * float(edge) + 15.0 * float(segment))
             var angle_b := deg_to_rad(30.0 + 60.0 * float(edge) + 15.0 * float(segment + 1))
@@ -870,19 +873,52 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
                 upper_b.y = _mountain_height_at(Vector2(center_world.x + upper_b.x, center_world.z + upper_b.z))
             if upper_a.y <= wall_bottom_y + 0.001 and upper_b.y <= wall_bottom_y + 0.001:
                 continue
-            var lower_a := Vector3(upper_a.x * 0.98, wall_bottom_y, upper_a.z * 0.98)
-            var lower_b := Vector3(upper_b.x * 0.98, wall_bottom_y, upper_b.z * 0.98)
-            surface.add_vertex(upper_a)
-            surface.add_vertex(lower_a)
-            surface.add_vertex(upper_b)
-            surface.add_vertex(upper_b)
-            surface.add_vertex(lower_a)
-            surface.add_vertex(lower_b)
+
+            var lower_a := Vector3(upper_a.x, wall_bottom_y, upper_a.z)
+            var lower_b := Vector3(upper_b.x, wall_bottom_y, upper_b.z)
+            var dark_backing := Color(0.32, 0.34, 0.33, 1.0)
+            _add_cliff_triangle(surface, upper_a, lower_a, upper_b, dark_backing)
+            _add_cliff_triangle(surface, upper_b, lower_a, lower_b, dark_backing)
             added_wall = true
+
+            var wall_height := maxf(0.02, ((upper_a.y - wall_bottom_y) + (upper_b.y - wall_bottom_y)) * 0.5)
+            var row_count := clampi(ceili(wall_height / 0.36), 1, 8)
+            var face_normal := Vector3(upper_a.x + upper_b.x, 0.0, upper_a.z + upper_b.z).normalized()
+            for row in range(row_count):
+                var row_start := (float(row) + 0.055) / float(row_count)
+                var row_end := (float(row + 1) - 0.055) / float(row_count)
+                for column in range(2):
+                    var column_start := (float(column) + 0.06) / 2.0
+                    var column_end := (float(column + 1) - 0.06) / 2.0
+                    var panel_top_left := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, column_start, row_end)
+                    var panel_top_right := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, column_end, row_end)
+                    var panel_bottom_left := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, column_start, row_start)
+                    var panel_bottom_right := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, column_end, row_start)
+                    var panel_center := (panel_top_left + panel_top_right + panel_bottom_left + panel_bottom_right) * 0.25
+                    panel_center += face_normal * cliff_rng.randf_range(0.025, 0.060)
+                    panel_center.y += cliff_rng.randf_range(-0.025, 0.025)
+                    var shade := cliff_rng.randf_range(0.68, 0.94)
+                    var panel_tint := Color(shade, shade * cliff_rng.randf_range(0.96, 1.04), shade * cliff_rng.randf_range(0.92, 1.02), 1.0)
+                    _add_cliff_triangle(surface, panel_top_left, panel_bottom_left, panel_center, panel_tint)
+                    _add_cliff_triangle(surface, panel_bottom_left, panel_bottom_right, panel_center, panel_tint.darkened(0.05))
+                    _add_cliff_triangle(surface, panel_bottom_right, panel_top_right, panel_center, panel_tint.lightened(0.025))
+                    _add_cliff_triangle(surface, panel_top_right, panel_top_left, panel_center, panel_tint.darkened(0.025))
     if not added_wall:
         return null
     surface.generate_normals()
     return surface.commit()
+
+func _cliff_surface_point(top_a: Vector3, top_b: Vector3, base_y: float, across: float, height_ratio: float) -> Vector3:
+    var point := top_a.lerp(top_b, across)
+    point.y = lerpf(base_y, point.y, height_ratio)
+    return point
+
+func _add_cliff_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, tint: Color) -> void:
+    surface.set_color(tint)
+    surface.add_vertex(a)
+    surface.add_vertex(b)
+    surface.add_vertex(c)
+
 
 func _make_prop(kind: String) -> Node3D:
     var root := Node3D.new()
