@@ -147,6 +147,15 @@ func _create_materials() -> void:
     prop_materials["wall"] = _standard_material(Color("a18a60"), 0.9)
     prop_materials["wood"] = _standard_material(Color("765335"), 0.92)
     prop_materials["stone"] = _standard_material(Color("77796e"), 0.96)
+    prop_materials["stone_light"] = _standard_material(Color("a19d8c"), 0.94)
+    prop_materials["stone_dark"] = _standard_material(Color("535750"), 0.98)
+    prop_materials["plaster"] = _standard_material(Color("c8b994"), 0.94)
+    prop_materials["plaster_light"] = _standard_material(Color("ddd0ae"), 0.93)
+    prop_materials["roof_red"] = _standard_material(Color("783d32"), 0.91)
+    prop_materials["thatch"] = _standard_material(Color("9a7843"), 0.95)
+    prop_materials["roof_moss"] = _standard_material(Color("48573d"), 0.94)
+    prop_materials["brick"] = _standard_material(Color("895340"), 0.95)
+    prop_materials["wood_dark"] = _standard_material(Color("49331f"), 0.96)
     prop_materials["window"] = _standard_material(Color("253b3d"), 0.44)
     prop_materials["water"] = _standard_material(Color("406c75"), 0.25)
     prop_materials["metal"] = _standard_material(Color("525b58"), 0.48)
@@ -311,15 +320,30 @@ func _build_ui() -> void:
     object_page.name = "OBJECTS"
     object_page.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     layer_tabs.add_child(object_page)
-    _add_section(object_page, "4  •  PLACE OBJECTS")
+    _add_section(object_page, "4  •  NATURE & DETAILS")
     for prop in [
         ["tree", "TREE"], ["pine", "PINE"], ["ancient_tree", "ANCIENT OAK"], ["dead_tree", "DEAD TREE"],
-        ["house", "HOUSE"], ["fence", "FENCE"], ["rock", "ROCK"], ["bush", "BUSH"],
-        ["stump", "STUMP"], ["log", "FALLEN LOG"], ["campfire", "CAMPFIRE"], ["lantern", "LANTERN"],
-        ["signpost", "SIGNPOST"], ["well", "WELL"], ["ruins", "RUINS"], ["flowers", "FLOWERS"], ["mushrooms", "MUSHROOMS"]
+        ["rock", "ROCK"], ["bush", "BUSH"], ["stump", "STUMP"], ["log", "FALLEN LOG"],
+        ["campfire", "CAMPFIRE"], ["lantern", "LANTERN"], ["signpost", "SIGNPOST"], ["well", "WELL"],
+        ["ruins", "RUINS"], ["flowers", "FLOWERS"], ["mushrooms", "MUSHROOMS"]
     ]:
         var prop_id: String = prop[0]
         _add_button(object_page, str(prop[1]), func(): _set_tool("prop:" + prop_id))
+    _add_section(object_page, "BUILDINGS")
+    for building in [
+        ["house", "HOUSE"], ["cottage", "COTTAGE"], ["longhouse", "LONGHOUSE"], ["barn", "BARN"],
+        ["inn", "INN / TAVERN"], ["smithy", "BLACKSMITH"], ["chapel", "CHAPEL"],
+        ["watchtower", "WATCHTOWER"], ["ruined_house", "RUINED HOUSE"]
+    ]:
+        var building_id: String = building[0]
+        _add_button(object_page, str(building[1]), func(): _set_tool("prop:" + building_id))
+    _add_section(object_page, "WALLS & GATES")
+    for fortification in [
+        ["stone_wall", "STONE WALL"], ["palisade_wall", "PALISADE WALL"],
+        ["wooden_gate", "WOODEN GATE"], ["stone_gate", "STONE GATE"]
+    ]:
+        var fortification_id: String = fortification[0]
+        _add_button(object_page, str(fortification[1]), func(): _set_tool("prop:" + fortification_id))
     _add_button(object_page, "SELECT / MOVE OBJECT", func(): _set_tool("select_object"))
     _add_button(object_page, "NEXT OBJECT ON HEX", _cycle_selected_object)
     _add_button(object_page, "ERASE SELECTED / LAST", func(): _set_tool("erase_prop"))
@@ -807,6 +831,30 @@ func _make_prop(kind: String) -> Node3D:
             _build_tree(root, true)
         "house":
             _build_house(root)
+        "cottage":
+            _build_cottage(root)
+        "longhouse":
+            _build_longhouse(root)
+        "barn":
+            _build_barn(root)
+        "inn":
+            _build_inn(root)
+        "smithy":
+            _build_smithy(root)
+        "chapel":
+            _build_chapel(root)
+        "watchtower":
+            _build_watchtower(root)
+        "ruined_house":
+            _build_ruined_house(root)
+        "stone_wall":
+            _build_stone_wall(root)
+        "palisade_wall":
+            _build_palisade_wall(root)
+        "wooden_gate":
+            _build_wooden_gate(root)
+        "stone_gate":
+            _build_stone_gate(root)
         "fence":
             _build_fence(root)
         "rock":
@@ -880,6 +928,292 @@ func _build_tree(root: Node3D, pine: bool) -> void:
         var foliage_material: Material = prop_materials["leaf_mid"] if index % 3 == 0 else (prop_materials["leaf_light"] if index % 2 == 0 else prop_materials["leaf_dark"])
         _add_mesh(root, foliage, foliage_material, center, Vector3(size, size * 0.88, size))
     _add_mesh(root, foliage, prop_materials["leaf_mid"], Vector3(0.0, 1.85, 0.0), Vector3(0.43, 0.42, 0.43))
+
+func _build_gable_roof(root: Node3D, width: float, depth: float, eaves_y: float, ridge_y: float, material: Material) -> void:
+    var half_span := width * 0.28
+    var slope := atan2(ridge_y - eaves_y, half_span)
+    var panel := BoxMesh.new()
+    panel.size = Vector3(width * 0.60, 0.11, depth)
+    var left := _add_mesh(root, panel, material, Vector3(-half_span * 0.5, (ridge_y + eaves_y) * 0.5, 0.0))
+    left.rotation.z = -slope
+    var right := _add_mesh(root, panel, material, Vector3(half_span * 0.5, (ridge_y + eaves_y) * 0.5, 0.0))
+    right.rotation.z = slope
+    var ridge_cap := BoxMesh.new()
+    ridge_cap.size = Vector3(0.12, 0.10, depth + 0.08)
+    _add_mesh(root, ridge_cap, material, Vector3(0.0, ridge_y, 0.0))
+
+func _build_cottage(root: Node3D) -> void:
+    var base := BoxMesh.new()
+    base.size = Vector3(1.12, 0.17, 1.02)
+    _add_mesh(root, base, prop_materials["stone_light"], Vector3(0.0, 0.085, 0.0))
+    var body := BoxMesh.new()
+    body.size = Vector3(0.98, 0.78, 0.86)
+    _add_mesh(root, body, prop_materials["plaster_light"], Vector3(0.0, 0.54, 0.0))
+    var timber := BoxMesh.new()
+    timber.size = Vector3(0.075, 0.84, 0.09)
+    for x in [-0.45, 0.45]:
+        for z in [-0.39, 0.39]:
+            _add_mesh(root, timber, prop_materials["wood_dark"], Vector3(x, 0.54, z))
+    var door := BoxMesh.new()
+    door.size = Vector3(0.24, 0.50, 0.045)
+    _add_mesh(root, door, prop_materials["wood"], Vector3(-0.22, 0.34, 0.45))
+    var window := BoxMesh.new()
+    window.size = Vector3(0.18, 0.20, 0.045)
+    _add_mesh(root, window, prop_materials["window"], Vector3(0.20, 0.63, 0.45))
+    _build_gable_roof(root, 1.18, 1.10, 0.96, 1.42, prop_materials["thatch"])
+    var chimney := BoxMesh.new()
+    chimney.size = Vector3(0.18, 0.48, 0.19)
+    _add_mesh(root, chimney, prop_materials["stone_dark"], Vector3(0.30, 1.29, -0.27))
+
+func _build_longhouse(root: Node3D) -> void:
+    var foundation := BoxMesh.new()
+    foundation.size = Vector3(1.58, 0.18, 1.05)
+    _add_mesh(root, foundation, prop_materials["stone"], Vector3(0.0, 0.09, 0.0))
+    var hall := BoxMesh.new()
+    hall.size = Vector3(1.43, 0.88, 0.90)
+    _add_mesh(root, hall, prop_materials["wood"], Vector3(0.0, 0.60, 0.0))
+    for z in [-0.36, 0.0, 0.36]:
+        var post := BoxMesh.new()
+        post.size = Vector3(0.10, 1.0, 0.11)
+        _add_mesh(root, post, prop_materials["wood_dark"], Vector3(-0.66, 0.60, z))
+        _add_mesh(root, post, prop_materials["wood_dark"], Vector3(0.66, 0.60, z))
+    for x in [-0.42, 0.42]:
+        var window := BoxMesh.new()
+        window.size = Vector3(0.035, 0.20, 0.17)
+        _add_mesh(root, window, prop_materials["window"], Vector3(x, 0.70, 0.47))
+    _build_gable_roof(root, 1.70, 1.22, 1.05, 1.62, prop_materials["roof_moss"])
+    var vent := CylinderMesh.new()
+    vent.top_radius = 0.16
+    vent.bottom_radius = 0.21
+    vent.height = 0.22
+    vent.radial_segments = 8
+    _add_mesh(root, vent, prop_materials["wood_dark"], Vector3(0.0, 1.73, -0.27))
+
+func _build_barn(root: Node3D) -> void:
+    var base := BoxMesh.new()
+    base.size = Vector3(1.48, 0.18, 1.16)
+    _add_mesh(root, base, prop_materials["stone_dark"], Vector3(0.0, 0.09, 0.0))
+    var body := BoxMesh.new()
+    body.size = Vector3(1.32, 1.02, 1.02)
+    _add_mesh(root, body, prop_materials["roof_red"], Vector3(0.0, 0.68, 0.0))
+    for x in [-0.59, -0.42, 0.42, 0.59]:
+        var brace := BoxMesh.new()
+        brace.size = Vector3(0.07, 1.0, 0.07)
+        _add_mesh(root, brace, prop_materials["wood_dark"], Vector3(x, 0.65, 0.52))
+    var door_left := BoxMesh.new()
+    door_left.size = Vector3(0.36, 0.75, 0.06)
+    _add_mesh(root, door_left, prop_materials["wood"], Vector3(-0.20, 0.45, 0.56))
+    _add_mesh(root, door_left, prop_materials["wood"], Vector3(0.20, 0.45, 0.56))
+    var door_brace := BoxMesh.new()
+    door_brace.size = Vector3(0.06, 0.80, 0.07)
+    for x in [-0.40, 0.0, 0.40]:
+        _add_mesh(root, door_brace, prop_materials["wood_dark"], Vector3(x, 0.45, 0.60))
+    _build_gable_roof(root, 1.68, 1.32, 1.18, 1.76, prop_materials["roof_red"])
+
+func _build_inn(root: Node3D) -> void:
+    var foundation := BoxMesh.new()
+    foundation.size = Vector3(1.38, 0.17, 1.15)
+    _add_mesh(root, foundation, prop_materials["stone"], Vector3(0.0, 0.085, 0.0))
+    var lower := BoxMesh.new()
+    lower.size = Vector3(1.18, 0.70, 0.96)
+    _add_mesh(root, lower, prop_materials["plaster"], Vector3(0.0, 0.52, 0.0))
+    var upper := BoxMesh.new()
+    upper.size = Vector3(1.03, 0.53, 0.86)
+    _add_mesh(root, upper, prop_materials["wood"], Vector3(0.0, 1.12, -0.03))
+    var balcony := BoxMesh.new()
+    balcony.size = Vector3(1.28, 0.09, 0.24)
+    _add_mesh(root, balcony, prop_materials["wood_dark"], Vector3(0.0, 0.89, 0.53))
+    for x in [-0.56, -0.28, 0.0, 0.28, 0.56]:
+        var rail_post := CylinderMesh.new()
+        rail_post.top_radius = 0.025
+        rail_post.bottom_radius = 0.035
+        rail_post.height = 0.34
+        rail_post.radial_segments = 6
+        _add_mesh(root, rail_post, prop_materials["wood_dark"], Vector3(x, 1.08, 0.62))
+    var rail := BoxMesh.new()
+    rail.size = Vector3(1.30, 0.07, 0.07)
+    _add_mesh(root, rail, prop_materials["wood_dark"], Vector3(0.0, 1.24, 0.62))
+    var door := BoxMesh.new()
+    door.size = Vector3(0.23, 0.52, 0.05)
+    _add_mesh(root, door, prop_materials["roof"], Vector3(-0.32, 0.34, 0.50))
+    _build_gable_roof(root, 1.35, 1.12, 1.42, 1.88, prop_materials["roof_red"])
+    var sign := BoxMesh.new()
+    sign.size = Vector3(0.42, 0.25, 0.07)
+    _add_mesh(root, sign, prop_materials["wood_dark"], Vector3(0.45, 1.03, 0.62))
+    var lantern := SphereMesh.new()
+    lantern.radius = 0.10
+    lantern.height = 0.20
+    _add_mesh(root, lantern, prop_materials["flame_light"], Vector3(0.50, 0.72, 0.61))
+
+func _build_smithy(root: Node3D) -> void:
+    var base := BoxMesh.new()
+    base.size = Vector3(1.30, 0.19, 1.12)
+    _add_mesh(root, base, prop_materials["stone"], Vector3(0.0, 0.095, 0.0))
+    var shop := BoxMesh.new()
+    shop.size = Vector3(1.10, 0.82, 0.92)
+    _add_mesh(root, shop, prop_materials["brick"], Vector3(-0.05, 0.56, 0.0))
+    _build_gable_roof(root, 1.38, 1.16, 0.97, 1.48, prop_materials["roof_moss"])
+    var chimney := BoxMesh.new()
+    chimney.size = Vector3(0.25, 0.80, 0.25)
+    _add_mesh(root, chimney, prop_materials["stone_dark"], Vector3(0.38, 1.31, -0.26))
+    var furnace := BoxMesh.new()
+    furnace.size = Vector3(0.40, 0.48, 0.32)
+    _add_mesh(root, furnace, prop_materials["stone_dark"], Vector3(0.62, 0.30, 0.28))
+    var fire := BoxMesh.new()
+    fire.size = Vector3(0.20, 0.20, 0.06)
+    _add_mesh(root, fire, prop_materials["flame"], Vector3(0.62, 0.34, 0.46))
+    var anvil_base := BoxMesh.new()
+    anvil_base.size = Vector3(0.22, 0.22, 0.18)
+    _add_mesh(root, anvil_base, prop_materials["metal"], Vector3(-0.46, 0.20, 0.48))
+    var anvil_top := BoxMesh.new()
+    anvil_top.size = Vector3(0.38, 0.12, 0.22)
+    _add_mesh(root, anvil_top, prop_materials["metal"], Vector3(-0.46, 0.36, 0.48))
+
+func _build_chapel(root: Node3D) -> void:
+    var foundation := BoxMesh.new()
+    foundation.size = Vector3(1.28, 0.20, 1.38)
+    _add_mesh(root, foundation, prop_materials["stone_light"], Vector3(0.0, 0.10, 0.0))
+    var nave := BoxMesh.new()
+    nave.size = Vector3(0.98, 1.02, 1.12)
+    _add_mesh(root, nave, prop_materials["plaster"], Vector3(0.0, 0.70, -0.02))
+    _build_gable_roof(root, 1.24, 1.35, 1.23, 1.80, prop_materials["roof_moss"])
+    var tower := BoxMesh.new()
+    tower.size = Vector3(0.48, 1.18, 0.50)
+    _add_mesh(root, tower, prop_materials["stone"], Vector3(0.0, 1.30, 0.52))
+    var arch := BoxMesh.new()
+    arch.size = Vector3(0.28, 0.42, 0.04)
+    _add_mesh(root, arch, prop_materials["window"], Vector3(0.0, 1.48, 0.79))
+    var spire := ConeMesh.new()
+    spire.top_radius = 0.02
+    spire.bottom_radius = 0.36
+    spire.height = 0.68
+    spire.radial_segments = 6
+    _add_mesh(root, spire, prop_materials["roof_red"], Vector3(0.0, 2.20, 0.52))
+    _add_beam(root, Vector3(0.0, 2.54, 0.52), Vector3(0.0, 2.84, 0.52), 0.035, prop_materials["metal"])
+    _add_beam(root, Vector3(-0.14, 2.70, 0.52), Vector3(0.14, 2.70, 0.52), 0.030, prop_materials["metal"])
+
+func _build_watchtower(root: Node3D) -> void:
+    var base := CylinderMesh.new()
+    base.top_radius = 0.54
+    base.bottom_radius = 0.64
+    base.height = 0.72
+    base.radial_segments = 8
+    _add_mesh(root, base, prop_materials["stone_dark"], Vector3(0.0, 0.36, 0.0))
+    var shaft := CylinderMesh.new()
+    shaft.top_radius = 0.38
+    shaft.bottom_radius = 0.48
+    shaft.height = 1.10
+    shaft.radial_segments = 8
+    _add_mesh(root, shaft, prop_materials["stone"], Vector3(0.0, 1.22, 0.0))
+    var platform := BoxMesh.new()
+    platform.size = Vector3(1.08, 0.16, 1.08)
+    _add_mesh(root, platform, prop_materials["wood_dark"], Vector3(0.0, 1.82, 0.0))
+    for x in [-0.43, 0.43]:
+        for z in [-0.43, 0.43]:
+            var post := CylinderMesh.new()
+            post.top_radius = 0.045
+            post.bottom_radius = 0.06
+            post.height = 0.64
+            post.radial_segments = 7
+            _add_mesh(root, post, prop_materials["wood"], Vector3(x, 2.18, z))
+    var roof := ConeMesh.new()
+    roof.top_radius = 0.02
+    roof.bottom_radius = 0.72
+    roof.height = 0.70
+    roof.radial_segments = 6
+    _add_mesh(root, roof, prop_materials["roof_red"], Vector3(0.0, 2.78, 0.0))
+    for x in [-0.43, 0.43]:
+        var rail := BoxMesh.new()
+        rail.size = Vector3(0.98, 0.09, 0.08)
+        _add_mesh(root, rail, prop_materials["wood_dark"], Vector3(0.0, 1.98, x))
+        rail.size = Vector3(0.08, 0.09, 0.98)
+        _add_mesh(root, rail, prop_materials["wood_dark"], Vector3(x, 1.98, 0.0))
+
+func _build_ruined_house(root: Node3D) -> void:
+    var floor := BoxMesh.new()
+    floor.size = Vector3(1.26, 0.16, 1.10)
+    _add_mesh(root, floor, prop_materials["stone_dark"], Vector3(0.0, 0.08, 0.0))
+    var wall_a := BoxMesh.new()
+    wall_a.size = Vector3(0.10, 0.94, 0.92)
+    _add_mesh(root, wall_a, prop_materials["stone"], Vector3(-0.54, 0.55, 0.0))
+    var wall_b := BoxMesh.new()
+    wall_b.size = Vector3(0.62, 0.62, 0.10)
+    _add_mesh(root, wall_b, prop_materials["stone_light"], Vector3(0.12, 0.42, -0.48))
+    var broken := BoxMesh.new()
+    broken.size = Vector3(0.50, 0.28, 0.10)
+    var broken_piece := _add_mesh(root, broken, prop_materials["stone"], Vector3(0.48, 0.77, 0.48))
+    broken_piece.rotation.z = -0.22
+    var beam := BoxMesh.new()
+    beam.size = Vector3(1.08, 0.15, 0.16)
+    var fallen := _add_mesh(root, beam, prop_materials["wood"], Vector3(0.10, 0.16, 0.04))
+    fallen.rotation.z = -0.18
+    var rubble := SphereMesh.new()
+    rubble.radial_segments = 8
+    rubble.rings = 5
+    for i in range(7):
+        _add_mesh(root, rubble, prop_materials["stone_dark"] if i % 2 == 0 else prop_materials["stone_light"], Vector3(-0.48 + float(i) * 0.16, 0.13, 0.52), Vector3(0.18, 0.13, 0.20))
+
+func _build_stone_wall(root: Node3D) -> void:
+    var footing := BoxMesh.new()
+    footing.size = Vector3(1.72, 0.20, 0.32)
+    _add_mesh(root, footing, prop_materials["stone_dark"], Vector3(0.0, 0.10, 0.0))
+    var block := BoxMesh.new()
+    block.size = Vector3(0.22, 0.46, 0.36)
+    for i in range(8):
+        var x := -0.77 + float(i) * 0.22
+        var material: Material = prop_materials["stone"] if i % 3 != 0 else prop_materials["stone_light"]
+        _add_mesh(root, block, material, Vector3(x, 0.43, 0.0), Vector3(1.0, 0.88 + float(i % 3) * 0.07, 1.0))
+    var cap := BoxMesh.new()
+    cap.size = Vector3(1.76, 0.15, 0.42)
+    _add_mesh(root, cap, prop_materials["stone_light"], Vector3(0.0, 0.75, 0.0))
+
+func _build_palisade_wall(root: Node3D) -> void:
+    var post := CylinderMesh.new()
+    post.top_radius = 0.015
+    post.bottom_radius = 0.095
+    post.height = 1.12
+    post.radial_segments = 7
+    for i in range(9):
+        var x := -0.78 + float(i) * 0.195
+        _add_mesh(root, post, prop_materials["wood"], Vector3(x, 0.52, 0.0), Vector3(1.0, 1.0, 0.88))
+    for y in [0.28, 0.67]:
+        _add_beam(root, Vector3(-0.86, y, -0.10), Vector3(0.86, y, -0.10), 0.055, prop_materials["wood_dark"])
+
+func _build_wooden_gate(root: Node3D) -> void:
+    for x in [-0.79, 0.79]:
+        var post := CylinderMesh.new()
+        post.top_radius = 0.08
+        post.bottom_radius = 0.12
+        post.height = 1.48
+        post.radial_segments = 8
+        _add_mesh(root, post, prop_materials["wood_dark"], Vector3(x, 0.72, 0.0))
+    for z in [-0.10, 0.10]:
+        var gate := BoxMesh.new()
+        gate.size = Vector3(1.45, 0.90, 0.10)
+        _add_mesh(root, gate, prop_materials["wood"], Vector3(0.0, 0.57, z))
+    for x in [-0.62, -0.31, 0.0, 0.31, 0.62]:
+        var brace := BoxMesh.new()
+        brace.size = Vector3(0.07, 0.92, 0.13)
+        _add_mesh(root, brace, prop_materials["wood_dark"], Vector3(x, 0.57, 0.18))
+    _add_beam(root, Vector3(-0.76, 0.12, 0.22), Vector3(0.76, 1.00, 0.22), 0.045, prop_materials["wood_dark"])
+    _add_beam(root, Vector3(0.76, 0.12, 0.22), Vector3(-0.76, 1.00, 0.22), 0.045, prop_materials["wood_dark"])
+
+func _build_stone_gate(root: Node3D) -> void:
+    for x in [-0.78, 0.78]:
+        var pillar := BoxMesh.new()
+        pillar.size = Vector3(0.36, 1.50, 0.48)
+        _add_mesh(root, pillar, prop_materials["stone"], Vector3(x, 0.75, 0.0))
+        var cap := BoxMesh.new()
+        cap.size = Vector3(0.46, 0.16, 0.56)
+        _add_mesh(root, cap, prop_materials["stone_light"], Vector3(x, 1.56, 0.0))
+    var lintel := BoxMesh.new()
+    lintel.size = Vector3(1.45, 0.28, 0.46)
+    _add_mesh(root, lintel, prop_materials["stone_dark"], Vector3(0.0, 1.44, 0.0))
+    for x in [-0.34, -0.11, 0.11, 0.34]:
+        var bar := BoxMesh.new()
+        bar.size = Vector3(0.08, 1.02, 0.12)
+        _add_mesh(root, bar, prop_materials["wood_dark"], Vector3(x, 0.53, 0.20))
+    _add_beam(root, Vector3(-0.40, 0.12, 0.28), Vector3(0.40, 0.90, 0.28), 0.04, prop_materials["wood"])
 
 func _build_house(root: Node3D) -> void:
     var foundation := BoxMesh.new()
