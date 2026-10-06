@@ -14,6 +14,18 @@ const PROP_STONE_ALBEDO := preload("res://assets/props/materials/masonry.jpg")
 const PROP_PLASTER_ALBEDO := preload("res://assets/props/materials/aged_plaster.jpg")
 const PROP_ROOF_ALBEDO := preload("res://assets/props/materials/clay_roof.jpg")
 const PROP_THATCH_ALBEDO := preload("res://assets/props/materials/thatch.jpg")
+const PROP_WEATHERED_WOOD_NORMAL := preload("res://assets/props/materials/weathered_wood_normal.jpg")
+const PROP_WEATHERED_WOOD_ROUGHNESS := preload("res://assets/props/materials/weathered_wood_roughness.jpg")
+const PROP_BARK_NORMAL := preload("res://assets/props/materials/bark_normal.jpg")
+const PROP_BARK_ROUGHNESS := preload("res://assets/props/materials/bark_roughness.jpg")
+const PROP_MASONRY_NORMAL := preload("res://assets/props/materials/masonry_normal.jpg")
+const PROP_MASONRY_ROUGHNESS := preload("res://assets/props/materials/masonry_roughness.jpg")
+const PROP_AGED_PLASTER_NORMAL := preload("res://assets/props/materials/aged_plaster_normal.jpg")
+const PROP_AGED_PLASTER_ROUGHNESS := preload("res://assets/props/materials/aged_plaster_roughness.jpg")
+const PROP_CLAY_ROOF_NORMAL := preload("res://assets/props/materials/clay_roof_normal.jpg")
+const PROP_CLAY_ROOF_ROUGHNESS := preload("res://assets/props/materials/clay_roof_roughness.jpg")
+const PROP_THATCH_NORMAL := preload("res://assets/props/materials/thatch_normal.jpg")
+const PROP_THATCH_ROUGHNESS := preload("res://assets/props/materials/thatch_roughness.jpg")
 const BOARD_DIR := "user://boards/"
 const ACTIVE_PATH := "user://boards/active_board.board.json"
 const HEX_RADIUS := 1.0
@@ -179,23 +191,27 @@ func _create_materials() -> void:
     prop_materials["flower_gold"] = _standard_material(Color("f2c951"), 0.55)
     prop_materials["mushroom"] = _standard_material(Color("bd5546"), 0.56)
     prop_materials["mushroom_light"] = _standard_material(Color("e7d9b5"), 0.65)
-    _apply_prop_texture(["wood", "wood_dark", "bark_light"], PROP_WOOD_ALBEDO, Color("e8d8bd"), Vector3(1.7, 1.7, 1.7))
-    _apply_prop_texture(["bark"], PROP_BARK_ALBEDO, Color("d9c7a8"), Vector3(2.2, 2.2, 2.2))
-    _apply_prop_texture(["stone", "stone_light", "stone_dark", "brick"], PROP_STONE_ALBEDO, Color("ded9ca"), Vector3(1.9, 1.9, 1.9))
-    _apply_prop_texture(["wall", "plaster", "plaster_light"], PROP_PLASTER_ALBEDO, Color("eee2c8"), Vector3(1.6, 1.6, 1.6))
-    _apply_prop_texture(["roof", "roof_red", "roof_moss"], PROP_ROOF_ALBEDO, Color("e1d0ba"), Vector3(1.8, 1.8, 1.8))
-    _apply_prop_texture(["thatch"], PROP_THATCH_ALBEDO, Color("e8d4a7"), Vector3(2.0, 2.0, 2.0))
+    _apply_prop_texture(["wood", "wood_dark", "bark_light"], PROP_WOOD_ALBEDO, Color("e8d8bd"), Vector3(1.7, 1.7, 1.7), PROP_WEATHERED_WOOD_NORMAL, PROP_WEATHERED_WOOD_ROUGHNESS, 0.32)
+    _apply_prop_texture(["bark"], PROP_BARK_ALBEDO, Color("d9c7a8"), Vector3(2.2, 2.2, 2.2), PROP_BARK_NORMAL, PROP_BARK_ROUGHNESS, 0.40)
+    _apply_prop_texture(["stone", "stone_light", "stone_dark", "brick"], PROP_STONE_ALBEDO, Color("ded9ca"), Vector3(1.9, 1.9, 1.9), PROP_MASONRY_NORMAL, PROP_MASONRY_ROUGHNESS, 0.30)
+    _apply_prop_texture(["wall", "plaster", "plaster_light"], PROP_PLASTER_ALBEDO, Color("eee2c8"), Vector3(1.6, 1.6, 1.6), PROP_AGED_PLASTER_NORMAL, PROP_AGED_PLASTER_ROUGHNESS, 0.24)
+    _apply_prop_texture(["roof", "roof_red", "roof_moss"], PROP_ROOF_ALBEDO, Color("e1d0ba"), Vector3(1.8, 1.8, 1.8), PROP_CLAY_ROOF_NORMAL, PROP_CLAY_ROOF_ROUGHNESS, 0.30)
+    _apply_prop_texture(["thatch"], PROP_THATCH_ALBEDO, Color("e8d4a7"), Vector3(2.0, 2.0, 2.0), PROP_THATCH_NORMAL, PROP_THATCH_ROUGHNESS, 0.34)
     selection_marker_material = _standard_material(Color("ffd16b"), 0.35)
     selection_marker_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     selection_marker_material.emission_enabled = true
     selection_marker_material.emission = Color("e6a53c")
     selection_marker_material.emission_energy_multiplier = 1.3
 
-func _apply_prop_texture(material_keys: Array, texture: Texture2D, tint: Color, texture_scale: Vector3) -> void:
+func _apply_prop_texture(material_keys: Array, texture: Texture2D, tint: Color, texture_scale: Vector3, normal_map: Texture2D, roughness_map: Texture2D, normal_strength: float) -> void:
     for material_key in material_keys:
         var material: StandardMaterial3D = prop_materials[material_key]
         material.albedo_texture = texture
         material.albedo_color = tint
+        material.normal_texture = normal_map
+        material.normal_enabled = true
+        material.normal_scale = normal_strength
+        material.roughness_texture = roughness_map
         material.uv1_triplanar = true
         material.uv1_triplanar_sharpness = 8.0
         material.uv1_scale = texture_scale
@@ -928,36 +944,83 @@ func _add_mesh(parent: Node3D, mesh: Mesh, material: Material, position: Vector3
 
 func _build_tree(root: Node3D, pine: bool) -> void:
     var trunk := CylinderMesh.new()
-    trunk.top_radius = 0.09 if not pine else 0.06
-    trunk.bottom_radius = 0.16 if not pine else 0.11
-    trunk.height = 1.45 if not pine else 1.9
-    trunk.radial_segments = 12
+    trunk.top_radius = 0.085 if not pine else 0.055
+    trunk.bottom_radius = 0.17 if not pine else 0.105
+    trunk.height = 1.52 if not pine else 1.92
+    trunk.radial_segments = 16
     _add_mesh(root, trunk, prop_materials["bark"], Vector3(0.0, trunk.height * 0.5, 0.0))
+    for root_index in range(5 if not pine else 3):
+        var root_angle := TAU * float(root_index) / float(5 if not pine else 3) + 0.18
+        var root_tip := Vector3(cos(root_angle) * 0.35, 0.045, sin(root_angle) * 0.35)
+        _add_beam(root, Vector3(0.0, 0.16, 0.0), root_tip, 0.065 if not pine else 0.038, prop_materials["bark"])
     if pine:
-        for index in range(4):
+        for index in range(5):
             var cone := CylinderMesh.new()
-            cone.top_radius = 0.0
-            cone.bottom_radius = 0.62 - float(index) * 0.1
-            cone.height = 0.68
-            cone.radial_segments = 14
-            _add_mesh(root, cone, prop_materials["leaf_dark"] if index % 2 == 0 else prop_materials["leaf_mid"], Vector3(0.0, 0.75 + float(index) * 0.34, 0.0))
+            cone.top_radius = 0.025
+            cone.bottom_radius = 0.66 - float(index) * 0.10
+            cone.height = 0.72
+            cone.radial_segments = 18
+            var cone_y := 0.72 + float(index) * 0.31
+            var cone_offset := Vector3(sin(float(index) * 1.7) * 0.025, 0.0, cos(float(index) * 1.3) * 0.025)
+            var needles: Material = prop_materials["leaf_dark"] if index % 2 == 0 else prop_materials["leaf_mid"]
+            _add_mesh(root, cone, needles, Vector3(0.0, cone_y, 0.0) + cone_offset)
         return
-    for branch_index in range(5):
-        var angle := float(branch_index) * TAU / 5.0
-        var start := Vector3(0.0, 0.65 + float(branch_index % 3) * 0.22, 0.0)
-        var finish := Vector3(cos(angle) * 0.48, start.y + 0.43, sin(angle) * 0.48)
-        _add_beam(root, start, finish, 0.055, prop_materials["bark_light"])
+    for branch_index in range(7):
+        var angle := float(branch_index) * TAU / 7.0 + 0.23
+        var branch_y := 0.62 + float(branch_index % 3) * 0.20
+        var start := Vector3(0.0, branch_y, 0.0)
+        var finish := Vector3(cos(angle) * (0.48 + float(branch_index % 2) * 0.06), branch_y + 0.42, sin(angle) * (0.48 + float(branch_index % 2) * 0.06))
+        _add_beam(root, start, finish, 0.052, prop_materials["bark_light"])
     var foliage := SphereMesh.new()
-    foliage.radial_segments = 18
-    foliage.rings = 12
-    for index in range(9):
-        var angle := float(index) * TAU / 8.0
-        var layer := float(index % 3)
-        var center := Vector3(cos(angle) * 0.42, 1.55 + layer * 0.18, sin(angle) * 0.42)
-        var size := 0.43 if index % 3 == 0 else 0.34
-        var foliage_material: Material = prop_materials["leaf_mid"] if index % 3 == 0 else (prop_materials["leaf_light"] if index % 2 == 0 else prop_materials["leaf_dark"])
-        _add_mesh(root, foliage, foliage_material, center, Vector3(size, size * 0.88, size))
-    _add_mesh(root, foliage, prop_materials["leaf_mid"], Vector3(0.0, 1.85, 0.0), Vector3(0.43, 0.42, 0.43))
+    foliage.radial_segments = 24
+    foliage.rings = 16
+    for index in range(13):
+        var angle := float(index) * 2.399963 + 0.31
+        var layer := float(index % 4)
+        var radius := 0.30 + float((index * 37) % 6) * 0.045
+        var center := Vector3(cos(angle) * radius, 1.53 + layer * 0.15 + sin(float(index) * 1.7) * 0.07, sin(angle) * radius)
+        var size := 0.32 + float(index % 4) * 0.035
+        var foliage_material: Material = prop_materials["leaf_mid"] if index % 4 == 0 else (prop_materials["leaf_light"] if index % 3 == 0 else prop_materials["leaf_dark"])
+        _add_mesh(root, foliage, foliage_material, center, Vector3(size, size * (0.76 + float(index % 3) * 0.05), size * (0.88 + float((index + 1) % 3) * 0.05)))
+    _add_mesh(root, foliage, prop_materials["leaf_mid"], Vector3(0.0, 1.82, 0.0), Vector3(0.48, 0.40, 0.46))
+
+func _build_gable_end(root: Node3D, width: float, depth: float, eaves_y: float, ridge_y: float, material: Material) -> void:
+    var half_span := width * 0.5
+    var face_z := depth * 0.5 + 0.012
+    var surface := SurfaceTool.new()
+    surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+    surface.add_vertex(Vector3(-half_span, eaves_y, face_z))
+    surface.add_vertex(Vector3(half_span, eaves_y, face_z))
+    surface.add_vertex(Vector3(0.0, ridge_y, face_z))
+    surface.add_vertex(Vector3(half_span, eaves_y, -face_z))
+    surface.add_vertex(Vector3(-half_span, eaves_y, -face_z))
+    surface.add_vertex(Vector3(0.0, ridge_y, -face_z))
+    surface.generate_normals()
+    var gable_mesh := surface.commit()
+    _add_mesh(root, gable_mesh, material, Vector3.ZERO)
+
+func _add_window_frame(root: Node3D, center: Vector3, width: float, height: float, face_z: float) -> void:
+    var wood := prop_materials["wood_dark"]
+    var jamb := BoxMesh.new()
+    jamb.size = Vector3(0.055, height + 0.10, 0.06)
+    for side in [-1.0, 1.0]:
+        _add_mesh(root, jamb, wood, Vector3(center.x + side * (width * 0.5 + 0.025), center.y, face_z))
+    var lintel := BoxMesh.new()
+    lintel.size = Vector3(width + 0.12, 0.055, 0.065)
+    _add_mesh(root, lintel, wood, Vector3(center.x, center.y + height * 0.5 + 0.035, face_z))
+    var sill := BoxMesh.new()
+    sill.size = Vector3(width + 0.16, 0.07, 0.11)
+    _add_mesh(root, sill, wood, Vector3(center.x, center.y - height * 0.5 - 0.04, face_z + 0.015))
+    var mullion := BoxMesh.new()
+    mullion.size = Vector3(0.028, height - 0.025, 0.03)
+    _add_mesh(root, mullion, wood, Vector3(center.x, center.y, face_z + 0.035))
+    var crossbar := BoxMesh.new()
+    crossbar.size = Vector3(width - 0.025, 0.028, 0.03)
+    _add_mesh(root, crossbar, wood, Vector3(center.x, center.y, face_z + 0.035))
+    var shutter := BoxMesh.new()
+    shutter.size = Vector3(0.055, height + 0.01, 0.045)
+    for side in [-1.0, 1.0]:
+        _add_mesh(root, shutter, prop_materials["wood"], Vector3(center.x + side * (width * 0.5 + 0.085), center.y, face_z - 0.008))
 
 func _build_gable_roof(root: Node3D, width: float, depth: float, eaves_y: float, ridge_y: float, material: Material) -> void:
     var half_span := width * 0.5
@@ -974,6 +1037,15 @@ func _build_gable_roof(root: Node3D, width: float, depth: float, eaves_y: float,
     var ridge_cap := BoxMesh.new()
     ridge_cap.size = Vector3(0.15, 0.12, depth + 0.20)
     _add_mesh(root, ridge_cap, material, Vector3(0.0, ridge_y, 0.0))
+    var fascia := BoxMesh.new()
+    fascia.size = Vector3(0.075, 0.12, depth + 0.15)
+    for side in [-1.0, 1.0]:
+        _add_mesh(root, fascia, prop_materials["wood_dark"], Vector3(side * (half_span + 0.01), eaves_y - 0.015, 0.0))
+        for end_sign in [-1.0, 1.0]:
+            var end_z := end_sign * (depth * 0.5 + 0.055)
+            var eave_point := Vector3(side * half_span, eaves_y, end_z)
+            var ridge_point := Vector3(0.0, ridge_y, end_z)
+            _add_beam(root, eave_point, ridge_point, 0.032, prop_materials["wood_dark"])
 
 func _build_cottage(root: Node3D) -> void:
     var base := BoxMesh.new()
@@ -990,13 +1062,28 @@ func _build_cottage(root: Node3D) -> void:
     var door := BoxMesh.new()
     door.size = Vector3(0.24, 0.50, 0.045)
     _add_mesh(root, door, prop_materials["wood"], Vector3(-0.22, 0.34, 0.45))
+    var door_frame := BoxMesh.new()
+    door_frame.size = Vector3(0.055, 0.56, 0.065)
+    _add_mesh(root, door_frame, prop_materials["wood_dark"], Vector3(-0.385, 0.35, 0.485))
+    _add_mesh(root, door_frame, prop_materials["wood_dark"], Vector3(-0.055, 0.35, 0.485))
+    var door_lintel := BoxMesh.new()
+    door_lintel.size = Vector3(0.38, 0.06, 0.07)
+    _add_mesh(root, door_lintel, prop_materials["wood_dark"], Vector3(-0.22, 0.65, 0.485))
+    var step := BoxMesh.new()
+    step.size = Vector3(0.42, 0.08, 0.20)
+    _add_mesh(root, step, prop_materials["stone"], Vector3(-0.22, 0.15, 0.54))
     var window := BoxMesh.new()
     window.size = Vector3(0.18, 0.20, 0.045)
     _add_mesh(root, window, prop_materials["window"], Vector3(0.20, 0.63, 0.45))
+    _add_window_frame(root, Vector3(0.20, 0.63, 0.45), 0.18, 0.20, 0.49)
+    _build_gable_end(root, 0.98, 0.86, 0.93, 1.42, prop_materials["plaster_light"])
     _build_gable_roof(root, 1.18, 1.10, 0.96, 1.42, prop_materials["thatch"])
     var chimney := BoxMesh.new()
     chimney.size = Vector3(0.18, 0.48, 0.19)
     _add_mesh(root, chimney, prop_materials["stone_dark"], Vector3(0.30, 1.29, -0.27))
+    var chimney_cap := BoxMesh.new()
+    chimney_cap.size = Vector3(0.24, 0.07, 0.25)
+    _add_mesh(root, chimney_cap, prop_materials["stone_light"], Vector3(0.30, 1.55, -0.27))
 
 func _build_longhouse(root: Node3D) -> void:
     var foundation := BoxMesh.new()
@@ -1014,6 +1101,7 @@ func _build_longhouse(root: Node3D) -> void:
         var window := BoxMesh.new()
         window.size = Vector3(0.035, 0.20, 0.17)
         _add_mesh(root, window, prop_materials["window"], Vector3(x, 0.70, 0.47))
+    _build_gable_end(root, 1.43, 0.88, 0.90, 1.62, prop_materials["wood"])
     _build_gable_roof(root, 1.70, 1.22, 1.05, 1.62, prop_materials["roof_moss"])
     var vent := CylinderMesh.new()
     vent.top_radius = 0.16
@@ -1028,19 +1116,26 @@ func _build_barn(root: Node3D) -> void:
     _add_mesh(root, base, prop_materials["stone_dark"], Vector3(0.0, 0.09, 0.0))
     var body := BoxMesh.new()
     body.size = Vector3(1.32, 1.02, 1.02)
-    _add_mesh(root, body, prop_materials["roof_red"], Vector3(0.0, 0.68, 0.0))
+    _add_mesh(root, body, prop_materials["wood"], Vector3(0.0, 0.68, 0.0))
     for x in [-0.59, -0.42, 0.42, 0.59]:
         var brace := BoxMesh.new()
         brace.size = Vector3(0.07, 1.0, 0.07)
         _add_mesh(root, brace, prop_materials["wood_dark"], Vector3(x, 0.65, 0.52))
     var door_left := BoxMesh.new()
     door_left.size = Vector3(0.36, 0.75, 0.06)
-    _add_mesh(root, door_left, prop_materials["wood"], Vector3(-0.20, 0.45, 0.56))
-    _add_mesh(root, door_left, prop_materials["wood"], Vector3(0.20, 0.45, 0.56))
-    var door_brace := BoxMesh.new()
-    door_brace.size = Vector3(0.06, 0.80, 0.07)
-    for x in [-0.40, 0.0, 0.40]:
-        _add_mesh(root, door_brace, prop_materials["wood_dark"], Vector3(x, 0.45, 0.60))
+    _add_mesh(root, door_left, prop_materials["wood_dark"], Vector3(-0.20, 0.45, 0.56))
+    _add_mesh(root, door_left, prop_materials["wood_dark"], Vector3(0.20, 0.45, 0.56))
+    var door_plank := BoxMesh.new()
+    door_plank.size = Vector3(0.055, 0.70, 0.025)
+    for x in [-0.40, -0.20, 0.0, 0.20, 0.40]:
+        _add_mesh(root, door_plank, prop_materials["wood"], Vector3(x, 0.45, 0.595))
+    _add_beam(root, Vector3(-0.36, 0.12, 0.62), Vector3(0.36, 0.78, 0.62), 0.035, prop_materials["wood_dark"])
+    _add_beam(root, Vector3(0.0, 0.45, 0.635), Vector3(0.0, 0.45, 0.70), 0.022, prop_materials["metal"])
+    var loft_opening := BoxMesh.new()
+    loft_opening.size = Vector3(0.30, 0.15, 0.04)
+    _add_mesh(root, loft_opening, prop_materials["window"], Vector3(0.0, 1.04, 0.54))
+    _add_window_frame(root, Vector3(0.0, 1.04, 0.54), 0.30, 0.15, 0.565)
+    _build_gable_end(root, 1.32, 1.02, 1.19, 1.76, prop_materials["wood"])
     _build_gable_roof(root, 1.68, 1.32, 1.18, 1.76, prop_materials["roof_red"])
 
 func _build_inn(root: Node3D) -> void:
@@ -1069,6 +1164,7 @@ func _build_inn(root: Node3D) -> void:
     var door := BoxMesh.new()
     door.size = Vector3(0.23, 0.52, 0.05)
     _add_mesh(root, door, prop_materials["roof"], Vector3(-0.32, 0.34, 0.50))
+    _build_gable_end(root, 1.03, 0.70, 0.96, 1.88, prop_materials["plaster"])
     _build_gable_roof(root, 1.35, 1.12, 1.42, 1.88, prop_materials["roof_red"])
     var sign := BoxMesh.new()
     sign.size = Vector3(0.42, 0.25, 0.07)
@@ -1085,6 +1181,7 @@ func _build_smithy(root: Node3D) -> void:
     var shop := BoxMesh.new()
     shop.size = Vector3(1.10, 0.82, 0.92)
     _add_mesh(root, shop, prop_materials["brick"], Vector3(-0.05, 0.56, 0.0))
+    _build_gable_end(root, 1.10, 0.82, 0.92, 1.48, prop_materials["brick"])
     _build_gable_roof(root, 1.38, 1.16, 0.97, 1.48, prop_materials["roof_moss"])
     var chimney := BoxMesh.new()
     chimney.size = Vector3(0.25, 0.80, 0.25)
@@ -1109,6 +1206,7 @@ func _build_chapel(root: Node3D) -> void:
     var nave := BoxMesh.new()
     nave.size = Vector3(0.98, 1.02, 1.12)
     _add_mesh(root, nave, prop_materials["plaster"], Vector3(0.0, 0.70, -0.02))
+    _build_gable_end(root, 0.98, 1.02, 1.12, 1.80, prop_materials["plaster"])
     _build_gable_roof(root, 1.24, 1.35, 1.23, 1.80, prop_materials["roof_moss"])
     var tower := BoxMesh.new()
     tower.size = Vector3(0.48, 1.18, 0.50)
@@ -1262,27 +1360,46 @@ func _build_house(root: Node3D) -> void:
     var front_door := BoxMesh.new()
     front_door.size = Vector3(0.22, 0.48, 0.035)
     _add_mesh(root, front_door, prop_materials["roof"], Vector3(0.0, 0.34, 0.38))
+    var door_frame := BoxMesh.new()
+    door_frame.size = Vector3(0.055, 0.56, 0.06)
+    _add_mesh(root, door_frame, prop_materials["wood_dark"], Vector3(-0.145, 0.35, 0.41))
+    _add_mesh(root, door_frame, prop_materials["wood_dark"], Vector3(0.145, 0.35, 0.41))
     var window := BoxMesh.new()
     window.size = Vector3(0.17, 0.18, 0.035)
     _add_mesh(root, window, prop_materials["window"], Vector3(-0.24, 0.62, 0.38))
     _add_mesh(root, window, prop_materials["window"], Vector3(0.24, 0.62, 0.38))
+    _add_window_frame(root, Vector3(-0.24, 0.62, 0.38), 0.17, 0.18, 0.42)
+    _add_window_frame(root, Vector3(0.24, 0.62, 0.38), 0.17, 0.18, 0.42)
+    _build_gable_end(root, 0.82, 0.72, 0.88, 1.38, prop_materials["wall"])
     _build_gable_roof(root, 1.08, 1.02, 0.90, 1.38, prop_materials["roof"])
     var chimney := BoxMesh.new()
     chimney.size = Vector3(0.16, 0.52, 0.18)
     _add_mesh(root, chimney, prop_materials["stone"], Vector3(0.24, 1.08, -0.24))
+    var chimney_cap := BoxMesh.new()
+    chimney_cap.size = Vector3(0.23, 0.07, 0.25)
+    _add_mesh(root, chimney_cap, prop_materials["stone_light"], Vector3(0.24, 1.36, -0.24))
 
 func _build_fence(root: Node3D) -> void:
     for x in [-0.86, 0.0, 0.86]:
         var post := CylinderMesh.new()
-        post.top_radius = 0.055
-        post.bottom_radius = 0.075
-        post.height = 0.88
-        post.radial_segments = 8
-        _add_mesh(root, post, prop_materials["wood"], Vector3(x, 0.44, 0.0))
-    for y in [0.28, 0.62]:
+        post.top_radius = 0.045
+        post.bottom_radius = 0.085
+        post.height = 0.90
+        post.radial_segments = 10
+        _add_mesh(root, post, prop_materials["wood_dark"], Vector3(x, 0.45, 0.0))
+        var cap := SphereMesh.new()
+        cap.radial_segments = 8
+        cap.rings = 5
+        _add_mesh(root, cap, prop_materials["bark_light"], Vector3(x, 0.91, 0.0), Vector3(0.075, 0.045, 0.075))
+    for y in [0.25, 0.65]:
         var rail := BoxMesh.new()
-        rail.size = Vector3(1.76, 0.11, 0.12)
-        _add_mesh(root, rail, prop_materials["bark_light"], Vector3(0.0, y, 0.0))
+        rail.size = Vector3(1.76, 0.10, 0.13)
+        _add_mesh(root, rail, prop_materials["wood"], Vector3(0.0, y, 0.0))
+    for index in range(5):
+        var x := -0.62 + float(index) * 0.31
+        var picket := BoxMesh.new()
+        picket.size = Vector3(0.09, 0.40 + float(index % 2) * 0.08, 0.075)
+        _add_mesh(root, picket, prop_materials["bark_light"], Vector3(x, 0.45, 0.0))
 
 func _build_rock(root: Node3D) -> void:
     var boulder := SphereMesh.new()
@@ -1405,25 +1522,57 @@ func _build_signpost(root: Node3D) -> void:
     _add_mesh(root, lower_board, prop_materials["wood"], Vector3(-0.16, 0.82, 0.0))
 
 func _build_well(root: Node3D) -> void:
-    var ring := TorusMesh.new()
-    ring.inner_radius = 0.38
-    ring.outer_radius = 0.50
-    ring.rings = 10
-    ring.ring_segments = 16
-    var well_stone_ring := _add_mesh(root, ring, prop_materials["stone"], Vector3(0.0, 0.40, 0.0))
-    well_stone_ring.rotation.x = PI * 0.5
+    for course in range(2):
+        for index in range(12):
+            var angle := TAU * (float(index) + float(course % 2) * 0.5) / 12.0
+            var block := BoxMesh.new()
+            block.size = Vector3(0.235, 0.18, 0.20)
+            var radius := 0.395 + float((index + course) % 3) * 0.008
+            var material_key := "stone_light" if (index + course) % 5 == 0 else ("stone_dark" if (index + course) % 7 == 0 else "stone")
+            var stone := _add_mesh(root, block, prop_materials[material_key], Vector3(cos(angle) * radius, 0.10 + float(course) * 0.17, sin(angle) * radius))
+            stone.rotation.y = angle + PI * 0.5 + float(index % 3 - 1) * 0.025
+    var rim_block := BoxMesh.new()
+    rim_block.size = Vector3(0.24, 0.12, 0.22)
+    for index in range(12):
+        var angle := TAU * (float(index) + 0.25) / 12.0
+        var capstone := _add_mesh(root, rim_block, prop_materials["stone_light"], Vector3(cos(angle) * 0.40, 0.34, sin(angle) * 0.40))
+        capstone.rotation.y = angle + PI * 0.5
     var water := CylinderMesh.new()
-    water.top_radius = 0.36
-    water.bottom_radius = 0.36
-    water.height = 0.04
-    _add_mesh(root, water, prop_materials["water"], Vector3(0.0, 0.31, 0.0))
+    water.top_radius = 0.30
+    water.bottom_radius = 0.30
+    water.height = 0.035
+    _add_mesh(root, water, prop_materials["water"], Vector3(0.0, 0.22, 0.0))
     for x in [-0.42, 0.42]:
         var post := CylinderMesh.new()
         post.top_radius = 0.045
-        post.bottom_radius = 0.06
+        post.bottom_radius = 0.065
         post.height = 0.82
-        post.radial_segments = 8
-        _add_mesh(root, post, prop_materials["wood"], Vector3(x, 0.78, 0.0))
+        post.radial_segments = 10
+        _add_mesh(root, post, prop_materials["wood_dark"], Vector3(x, 0.78, 0.0))
+    var axle := CylinderMesh.new()
+    axle.top_radius = 0.055
+    axle.bottom_radius = 0.055
+    axle.height = 0.76
+    axle.radial_segments = 10
+    var windlass := _add_mesh(root, axle, prop_materials["wood"], Vector3(0.0, 0.98, 0.0))
+    windlass.rotation.z = PI * 0.5
+    var rope := CylinderMesh.new()
+    rope.top_radius = 0.018
+    rope.bottom_radius = 0.018
+    rope.height = 0.47
+    rope.radial_segments = 6
+    _add_mesh(root, rope, prop_materials["bark_light"], Vector3(0.0, 0.71, 0.0))
+    var crank_arm := BoxMesh.new()
+    crank_arm.size = Vector3(0.07, 0.27, 0.07)
+    var crank := _add_mesh(root, crank_arm, prop_materials["wood_dark"], Vector3(-0.43, 0.97, 0.0))
+    crank.rotation.z = -0.32
+    var crank_handle := CylinderMesh.new()
+    crank_handle.top_radius = 0.035
+    crank_handle.bottom_radius = 0.035
+    crank_handle.height = 0.20
+    crank_handle.radial_segments = 8
+    var handle := _add_mesh(root, crank_handle, prop_materials["wood"], Vector3(-0.50, 0.85, 0.0))
+    handle.rotation.z = PI * 0.5
     _build_gable_roof(root, 1.18, 0.78, 1.20, 1.52, prop_materials["roof"])
 
 func _build_ruins(root: Node3D) -> void:
