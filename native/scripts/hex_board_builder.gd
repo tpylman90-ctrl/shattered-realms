@@ -986,33 +986,6 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
 
 
 
-func _cliff_noise_at(local_pos: Vector3, center_world: Vector3, tile_height: float) -> float:
-    var world_pos := Vector3(center_world.x + local_pos.x, tile_height + local_pos.y, center_world.z + local_pos.z)
-    return _cliff_noise.get_noise_3d(world_pos.x * 1.8, world_pos.y * 1.2, world_pos.z * 1.8)
-
-func _displace_cliff_vertex(local_pos: Vector3, face_normal: Vector3, center_world: Vector3, tile_height: float, wall_bottom_y: float, wall_height: float) -> Vector3:
-    var height_ratio := clampf((local_pos.y - wall_bottom_y) / maxf(wall_height, 0.01), 0.0, 1.0)
-    var edge_fade := sin(height_ratio * PI)
-    if edge_fade <= 0.001:
-        return local_pos
-    var noise_value := _cliff_noise_at(local_pos, center_world, tile_height)
-    var radial_offset := noise_value * 0.16 * edge_fade
-    var vertical_offset := signf(noise_value) * noise_value * noise_value * 0.07 * edge_fade
-    return local_pos + face_normal * radial_offset + Vector3.UP * vertical_offset
-
-
-func _cliff_surface_point(top_a: Vector3, top_b: Vector3, base_y: float, across: float, height_ratio: float) -> Vector3:
-    var point := top_a.lerp(top_b, across)
-    point.y = lerpf(base_y, point.y, height_ratio)
-    return point
-
-func _add_cliff_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, tint: Color) -> void:
-    surface.set_color(tint)
-    surface.add_vertex(a)
-    surface.add_vertex(b)
-    surface.add_vertex(c)
-
-
 func _make_prop(kind: String) -> Node3D:
     var root := Node3D.new()
     root.name = kind.capitalize()
