@@ -1010,7 +1010,26 @@ func _build_terrain_dressing(tile: Node3D, terrain: String, q: int, r: int) -> v
         var width := rng.randf_range(0.72, 1.22)
         var basis := Basis(Vector3.UP, rng.randf_range(0.0, TAU)).scaled(Vector3(width, height, width))
         grass_batch.set_instance_transform(index, Transform3D(basis, position))
-        grass_batch.set_instance_color(index, Color.from_hsv(rng.randf_range(0.20, 0.28), 0.18, rng.randf_range(0.82, 1.0)))
+        var blade_tint: Color
+        if terrain == "woodland":
+            blade_tint = Color.from_hsv(
+                rng.randf_range(0.28, 0.34),
+                rng.randf_range(0.36, 0.48),
+                rng.randf_range(0.78, 0.92)
+            )
+        elif terrain == "marsh":
+            blade_tint = Color.from_hsv(
+                rng.randf_range(0.19, 0.24),
+                rng.randf_range(0.26, 0.40),
+                rng.randf_range(0.82, 0.95)
+            )
+        else:
+            blade_tint = Color.from_hsv(
+                rng.randf_range(0.20, 0.28),
+                rng.randf_range(0.20, 0.30),
+                rng.randf_range(0.88, 1.0)
+            )
+        grass_batch.set_instance_color(index, blade_tint)
     var grass_instance := MultiMeshInstance3D.new()
     grass_instance.name = "MeadowGrass"
     grass_instance.multimesh = grass_batch
