@@ -986,15 +986,6 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
 
 
 
-func _init_cliff_noise() -> void:
-    if _cliff_noise != null:
-        return
-    _cliff_noise = FastNoiseLite.new()
-    _cliff_noise.seed = 1337
-    _cliff_noise.frequency = 0.12
-    _cliff_noise.fractal_type = FastNoiseLite.FRACTAL_FBM
-    _cliff_noise.fractal_octaves = 3
-
 func _cliff_noise_at(local_pos: Vector3, center_world: Vector3, tile_height: float) -> float:
     var world_pos := Vector3(center_world.x + local_pos.x, tile_height + local_pos.y, center_world.z + local_pos.z)
     return _cliff_noise.get_noise_3d(world_pos.x * 1.8, world_pos.y * 1.2, world_pos.z * 1.8)
