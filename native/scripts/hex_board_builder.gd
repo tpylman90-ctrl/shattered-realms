@@ -1000,7 +1000,7 @@ func _build_gable_end(root: Node3D, width: float, depth: float, eaves_y: float, 
     _add_mesh(root, gable_mesh, material, Vector3.ZERO)
 
 func _add_window_frame(root: Node3D, center: Vector3, width: float, height: float, face_z: float) -> void:
-    var wood := prop_materials["wood_dark"]
+    var wood: Material = prop_materials["wood_dark"]
     var jamb := BoxMesh.new()
     jamb.size = Vector3(0.055, height + 0.10, 0.06)
     for side in [-1.0, 1.0]:
@@ -1042,7 +1042,7 @@ func _build_gable_roof(root: Node3D, width: float, depth: float, eaves_y: float,
     for side in [-1.0, 1.0]:
         _add_mesh(root, fascia, prop_materials["wood_dark"], Vector3(side * (half_span + 0.01), eaves_y - 0.015, 0.0))
         for end_sign in [-1.0, 1.0]:
-            var end_z := end_sign * (depth * 0.5 + 0.055)
+            var end_z: float = end_sign * (depth * 0.5 + 0.055)
             var eave_point := Vector3(side * half_span, eaves_y, end_z)
             var ridge_point := Vector3(0.0, ridge_y, end_z)
             _add_beam(root, eave_point, ridge_point, 0.032, prop_materials["wood_dark"])
