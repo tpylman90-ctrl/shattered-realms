@@ -173,6 +173,12 @@ func _create_materials() -> void:
     prop_materials["stone"] = _standard_material(Color("77796e"), 0.96)
     prop_materials["stone_light"] = _standard_material(Color("a19d8c"), 0.94)
     prop_materials["stone_dark"] = _standard_material(Color("535750"), 0.98)
+    var cliff_material := StandardMaterial3D.new()
+    cliff_material.albedo_color = Color.WHITE
+    cliff_material.roughness = 0.98
+    cliff_material.vertex_color_use_as_albedo = true
+    cliff_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    prop_materials["cliff"] = cliff_material
     prop_materials["plaster"] = _standard_material(Color("c8b994"), 0.94)
     prop_materials["plaster_light"] = _standard_material(Color("ddd0ae"), 0.93)
     prop_materials["roof_red"] = _standard_material(Color("783d32"), 0.91)
@@ -699,7 +705,7 @@ func _refresh_cell_visual(key: String) -> void:
         var walls := MeshInstance3D.new()
         walls.name = "ExposedHexWalls"
         walls.mesh = wall_mesh
-        walls.material_override = prop_materials["stone"]
+        walls.material_override = prop_materials["cliff"]
         tile.add_child(walls)
     if not has_mountain:
         _build_terrain_dressing(tile, terrain, int(cell.get("q", 0)), int(cell.get("r", 0)))
@@ -859,9 +865,9 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
         if wall_bottom_y >= -0.001 and not is_mountain:
             continue
 
-        for segment in range(4):
-            var angle_a := deg_to_rad(30.0 + 60.0 * float(edge) + 15.0 * float(segment))
-            var angle_b := deg_to_rad(30.0 + 60.0 * float(edge) + 15.0 * float(segment + 1))
+        for segment in range(3):
+            var angle_a := deg_to_rad(30.0 + 60.0 * float(edge) + 20.0 * float(segment))
+            var angle_b := deg_to_rad(30.0 + 60.0 * float(edge) + 20.0 * float(segment + 1))
             var normal_a := roundf(angle_a / (PI / 3.0)) * (PI / 3.0)
             var normal_b := roundf(angle_b / (PI / 3.0)) * (PI / 3.0)
             var radius_a := (ROOT_3 * 0.5) / cos(angle_a - normal_a)
@@ -876,33 +882,32 @@ func _make_hex_wall_mesh(cell: Dictionary) -> ArrayMesh:
 
             var lower_a := Vector3(upper_a.x, wall_bottom_y, upper_a.z)
             var lower_b := Vector3(upper_b.x, wall_bottom_y, upper_b.z)
-            var dark_backing := Color(0.32, 0.34, 0.33, 1.0)
+            var dark_backing := Color(0.19, 0.20, 0.19, 1.0)
             _add_cliff_triangle(surface, upper_a, lower_a, upper_b, dark_backing)
             _add_cliff_triangle(surface, upper_b, lower_a, lower_b, dark_backing)
             added_wall = true
 
             var wall_height := maxf(0.02, ((upper_a.y - wall_bottom_y) + (upper_b.y - wall_bottom_y)) * 0.5)
-            var row_count := clampi(ceili(wall_height / 0.36), 1, 8)
+            var row_count := clampi(ceili(wall_height / 0.62), 1, 6)
             var face_normal := Vector3(upper_a.x + upper_b.x, 0.0, upper_a.z + upper_b.z).normalized()
             for row in range(row_count):
-                var row_start := (float(row) + 0.055) / float(row_count)
-                var row_end := (float(row + 1) - 0.055) / float(row_count)
-                for column in range(2):
-                    var column_start := (float(column) + 0.06) / 2.0
-                    var column_end := (float(column + 1) - 0.06) / 2.0
-                    var panel_top_left := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, column_start, row_end)
-                    var panel_top_right := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, column_end, row_end)
-                    var panel_bottom_left := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, column_start, row_start)
-                    var panel_bottom_right := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, column_end, row_start)
-                    var panel_center := (panel_top_left + panel_top_right + panel_bottom_left + panel_bottom_right) * 0.25
-                    panel_center += face_normal * cliff_rng.randf_range(0.025, 0.060)
-                    panel_center.y += cliff_rng.randf_range(-0.025, 0.025)
-                    var shade := cliff_rng.randf_range(0.68, 0.94)
-                    var panel_tint := Color(shade, shade * cliff_rng.randf_range(0.96, 1.04), shade * cliff_rng.randf_range(0.92, 1.02), 1.0)
-                    _add_cliff_triangle(surface, panel_top_left, panel_bottom_left, panel_center, panel_tint)
-                    _add_cliff_triangle(surface, panel_bottom_left, panel_bottom_right, panel_center, panel_tint.darkened(0.05))
-                    _add_cliff_triangle(surface, panel_bottom_right, panel_top_right, panel_center, panel_tint.lightened(0.025))
-                    _add_cliff_triangle(surface, panel_top_right, panel_top_left, panel_center, panel_tint.darkened(0.025))
+                var row_start := (float(row) + 0.045) / float(row_count)
+                var row_end := (float(row + 1) - 0.045) / float(row_count)
+                var panel_top_left := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, 0.045, row_end)
+                var panel_top_right := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, 0.955, row_end)
+                var panel_bottom_left := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, 0.045, row_start)
+                var panel_bottom_right := _cliff_surface_point(upper_a, upper_b, wall_bottom_y, 0.955, row_start)
+                var panel_center := (panel_top_left + panel_top_right + panel_bottom_left + panel_bottom_right) * 0.25
+                panel_center += face_normal * cliff_rng.randf_range(0.075, 0.145)
+                panel_center.y += cliff_rng.randf_range(-0.07, 0.07)
+                var stone_r := cliff_rng.randf_range(0.38, 0.62)
+                var stone_g := stone_r * cliff_rng.randf_range(0.96, 1.04)
+                var stone_b := stone_r * cliff_rng.randf_range(0.89, 0.99)
+                var panel_tint := Color(stone_r, stone_g, stone_b, 1.0)
+                _add_cliff_triangle(surface, panel_top_left, panel_bottom_left, panel_center, panel_tint.lightened(0.04))
+                _add_cliff_triangle(surface, panel_bottom_left, panel_bottom_right, panel_center, panel_tint.darkened(0.12))
+                _add_cliff_triangle(surface, panel_bottom_right, panel_top_right, panel_center, panel_tint.lightened(0.02))
+                _add_cliff_triangle(surface, panel_top_right, panel_top_left, panel_center, panel_tint.darkened(0.08))
     if not added_wall:
         return null
     surface.generate_normals()
