@@ -43,6 +43,36 @@ static func inventory() -> Array[String]:
             result.append(str(item_id))
     return result
 
+static func gold() -> int:
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    return maxi(0, int(cfg.get_value("economy", "gold", 0)))
+
+static func award_gold(category: String, source_id: String, amount: int) -> int:
+    if amount <= 0:
+        return 0
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var source_key := "%s:%s" % [category, source_id]
+    var claimed: Array = cfg.get_value("economy", "claimed_gold_sources", [])
+    if claimed.has(source_key):
+        return 0
+    claimed.append(source_key)
+    cfg.set_value("economy", "claimed_gold_sources", claimed)
+    cfg.set_value("economy", "gold", int(cfg.get_value("economy", "gold", 0)) + amount)
+    return amount if cfg.save(SAVE_PATH) == OK else 0
+
+static func spend_gold(amount: int) -> bool:
+    if amount <= 0:
+        return false
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var balance := int(cfg.get_value("economy", "gold", 0))
+    if balance < amount:
+        return false
+    cfg.set_value("economy", "gold", balance - amount)
+    return cfg.save(SAVE_PATH) == OK
+
 static func gear_instances() -> Array:
     var cfg := ConfigFile.new()
     cfg.load(SAVE_PATH)

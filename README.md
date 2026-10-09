@@ -11,6 +11,8 @@ The title screen uses the hero ensemble artwork and opens an interactive illustr
 - road-constrained movement with terrain grounding
 - turn-based movement points
 - route previews
+- a battle victory screen that awards XP, gold, equipment and supplies
+- interactive stronghold city views over high-resolution illustrated backgrounds
 - discoverable and claimable points of interest
 - visible board encounters that can block routes
 - hero health, XP, levels, signature abilities and defeat/retreat

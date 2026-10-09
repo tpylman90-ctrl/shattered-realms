@@ -1471,14 +1471,21 @@ func _finish_battle(victory: bool) -> void:
     battle_over = true
     action_locked = true
     _set_commands_enabled(false)
+    var reward_gold := 0
+    var reward_loot: Array[String] = []
+    var gained_levels := 0
 
     if victory:
         var progression := HeroProgressionService.add_xp(hero_id, reward_xp, hero_xp)
-        var gained_levels := int(progression.get("levels_gained", 0))
+        gained_levels = int(progression.get("levels_gained", 0))
         hero_xp = int(progression.get("xp", hero_xp + reward_xp))
         hero_level = int(progression.get("level", hero_level))
         hero_profile = progression
         hero_stats = (progression.get("stats", hero_stats) as Dictionary).duplicate(true)
+        if encounter_id != "__battle_test__":
+            var gold_base := 240 if encounter_id == "__VULGRIM__" else 20 + danger * 15 + hero_level * 2
+            reward_gold = HeroEquipmentService.award_gold("battle", "%s:%s" % [region_id, encounter_id], gold_base)
+            reward_loot = _collect_battle_loot()
         if gained_levels > 0:
             message_label.text = "VICTORY! +%d XP • LEVEL %d! • +%d SP" % [reward_xp, hero_level, gained_levels]
         else:
@@ -1494,11 +1501,136 @@ func _finish_battle(victory: bool) -> void:
     cfg.set_value("battle", "hero_xp", hero_xp)
     cfg.set_value("battle", "hero_level", hero_level)
     cfg.set_value("battle", "enemy_name", enemy_name)
+    cfg.set_value("battle", "reward_xp", reward_xp if victory else 0)
+    cfg.set_value("battle", "reward_gold", reward_gold)
+    cfg.set_value("battle", "reward_loot", reward_loot)
     cfg.save(RESULT_PATH)
 
-    await get_tree().create_timer(1.05).timeout
+    if victory:
+        await _show_victory_page(reward_gold, reward_loot, gained_levels)
+    else:
+        await get_tree().create_timer(1.05).timeout
     if transition_rect:
         var fade := create_tween()
         fade.tween_property(transition_rect, "color:a", 1.0, 0.40)
         await fade.finished
     get_tree().change_scene_to_file(RETURN_SCENE)
+
+
+func _collect_battle_loot() -> Array[String]:
+    var rewards: Array[String] = []
+    var guaranteed := HeroEquipmentService.claim_equipment_reward("boss" if encounter_id == "__VULGRIM__" else "battle", "vulgrim" if encounter_id == "__VULGRIM__" else encounter_id)
+    if not guaranteed.is_empty():
+        rewards.append("%s  •  %s" % [str(guaranteed.get("name", "Equipment")), str(guaranteed.get("rarity", "common")).capitalize()])
+    var regional := HeroEquipmentService.claim_region_drop("battle", encounter_id, region_id, 35, 12)
+    if not regional.is_empty():
+        rewards.append("%s  •  %s" % [str(regional.get("name", "Regional gear")), str(regional.get("rarity", "common")).capitalize()])
+    var supply_id := HeroEquipmentService.claim_supply_drop("battle", encounter_id, region_id)
+    if supply_id != "":
+        rewards.append(str(HeroEquipmentService.consumables().get(supply_id, {}).get("name", supply_id)))
+    return rewards
+
+
+func _show_victory_page(gold_earned: int, loot: Array[String], levels_gained: int) -> void:
+    var layer := CanvasLayer.new()
+    layer.layer = 40
+    battle_ui_layer.add_child(layer)
+
+    var dimmer := ColorRect.new()
+    dimmer.color = Color(0.015, 0.018, 0.024, 0.82)
+    dimmer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    layer.add_child(dimmer)
+
+    var panel := PanelContainer.new()
+    panel.anchor_left = 0.5
+    panel.anchor_top = 0.5
+    panel.anchor_right = 0.5
+    panel.anchor_bottom = 0.5
+    panel.offset_left = -300.0
+    panel.offset_top = -235.0
+    panel.offset_right = 300.0
+    panel.offset_bottom = 235.0
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color("182126")
+    panel_style.border_color = Color("caa96c")
+    panel_style.set_border_width_all(3)
+    panel_style.set_corner_radius_all(12)
+    panel.add_theme_stylebox_override("panel", panel_style)
+    layer.add_child(panel)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 28)
+    margin.add_theme_constant_override("margin_right", 28)
+    margin.add_theme_constant_override("margin_top", 22)
+    margin.add_theme_constant_override("margin_bottom", 22)
+    panel.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 12)
+    margin.add_child(box)
+
+    var title := Label.new()
+    title.text = "VICTORY"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 34)
+    title.add_theme_color_override("font_color", Color("f2d79b"))
+    box.add_child(title)
+
+    var defeated := Label.new()
+    defeated.text = "%s defeated" % enemy_name
+    defeated.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    defeated.add_theme_font_size_override("font_size", 17)
+    defeated.add_theme_color_override("font_color", Color("d3d6d0"))
+    box.add_child(defeated)
+
+    var divider := HSeparator.new()
+    box.add_child(divider)
+
+    var xp_row := _victory_reward_row("EXPERIENCE", "+%d XP" % reward_xp)
+    box.add_child(xp_row)
+    var gold_row := _victory_reward_row("GOLD", "+%d  •  purse %d" % [gold_earned, HeroEquipmentService.gold()])
+    box.add_child(gold_row)
+    if levels_gained > 0:
+        var level_row := _victory_reward_row("LEVEL UP", "Level %d  •  +%d skill point%s" % [hero_level, levels_gained, "" if levels_gained == 1 else "s"])
+        box.add_child(level_row)
+
+    var loot_title := Label.new()
+    loot_title.text = "LOOT"
+    loot_title.add_theme_font_size_override("font_size", 15)
+    loot_title.add_theme_color_override("font_color", Color("d5b87b"))
+    box.add_child(loot_title)
+    if loot.is_empty():
+        var empty_loot := Label.new()
+        empty_loot.text = "No equipment found this time."
+        empty_loot.add_theme_color_override("font_color", Color("bac3c2"))
+        box.add_child(empty_loot)
+    else:
+        for loot_name in loot:
+            var item_label := Label.new()
+            item_label.text = "◆  %s" % loot_name
+            item_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+            item_label.add_theme_color_override("font_color", Color("efe0c2"))
+            box.add_child(item_label)
+
+    var continue_button := Button.new()
+    continue_button.text = "CONTINUE"
+    continue_button.custom_minimum_size.y = 50
+    continue_button.add_theme_font_size_override("font_size", 18)
+    continue_button.pressed.connect(func(): layer.queue_free())
+    box.add_child(continue_button)
+    await continue_button.pressed
+
+
+func _victory_reward_row(label_text: String, value_text: String) -> Control:
+    var row := HBoxContainer.new()
+    var label := Label.new()
+    label.text = label_text
+    label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    label.add_theme_color_override("font_color", Color("aeb9b9"))
+    row.add_child(label)
+    var value := Label.new()
+    value.text = value_text
+    value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    value.add_theme_color_override("font_color", Color("f1e1b9"))
+    row.add_child(value)
+    return row

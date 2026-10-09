@@ -22,6 +22,7 @@ var detail_name: Label
 var detail_type: Label
 var detail_body: Label
 var enter_button: Button
+var city_button: Button
 var armory_popup: PopupPanel
 var armory_text: RichTextLabel
 var load_bar: ProgressBar
@@ -51,6 +52,11 @@ func _ready() -> void:
     _build_map()
     _build_loading()
     _show_page(title_page)
+    if get_tree().has_meta("city_return_region"):
+        current_region = str(get_tree().get_meta("city_return_region", "ashen_wastes"))
+        get_tree().remove_meta("city_return_region")
+        _select_region(current_region)
+        _open_map()
 
 func _process(delta: float) -> void:
     if character_page and character_page.visible and character_preview_model and is_instance_valid(character_preview_model):
@@ -431,8 +437,8 @@ func _build_map() -> void:
     var info := PanelContainer.new()
     atlas_info = info
     map_page.add_child(info)
-    info.anchor_left = 0.24
-    info.anchor_right = 0.76
+    info.anchor_left = 0.11
+    info.anchor_right = 0.89
     info.anchor_top = 1.0
     info.anchor_bottom = 1.0
     info.offset_top = -120
@@ -470,6 +476,11 @@ func _build_map() -> void:
     enter_button.custom_minimum_size.x = 170
     enter_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     row.add_child(enter_button)
+    city_button = _button("VISIT CITY", _open_city)
+    city_button.custom_minimum_size.x = 132
+    city_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    city_button.visible = false
+    row.add_child(city_button)
     var armory_button := _button("REGIONAL GEAR", _show_region_armory)
     armory_button.custom_minimum_size.x = 160
     armory_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -517,6 +528,8 @@ func _select_region(region_id: String) -> void:
     detail_body.text = str(region.get("description", "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]))
     enter_button.visible = playable_board or has_preview or concept_ready
     enter_button.disabled = false
+    city_button.visible = not str(region.get("stronghold", "")).is_empty() or not (region.get("locations", []) as Array).is_empty()
+    city_button.disabled = false
     var campaign_region := CampaignFlowService.territory(region_id)
     if not campaign_region.is_empty():
         var route_status := CampaignFlowService.route_status(region_id)
@@ -543,12 +556,15 @@ func _select_region(region_id: String) -> void:
             detail_type.text += " • RECONNECTED"
         elif route_status == "SEALED ROUTE":
             enter_button.disabled = true
+            city_button.disabled = true
         if region_id == "ashen_wastes":
             detail_body.text = "%s\n\n%s\n\nThreat: %s" % [
                 str(CampaignFlowService.campaign_text().get("prologue", "")),
                 str(campaign_region.get("story", "")),
                 str(campaign_region.get("threat", ""))
             ]
+    if str(region.get("status", "")) == "future_ocean_expansion":
+        city_button.disabled = true
     if region_id == "ravenwood":
         enter_button.text = "ENTER RAVENWOOD"
     elif region_id == "iron_plains":
@@ -561,6 +577,13 @@ func _select_region(region_id: String) -> void:
         enter_button.text = "PREVIEW BOARD"
     else:
         enter_button.text = "ENTER ASHENREACH"
+    city_button.text = "VISIT %s" % (str(region.get("stronghold", "CITY")).to_upper() if not str(region.get("stronghold", "")).is_empty() else "CITY")
+
+func _open_city() -> void:
+    if city_button.disabled or not city_button.visible:
+        return
+    get_tree().set_meta("city_region_id", current_region)
+    get_tree().change_scene_to_file("res://scenes/CityScene.tscn")
 
 func _show_region_armory() -> void:
     var source_region := str(territories.get(current_region, {}).get("parent_territory", current_region))
