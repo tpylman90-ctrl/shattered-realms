@@ -172,7 +172,7 @@ func _build_city_view() -> void:
 	gear_dialog.title = "CITY ARMORY"
 	gear_dialog.ok_button_text = "CLOSE"
 	gear_dialog.dialog_text = ""
-	gear_dialog.custom_minimum_size = Vector2(470, 430)
+	gear_dialog.size = Vector2i(470, 430)
 	add_child(gear_dialog)
 
 	if city_names.size() > 1:
