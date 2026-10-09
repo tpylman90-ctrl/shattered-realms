@@ -362,7 +362,7 @@ func _show_selection_map() -> void:
 	for screen_id in ["plaza", "market", "forge", "inn", "keep", "gate"]:
 		var item: Dictionary = CITY_SCREENS[screen_id]
 		var label_text := ("●  " if screen_id == current_screen else "○  ") + str(item.get("title", screen_id))
-	var route_button := _button(label_text, _travel_to_screen.bind(screen_id))
+		var route_button := _button(label_text, _travel_to_screen.bind(screen_id))
 		route_button.custom_minimum_size.y = 48
 		selection_content.add_child(route_button)
 
