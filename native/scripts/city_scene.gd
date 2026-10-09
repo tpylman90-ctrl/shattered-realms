@@ -154,6 +154,7 @@ func _build_city_view() -> void:
 	var top_bar := PanelContainer.new()
 	top_bar.anchor_right = 1.0
 	top_bar.offset_bottom = 76.0
+	top_bar.z_index = 8
 	top_bar.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.035, 0.04, 0.88), Color("c5a068")))
 	add_child(top_bar)
 	var top_margin := MarginContainer.new()
@@ -204,6 +205,7 @@ func _build_city_view() -> void:
 	bottom_panel.anchor_bottom = 1.0
 	bottom_panel.offset_top = -148.0
 	bottom_panel.offset_bottom = -14.0
+	bottom_panel.z_index = 8
 	bottom_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.04, 0.045, 0.94), Color("c5a068")))
 	add_child(bottom_panel)
 	var bottom_margin := MarginContainer.new()
@@ -694,6 +696,7 @@ func _add_hotspot(id: String, label_text: String, point: Vector2) -> void:
 	hotspot.offset_right = 58.0
 	hotspot.offset_bottom = 23.0
 	hotspot.add_theme_font_size_override("font_size", 13)
+	hotspot.z_index = 4
 	add_child(hotspot)
 	hotspot_buttons.append(hotspot)
 
