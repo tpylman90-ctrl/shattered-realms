@@ -53,6 +53,7 @@ jobs:
           for part in {00..09}; do test -f "native/assets/3d/game-ready/ravenwood-board/ravenwood_section_${part}.glb"; done
           for map in albedo normal metal_rough; do test -f "native/assets/3d/game-ready/ravenwood-board/ravenwood_${map}.jpg"; done
           test -f native/assets/3d/game-ready/ravenwood-board/generated/ravenwood_nav_surface.glb
+          for scene in market forge inn keep gate; do test -s "native/assets/cities/ashenreach/${scene}.jpg"; done
           python3 - <<'PY'
           import json, pathlib, struct
           board=pathlib.Path('native/assets/3d/game-ready/ravenwood-board')
@@ -154,7 +155,7 @@ jobs:
             echo "Godot validation exited with code $GODOT_EXIT."
             exit "$GODOT_EXIT"
           fi
-          for scene in "res://scenes/BoardWorkshop.tscn" "res://scenes/HexBoardBuilder.tscn" "res://scenes/RavenwoodPreview.tscn"; do
+          for scene in "res://scenes/BoardWorkshop.tscn" "res://scenes/HexBoardBuilder.tscn" "res://scenes/RavenwoodPreview.tscn" "res://scenes/CityScene.tscn"; do
             echo "Smoke testing $scene"
             set +e
             timeout 90 "$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE/native" --scene "$scene" --quit-after 30 2>&1 | tee "$RUNNER_TEMP/godot-scene-smoke.log"
