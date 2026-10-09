@@ -1,15 +1,15 @@
 extends Control
 
 const WORLD_DATA_PATH := "res://data/world_catalog.json"
-const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach_city.jpg"
+const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach/plaza_legacy.webp"
 const CAMPAIGN_SERVICE = preload("res://scripts/campaign_director.gd")
 const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
 const HERO_PROGRESSION_SERVICE = preload("res://scripts/hero_progression.gd")
 const SPRITE_FRAME_SIZE := Vector2i(24, 32)
 const CITY_SAVE_PATH := "user://city_checkpoint.cfg"
 const CITY_SCREENS := {
-	"plaza": {"art": "res://assets/cities/ashenreach_city.jpg", "title": "ASHENREACH PLAZA", "spawn": Vector2(0.50, 0.70)},
-	"market": {"art": "res://assets/cities/ashenreach/market.jpg", "title": "MARKET LANE", "spawn": Vector2(0.50, 0.75)},
+	"plaza": {"art": "res://assets/cities/ashenreach/plaza_legacy.webp", "title": "ASHENREACH PLAZA", "spawn": Vector2(0.50, 0.70)},
+	"market": {"art": "res://assets/cities/ashenreach/market_legacy.webp", "title": "MARKET LANE", "spawn": Vector2(0.50, 0.75)},
 	"forge": {"art": "res://assets/cities/ashenreach/forge_interior.webp", "title": "THE FORGE", "spawn": Vector2(0.50, 0.77)},
 	"inn": {"art": "res://assets/cities/ashenreach/inn_interior.webp", "title": "THE WAYFARER'S INN", "spawn": Vector2(0.50, 0.78)},
 	"keep": {"art": "res://assets/cities/ashenreach/keep_interior.webp", "title": "ASHENREACH KEEP", "spawn": Vector2(0.50, 0.78)},
@@ -911,19 +911,19 @@ func _refresh_hotspots() -> void:
 	match current_screen:
 		"plaza":
 			routes = [
-				["market", "MARKET LANE", Vector2(0.19, 0.43)],
-				["keep", "KEEP", Vector2(0.52, 0.18)],
-				["forge", "FORGE", Vector2(0.27, 0.49)],
-				["inn", "INN", Vector2(0.70, 0.53)],
-				["gate", "GATE", Vector2(0.87, 0.43)]
+				["market", "MARKET LANE", Vector2(0.31, 0.45)],
+				["keep", "KEEP", Vector2(0.51, 0.35)],
+				["forge", "FORGE", Vector2(0.17, 0.54)],
+				["inn", "INN", Vector2(0.80, 0.50)],
+				["gate", "GATE", Vector2(0.70, 0.42)]
 			]
 		"market":
 			routes = [
-				["plaza", "PLAZA", Vector2(0.12, 0.48)],
-				["keep", "KEEP", Vector2(0.53, 0.18)],
-				["forge", "FORGE", Vector2(0.25, 0.46)],
-				["inn", "INN", Vector2(0.75, 0.46)],
-				["gate", "GATE", Vector2(0.88, 0.47)]
+				["plaza", "PLAZA", Vector2(0.20, 0.46)],
+				["keep", "KEEP", Vector2(0.52, 0.35)],
+				["forge", "FORGE", Vector2(0.29, 0.54)],
+				["inn", "INN", Vector2(0.76, 0.52)],
+				["gate", "GATE", Vector2(0.83, 0.46)]
 			]
 		"forge":
 			routes = [["market", "BACK TO MARKET", Vector2(0.50, 0.20)]]

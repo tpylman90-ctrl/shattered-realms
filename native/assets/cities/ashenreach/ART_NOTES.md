@@ -1,8 +1,8 @@
 # Ashenreach city scene art
 
-These are fixed-camera background plates for the 2D city exploration scene. The player sprite is rendered separately at low resolution with nearest-neighbor filtering.
+These are fixed-camera background plates for the 2.5D city exploration scene. The player sprite is rendered separately at low resolution with nearest-neighbor filtering and sorted by floor Y position.
 
-The panorama `../ashenreach_city.jpg` opens on the plaza. The market, forge, inn, keep, and gate images are connected camera scenes. The high-resolution scenery remains still while the small sprite walks over it.
+The plaza and market use compact, warm timber-town street plates. The forge, inn, keep, and gate images are connected camera scenes. The high-resolution scenery remains still while the small sprite walks over it.
 
 - `market.jpg` — OpenAI ImageGen output `exec-c78c8e21-e06a-46ba-b57b-79726d262bf5.png`, generated with `ashenreach_city.jpg` as the visual reference.
 - `forge.jpg` — OpenAI ImageGen output `exec-000b19cd-e070-46a1-8c1e-afb0f3f16426.png`.
@@ -58,3 +58,11 @@ Each portrait was generated with this exact prompt; the role-specific descriptio
 - **Innkeeper character description:** Ashenreach Wayfarer Inn keeper: a warm, weathered middle-aged woman with braided auburn hair, kind alert eyes, practical cream blouse, dark green wool vest and brass key ring. Dramatic but soft warm inn lighting.
 - **Steward character description:** Ashenreach keep steward and campaign advisor: a disciplined older man with silver-streaked hair, dark blue travel coat, pale gold trim, leather map case strap over shoulder. Thoughtful expression, warm candle rim light against cool shadow.
 - **Smith character description:** Ashenreach master smith: a broad middle-aged man with a soot-dark beard, tied-back dark hair, one small healed eyebrow scar, leather apron over a charcoal shirt and a red-brown shoulder mantle. Confident friendly expression, warm forge edge light.
+
+
+## Classic JRPG street plates
+
+The plaza and market were restyled toward the user's reference: close human-scale half-timber houses, terracotta roof tiles, soft daylight, and broad cobblestone paths. They remain high-resolution fixed camera plates; the hero and residents are separate low-resolution sprites. The main plaza now reads as a walkable town lane instead of a distant fortress panorama.
+
+- `plaza_legacy.webp` — source `exec-1994c1f3-9ecb-4a3f-ad6e-1a8da6ee0eec.png`; 1280 × 720, WebP quality 78.
+- `market_legacy.webp` — source `exec-a67acc1d-792e-4ace-8b1a-accc223d1e0d.png`; 1280 × 720, WebP quality 78.
