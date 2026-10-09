@@ -21,8 +21,12 @@ var atlas_info: PanelContainer
 var detail_name: Label
 var detail_type: Label
 var detail_body: Label
+var detail_scroll: ScrollContainer
 var enter_button: Button
 var city_button: Button
+var armory_button: Button
+var atlas_action_row: HFlowContainer
+var title_button: Button
 var armory_popup: PopupPanel
 var armory_text: RichTextLabel
 var load_bar: ProgressBar
@@ -420,71 +424,77 @@ func _confirm_chosen_hero() -> void:
 
 func _build_map() -> void:
     map_page = _fill_panel()
+    map_page.resized.connect(_layout_atlas_ui)
     map_canvas = Control.new()
     map_canvas.set_script(MAP_SCRIPT)
     map_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     map_page.add_child(map_canvas)
     map_canvas.connect("region_pressed", _select_region)
-    var title_button := _button("◀ TITLE", func(): _show_page(title_page))
+    title_button = _button("◀ TITLE", func(): _show_page(title_page))
     map_page.add_child(title_button)
     title_button.anchor_top = 1.0
     title_button.anchor_bottom = 1.0
     title_button.offset_left = 16
     title_button.offset_right = 158
-    title_button.offset_top = -67
-    title_button.offset_bottom = -14
 
     var info := PanelContainer.new()
     atlas_info = info
     map_page.add_child(info)
-    info.anchor_left = 0.11
-    info.anchor_right = 0.89
+    info.anchor_left = 0.04
+    info.anchor_right = 0.96
     info.anchor_top = 1.0
     info.anchor_bottom = 1.0
-    info.offset_top = -120
+    info.offset_top = -230
     info.offset_bottom = -12
     info.add_theme_stylebox_override("panel", _style(Color(0.035, 0.065, 0.08, 0.95), Color("c39b67")))
     info.gui_input.connect(_atlas_panel_input.bind(info))
     var margin := MarginContainer.new()
-    margin.add_theme_constant_override("margin_left", 16)
-    margin.add_theme_constant_override("margin_right", 16)
-    margin.add_theme_constant_override("margin_top", 9)
-    margin.add_theme_constant_override("margin_bottom", 9)
+    margin.add_theme_constant_override("margin_left", 12)
+    margin.add_theme_constant_override("margin_right", 12)
+    margin.add_theme_constant_override("margin_top", 8)
+    margin.add_theme_constant_override("margin_bottom", 8)
     margin.mouse_filter = Control.MOUSE_FILTER_PASS
     info.add_child(margin)
-    var row := HBoxContainer.new()
-    row.add_theme_constant_override("separation", 14)
-    row.mouse_filter = Control.MOUSE_FILTER_PASS
-    margin.add_child(row)
-    var details := VBoxContainer.new()
-    details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    details.add_theme_constant_override("separation", 2)
-    details.mouse_filter = Control.MOUSE_FILTER_PASS
-    row.add_child(details)
+    var content := VBoxContainer.new()
+    content.add_theme_constant_override("separation", 5)
+    content.mouse_filter = Control.MOUSE_FILTER_PASS
+    margin.add_child(content)
     detail_name = _label("", 23)
     detail_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     detail_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    details.add_child(detail_name)
+    content.add_child(detail_name)
     detail_type = _label("", 13, Color("d0a365"))
     detail_type.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    details.add_child(detail_type)
+    content.add_child(detail_type)
+    detail_scroll = ScrollContainer.new()
+    detail_scroll.custom_minimum_size.y = 62
+    detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    detail_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
+    content.add_child(detail_scroll)
     detail_body = _label("", 13, Color("c4d0ce"))
     detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     detail_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    details.add_child(detail_body)
+    detail_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    detail_scroll.add_child(detail_body)
+    atlas_action_row = HFlowContainer.new()
+    atlas_action_row.add_theme_constant_override("h_separation", 8)
+    atlas_action_row.add_theme_constant_override("v_separation", 6)
+    atlas_action_row.mouse_filter = Control.MOUSE_FILTER_PASS
+    content.add_child(atlas_action_row)
     enter_button = _button("ENTER ASHENREACH", _enter_region)
-    enter_button.custom_minimum_size.x = 170
+    enter_button.custom_minimum_size.x = 176
     enter_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-    row.add_child(enter_button)
+    atlas_action_row.add_child(enter_button)
     city_button = _button("VISIT CITY", _open_city)
-    city_button.custom_minimum_size.x = 132
+    city_button.custom_minimum_size.x = 148
     city_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     city_button.visible = false
-    row.add_child(city_button)
-    var armory_button := _button("REGIONAL GEAR", _show_region_armory)
-    armory_button.custom_minimum_size.x = 160
+    atlas_action_row.add_child(city_button)
+    armory_button = _button("REGIONAL GEAR", _show_region_armory)
+    armory_button.custom_minimum_size.x = 156
     armory_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-    row.add_child(armory_button)
+    atlas_action_row.add_child(armory_button)
     armory_popup = PopupPanel.new()
     armory_popup.title = "REGIONAL ARMORY"
     add_child(armory_popup)
@@ -498,8 +508,55 @@ func _build_map() -> void:
     dismiss.custom_minimum_size.x = 35
     dismiss.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
     dismiss.pressed.connect(info.hide)
-    row.add_child(dismiss)
+    atlas_action_row.add_child(dismiss)
+    _layout_atlas_ui()
     _select_region(current_region)
+
+func _layout_atlas_ui() -> void:
+    if not is_instance_valid(atlas_info) or not is_instance_valid(map_page):
+        return
+    var viewport_size := map_page.size
+    if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+        return
+    var compact := viewport_size.x < 820.0
+    atlas_info.anchor_left = 0.025 if compact else 0.04
+    atlas_info.anchor_right = 0.975 if compact else 0.96
+    var card_height := clampf(viewport_size.y * 0.34, 214.0, 270.0)
+    if viewport_size.y < 560.0:
+        card_height = clampf(viewport_size.y * 0.43, 184.0, 240.0)
+    atlas_info.offset_top = -card_height - 12.0
+    atlas_info.offset_bottom = -10.0
+    if title_button:
+        title_button.offset_top = -card_height - 70.0
+        title_button.offset_bottom = -card_height - 16.0
+    if detail_name:
+        detail_name.add_theme_font_size_override("font_size", 20 if compact else 23)
+    if detail_scroll:
+        detail_scroll.custom_minimum_size.y = clampf(viewport_size.y * 0.105, 48.0, 76.0)
+    if enter_button:
+        enter_button.custom_minimum_size.x = 158 if compact else 176
+        if compact:
+            enter_button.text = "ENTER TERRITORY" if current_region != "ashen_wastes" else "ENTER ASHENREACH"
+        elif current_region == "ashen_wastes":
+            enter_button.text = "ENTER ASHENREACH"
+        elif current_region == "ravenwood":
+            enter_button.text = "ENTER RAVENWOOD"
+        elif current_region == "iron_plains":
+            enter_button.text = "PREVIEW IRON PLAINS"
+        elif current_region == "golden_expanse":
+            enter_button.text = "EXPLORE GOLDEN EXPANSE"
+        elif current_region == "devouring_deep":
+            enter_button.text = "ASSAULT THE DEVOURING DEEP" if not enter_button.disabled else "FINALE LOCKED"
+        elif ResourceLoader.exists("res://assets/boards/concept/" + current_region + ".webp"):
+            enter_button.text = "PREVIEW BOARD"
+    if city_button:
+        city_button.custom_minimum_size.x = 132 if compact else 148
+        if compact and city_button.visible:
+            city_button.text = "VISIT CITY"
+    if armory_button:
+        armory_button.custom_minimum_size.x = 140 if compact else 156
+        if compact:
+            armory_button.text = "REGIONAL GEAR"
 
 func _atlas_panel_input(event: InputEvent, panel: Control) -> void:
     if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -578,6 +635,7 @@ func _select_region(region_id: String) -> void:
     else:
         enter_button.text = "ENTER ASHENREACH"
     city_button.text = "VISIT %s" % (str(region.get("stronghold", "CITY")).to_upper() if not str(region.get("stronghold", "")).is_empty() else "CITY")
+    _layout_atlas_ui()
 
 func _open_city() -> void:
     if city_button.disabled or not city_button.visible:
