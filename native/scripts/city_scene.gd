@@ -45,6 +45,11 @@ var joystick_touch_index := -1
 var joystick_mouse_down := false
 var b_button: Button
 var mini_map_button: Button
+var mini_map_panel: Panel
+var mini_map_hero: Panel
+var mini_map_pois: Array[Panel] = []
+var joystick_base: Panel
+var joystick_knob: Panel
 var walking_tween: Tween
 var walk_clock := 0.0
 var walking := false
@@ -76,41 +81,17 @@ func _process(delta: float) -> void:
 		player_sprite.position += movement * 205.0 * delta
 		player_sprite.position.x = clampf(player_sprite.position.x, 28.0, size.x - 28.0)
 		player_sprite.position.y = clampf(player_sprite.position.y, 104.0, size.y - 160.0)
-		queue_redraw()
 	elif walking and not walking_tween:
 		walking = false
 		player_sprite.frame = player_direction * 4
+	_update_minimap_markers()
+	_update_joystick_knob()
 	if not walking or not player_sprite:
 		return
 	walk_clock += delta
 	var walk_phase := 1 if int(walk_clock / 0.14) % 2 == 0 else 3
 	player_sprite.frame = player_direction * 4 + walk_phase
-	queue_redraw()
-
-
-func _draw() -> void:
-	# Circular room minimap: the current room is central and nearby exits are plotted around it.
-	var map_center := Vector2(size.x - 91.0, 165.0)
-	draw_circle(map_center, 66.0, Color(0.015, 0.025, 0.03, 0.86))
-	draw_arc(map_center, 66.0, 0.0, TAU, 64, Color("d0aa69"), 2.0, true)
-	draw_arc(map_center, 43.0, 0.0, TAU, 48, Color(0.65, 0.58, 0.43, 0.38), 1.0, true)
-	var exits := _screen_routes(current_screen)
-	for index in range(exits.size()):
-		var angle := -PI * 0.5 + TAU * float(index) / float(maxi(1, exits.size()))
-		var point := map_center + Vector2(cos(angle), sin(angle)) * 43.0
-		draw_line(map_center, point, Color(0.7, 0.57, 0.34, 0.5), 1.0, true)
-		draw_circle(point, 4.2, Color("d0aa69"))
-	draw_circle(map_center, 6.0, Color("f4e3b9"))
-	# A subtle marker on the minimap shows where the hero is within the current room.
-	var room_pos := Vector2((player_sprite.position.x / maxf(1.0, size.x) - 0.5) * 30.0, (player_sprite.position.y / maxf(1.0, size.y) - 0.65) * 24.0)
-	draw_circle(map_center + room_pos, 3.0, Color("77d5a3"))
-	var stick_center := Vector2(90.0, size.y - 102.0)
-	draw_circle(stick_center, 59.0, Color(0.015, 0.025, 0.03, 0.68))
-	draw_arc(stick_center, 59.0, 0.0, TAU, 48, Color(0.82, 0.69, 0.46, 0.72), 2.0, true)
-	draw_line(stick_center + Vector2(-34.0, 0.0), stick_center + Vector2(34.0, 0.0), Color(0.75, 0.68, 0.54, 0.28), 1.0)
-	draw_line(stick_center + Vector2(0.0, -34.0), stick_center + Vector2(0.0, 34.0), Color(0.75, 0.68, 0.54, 0.28), 1.0)
-	draw_circle(stick_center + joystick_vector * 34.0, 22.0, Color(0.63, 0.48, 0.28, 0.82))
-	draw_arc(stick_center + joystick_vector * 34.0, 22.0, 0.0, TAU, 32, Color("e0c28b"), 2.0, true)
+	_update_minimap_markers()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -261,6 +242,23 @@ func _build_city_view() -> void:
 
 
 func _build_touch_controls() -> void:
+	mini_map_panel = Panel.new()
+	mini_map_panel.position = Vector2(size.x - 157.0, 99.0)
+	mini_map_panel.size = Vector2(132.0, 132.0)
+	mini_map_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mini_map_panel.z_index = 3
+	mini_map_panel.add_theme_stylebox_override("panel", _circle_style(Color(0.015, 0.025, 0.03, 0.90), Color("d0aa69"), 66))
+	add_child(mini_map_panel)
+	mini_map_hero = _map_dot(Color("77d5a3"), Vector2(8.0, 8.0))
+	mini_map_hero.z_index = 4
+	add_child(mini_map_hero)
+	_create_minimap_pois()
+	joystick_base = Panel.new()
+	joystick_base.size = Vector2(118.0, 118.0)
+	joystick_base.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	joystick_base.z_index = 7
+	joystick_base.add_theme_stylebox_override("panel", _circle_style(Color(0.015, 0.025, 0.03, 0.68), Color(0.82, 0.69, 0.46, 0.72), 59))
+	add_child(joystick_base)
 	joystick_area = Control.new()
 	joystick_area.position = Vector2(18.0, size.y - 174.0)
 	joystick_area.size = Vector2(144.0, 144.0)
@@ -268,6 +266,13 @@ func _build_touch_controls() -> void:
 	joystick_area.z_index = 8
 	joystick_area.gui_input.connect(_on_joystick_input)
 	add_child(joystick_area)
+	joystick_knob = Panel.new()
+	joystick_knob.size = Vector2(44.0, 44.0)
+	joystick_knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	joystick_knob.z_index = 9
+	joystick_knob.add_theme_stylebox_override("panel", _circle_style(Color(0.63, 0.48, 0.28, 0.90), Color("e0c28b"), 22))
+	add_child(joystick_knob)
+	_update_joystick_knob()
 	b_button = _button("B", _on_b_pressed)
 	b_button.custom_minimum_size = Vector2(72.0, 72.0)
 	b_button.anchor_left = 1.0
@@ -332,6 +337,12 @@ func _build_selection_layer() -> void:
 
 func _open_selection() -> void:
 	joystick_vector = Vector2.ZERO
+	if walking_tween and walking_tween.is_running():
+		walking_tween.kill()
+		walking_tween = null
+		walking = false
+		pending_location = ""
+	_update_joystick_knob()
 	selection_layer.visible = true
 	_show_selection_map()
 
@@ -401,6 +412,7 @@ func _clear_selection_content() -> void:
 
 func _save_city_checkpoint() -> void:
 	var cfg := ConfigFile.new()
+	cfg.load(CITY_SAVE_PATH)
 	cfg.set_value(region_id, "screen", current_screen)
 	cfg.set_value(region_id, "player_x", player_sprite.position.x / maxf(1.0, size.x))
 	cfg.set_value(region_id, "player_y", player_sprite.position.y / maxf(1.0, size.y))
@@ -484,6 +496,61 @@ func _screen_routes(screen_id: String) -> Array:
 		"forge", "inn": return ["market"]
 		"keep", "gate": return ["plaza"]
 	return []
+
+
+func _create_minimap_pois() -> void:
+	for poi in mini_map_pois:
+		if is_instance_valid(poi):
+			poi.queue_free()
+	mini_map_pois.clear()
+	for index in range(5):
+		var dot := _map_dot(Color("d0aa69"), Vector2(7.0, 7.0))
+		dot.z_index = 4
+		mini_map_pois.append(dot)
+		add_child(dot)
+	_update_minimap_markers()
+
+
+func _update_minimap_markers() -> void:
+	if not mini_map_panel or not mini_map_hero:
+		return
+	mini_map_panel.position = Vector2(size.x - 157.0, 99.0)
+	var map_center := mini_map_panel.position + mini_map_panel.size * 0.5
+	if player_sprite:
+		var offset := Vector2((player_sprite.position.x / maxf(1.0, size.x) - 0.5) * 30.0, (player_sprite.position.y / maxf(1.0, size.y) - 0.65) * 24.0)
+		mini_map_hero.position = map_center + offset - mini_map_hero.size * 0.5
+	var exits := _screen_routes(current_screen)
+	for index in range(mini_map_pois.size()):
+		var poi := mini_map_pois[index]
+		poi.visible = index < exits.size()
+		if index < exits.size():
+			var angle := -PI * 0.5 + TAU * float(index) / float(maxi(1, exits.size()))
+			poi.position = map_center + Vector2(cos(angle), sin(angle)) * 43.0 - poi.size * 0.5
+
+
+func _update_joystick_knob() -> void:
+	if not joystick_area or not joystick_base or not joystick_knob:
+		return
+	joystick_area.position = Vector2(18.0, size.y - 174.0)
+	joystick_base.position = joystick_area.position + Vector2(13.0, 13.0)
+	joystick_knob.position = joystick_area.position + Vector2(72.0, 72.0) + joystick_vector * 34.0 - joystick_knob.size * 0.5
+
+
+func _map_dot(color: Color, dot_size: Vector2) -> Panel:
+	var dot := Panel.new()
+	dot.size = dot_size
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.add_theme_stylebox_override("panel", _circle_style(color, color, int(dot_size.x * 0.5)))
+	return dot
+
+
+func _circle_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(2 if radius > 10 else 1)
+	style.set_corner_radius_all(radius)
+	return style
 
 
 func _city_background() -> Texture2D:
@@ -677,8 +744,8 @@ func _finish_walk() -> void:
 
 
 func _on_city_resized() -> void:
-	if joystick_area:
-		joystick_area.position = Vector2(18.0, size.y - 174.0)
+	_update_joystick_knob()
+	_update_minimap_markers()
 	if not player_sprite:
 		return
 	player_sprite.position.x = clampf(player_sprite.position.x, 28.0, size.x - 28.0)
