@@ -6,6 +6,7 @@ const CAMPAIGN_SERVICE = preload("res://scripts/campaign_director.gd")
 const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
 const HERO_PROGRESSION_SERVICE = preload("res://scripts/hero_progression.gd")
 const SPRITE_FRAME_SIZE := Vector2i(24, 32)
+const CITY_SAVE_PATH := "user://city_checkpoint.cfg"
 const CITY_SCREENS := {
 	"plaza": {"art": "res://assets/cities/ashenreach_city.jpg", "title": "ASHENREACH PLAZA", "spawn": Vector2(0.50, 0.70)},
 	"market": {"art": "res://assets/cities/ashenreach/market.jpg", "title": "MARKET LANE", "spawn": Vector2(0.50, 0.75)},
@@ -35,6 +36,15 @@ var info_body: Label
 var action_button: Button
 var gear_dialog: AcceptDialog
 var hotspot_buttons: Array[Button] = []
+var selection_layer: Control
+var selection_content: VBoxContainer
+var selection_status: Label
+var joystick_area: Control
+var joystick_vector := Vector2.ZERO
+var joystick_touch_index := -1
+var joystick_mouse_down := false
+var b_button: Button
+var mini_map_button: Button
 var walking_tween: Tween
 var walk_clock := 0.0
 var walking := false
@@ -49,18 +59,69 @@ func _ready() -> void:
 	resized.connect(_on_city_resized)
 	_show_city_screen("plaza")
 	_select_location("plaza")
+	_restore_city_checkpoint()
 	call_deferred("_on_city_resized")
 
 
 func _process(delta: float) -> void:
+	var movement := joystick_vector if joystick_vector.length() > 0.12 else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	if movement.length() > 0.12 and player_sprite and not (selection_layer and selection_layer.visible):
+		movement = movement.normalized()
+		player_direction = 2 if absf(movement.x) > absf(movement.y) and movement.x >= 0.0 else player_direction
+		if absf(movement.x) > absf(movement.y) and movement.x < 0.0:
+			player_direction = 1
+		elif absf(movement.y) >= absf(movement.x):
+			player_direction = 0 if movement.y > 0.0 else 3
+		walking = true
+		player_sprite.position += movement * 205.0 * delta
+		player_sprite.position.x = clampf(player_sprite.position.x, 28.0, size.x - 28.0)
+		player_sprite.position.y = clampf(player_sprite.position.y, 104.0, size.y - 160.0)
+		queue_redraw()
+	elif walking and not walking_tween:
+		walking = false
+		player_sprite.frame = player_direction * 4
 	if not walking or not player_sprite:
 		return
 	walk_clock += delta
 	var walk_phase := 1 if int(walk_clock / 0.14) % 2 == 0 else 3
 	player_sprite.frame = player_direction * 4 + walk_phase
+	queue_redraw()
+
+
+func _draw() -> void:
+	# Circular room minimap: the current room is central and nearby exits are plotted around it.
+	var map_center := Vector2(size.x - 91.0, 165.0)
+	draw_circle(map_center, 66.0, Color(0.015, 0.025, 0.03, 0.86))
+	draw_arc(map_center, 66.0, 0.0, TAU, 64, Color("d0aa69"), 2.0, true)
+	draw_arc(map_center, 43.0, 0.0, TAU, 48, Color(0.65, 0.58, 0.43, 0.38), 1.0, true)
+	var exits := _screen_routes(current_screen)
+	for index in range(exits.size()):
+		var angle := -PI * 0.5 + TAU * float(index) / float(maxi(1, exits.size()))
+		var point := map_center + Vector2(cos(angle), sin(angle)) * 43.0
+		draw_line(map_center, point, Color(0.7, 0.57, 0.34, 0.5), 1.0, true)
+		draw_circle(point, 4.2, Color("d0aa69"))
+	draw_circle(map_center, 6.0, Color("f4e3b9"))
+	# A subtle marker on the minimap shows where the hero is within the current room.
+	var room_pos := Vector2((player_sprite.position.x / maxf(1.0, size.x) - 0.5) * 30.0, (player_sprite.position.y / maxf(1.0, size.y) - 0.65) * 24.0)
+	draw_circle(map_center + room_pos, 3.0, Color("77d5a3"))
+	var stick_center := Vector2(90.0, size.y - 102.0)
+	draw_circle(stick_center, 59.0, Color(0.015, 0.025, 0.03, 0.68))
+	draw_arc(stick_center, 59.0, 0.0, TAU, 48, Color(0.82, 0.69, 0.46, 0.72), 2.0, true)
+	draw_line(stick_center + Vector2(-34.0, 0.0), stick_center + Vector2(34.0, 0.0), Color(0.75, 0.68, 0.54, 0.28), 1.0)
+	draw_line(stick_center + Vector2(0.0, -34.0), stick_center + Vector2(0.0, 34.0), Color(0.75, 0.68, 0.54, 0.28), 1.0)
+	draw_circle(stick_center + joystick_vector * 34.0, 22.0, Color(0.63, 0.48, 0.28, 0.82))
+	draw_arc(stick_center + joystick_vector * 34.0, 22.0, 0.0, TAU, 32, Color("e0c28b"), 2.0, true)
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_ESCAPE or event.keycode == KEY_BACKSPACE):
+		_on_b_pressed()
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
+		_on_b_pressed()
+		get_viewport().set_input_as_handled()
+		return
 	var target := Vector2(-1, -1)
 	if event is InputEventScreenTouch and event.pressed:
 		target = event.position
@@ -131,6 +192,24 @@ func _build_city_view() -> void:
 	gold_label = _label("◈ %d GOLD" % HERO_EQUIPMENT_SERVICE.gold(), 16, Color("f0cf7d"))
 	gold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	top_row.add_child(gold_label)
+	var selection_button := _button("☰  SELECT", _open_selection)
+	selection_button.anchor_left = 1.0
+	selection_button.anchor_right = 1.0
+	selection_button.offset_left = -168.0
+	selection_button.offset_top = 84.0
+	selection_button.offset_right = -18.0
+	selection_button.offset_bottom = 128.0
+	selection_button.z_index = 5
+	add_child(selection_button)
+	mini_map_button = _button("ROOM MAP", _open_selection_map)
+	mini_map_button.anchor_left = 1.0
+	mini_map_button.anchor_right = 1.0
+	mini_map_button.offset_left = -151.0
+	mini_map_button.offset_top = 191.0
+	mini_map_button.offset_right = -31.0
+	mini_map_button.offset_bottom = 225.0
+	mini_map_button.z_index = 5
+	add_child(mini_map_button)
 
 	_build_city_hero()
 
@@ -174,9 +253,237 @@ func _build_city_view() -> void:
 	gear_dialog.dialog_text = ""
 	gear_dialog.size = Vector2i(470, 430)
 	add_child(gear_dialog)
+	_build_selection_layer()
+	_build_touch_controls()
 
 	if city_names.size() > 1:
 		_build_city_selector(top_row)
+
+
+func _build_touch_controls() -> void:
+	joystick_area = Control.new()
+	joystick_area.position = Vector2(18.0, size.y - 174.0)
+	joystick_area.size = Vector2(144.0, 144.0)
+	joystick_area.mouse_filter = Control.MOUSE_FILTER_STOP
+	joystick_area.z_index = 8
+	joystick_area.gui_input.connect(_on_joystick_input)
+	add_child(joystick_area)
+	b_button = _button("B", _on_b_pressed)
+	b_button.custom_minimum_size = Vector2(72.0, 72.0)
+	b_button.anchor_left = 1.0
+	b_button.anchor_top = 1.0
+	b_button.anchor_right = 1.0
+	b_button.anchor_bottom = 1.0
+	b_button.offset_left = -102.0
+	b_button.offset_top = -112.0
+	b_button.offset_right = -24.0
+	b_button.offset_bottom = -34.0
+	b_button.add_theme_font_size_override("font_size", 25)
+	b_button.z_index = 8
+	add_child(b_button)
+
+
+func _build_selection_layer() -> void:
+	selection_layer = Control.new()
+	selection_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	selection_layer.visible = false
+	selection_layer.z_index = 20
+	add_child(selection_layer)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.01, 0.015, 0.02, 0.76)
+	selection_layer.add_child(shade)
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.12
+	panel.anchor_top = 0.10
+	panel.anchor_right = 0.88
+	panel.anchor_bottom = 0.90
+	panel.add_theme_stylebox_override("panel", _panel_style(Color("11191b"), Color("c5a068")))
+	selection_layer.add_child(panel)
+	var margin := MarginContainer.new()
+	_set_margins(margin, 18, 16, 18, 16)
+	panel.add_child(margin)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 12)
+	margin.add_child(stack)
+	var heading := HBoxContainer.new()
+	stack.add_child(heading)
+	var title := _label("CITY SELECTION", 22, Color("f1dbac"))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.add_child(title)
+	heading.add_child(_button("✕  CLOSE", _close_selection))
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 8)
+	stack.add_child(tabs)
+	tabs.add_child(_button("CITY MAP", _show_selection_map))
+	tabs.add_child(_button("EQUIPMENT", _show_selection_equipment))
+	tabs.add_child(_button("SAVE", _show_selection_save))
+	selection_status = _label("Equipment and campaign rewards save automatically on this device.", 13, Color("aebbb9"))
+	stack.add_child(selection_status)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stack.add_child(scroll)
+	selection_content = VBoxContainer.new()
+	selection_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	selection_content.add_theme_constant_override("separation", 8)
+	scroll.add_child(selection_content)
+	_show_selection_map()
+
+
+func _open_selection() -> void:
+	joystick_vector = Vector2.ZERO
+	selection_layer.visible = true
+	_show_selection_map()
+
+
+func _open_selection_map() -> void:
+	_open_selection()
+	_show_selection_map()
+
+
+func _close_selection() -> void:
+	selection_layer.visible = false
+
+
+func _show_selection_map() -> void:
+	_clear_selection_content()
+	selection_status.text = "You are in %s. Select a room to travel there." % str(CITY_SCREENS.get(current_screen, {}).get("title", current_screen)).capitalize()
+	for screen_id in ["plaza", "market", "forge", "inn", "keep", "gate"]:
+		var item: Dictionary = CITY_SCREENS[screen_id]
+		var label_text := ("●  " if screen_id == current_screen else "○  ") + str(item.get("title", screen_id))
+	var route_button := _button(label_text, _travel_to_screen.bind(screen_id))
+		route_button.custom_minimum_size.y = 48
+		selection_content.add_child(route_button)
+
+
+func _travel_to_screen(screen_id: String) -> void:
+	_select_location(screen_id)
+	_close_selection()
+
+
+func _show_selection_equipment() -> void:
+	_clear_selection_content()
+	selection_status.text = "Your inventory, loadout, and gold are saved automatically as you earn or equip items."
+	var loadout := HERO_EQUIPMENT_SERVICE.loadout(HERO_PROGRESSION_SERVICE.CHOSEN_HERO_ID)
+	var catalog := HERO_EQUIPMENT_SERVICE.items()
+	var has_equipment := false
+	for slot in HERO_EQUIPMENT_SERVICE.SLOTS:
+		var reference := str(loadout.get(slot, ""))
+		if reference == "":
+			continue
+		has_equipment = true
+		var item := HERO_EQUIPMENT_SERVICE.item_for(reference)
+		selection_content.add_child(_label("%s  •  %s" % [str(slot).replace("_", " ").to_upper(), str(item.get("name", reference))], 16, Color("e6d3ab")))
+	if not has_equipment:
+		selection_content.add_child(_label("No equipment is currently assigned to the loadout.", 15, Color("d5ddda")))
+	selection_content.add_child(_label("INVENTORY  •  %d items     ◈ %d GOLD" % [HERO_EQUIPMENT_SERVICE.inventory().size(), HERO_EQUIPMENT_SERVICE.gold()], 17, Color("f0cf7d")))
+	var owned := HERO_EQUIPMENT_SERVICE.inventory()
+	if owned.is_empty():
+		selection_content.add_child(_label("No battle loot collected yet. Visit the forge after finding equipment.", 14, Color("aebbb9")))
+	else:
+		for reference in owned:
+			var item: Dictionary = catalog.get(reference, {})
+			selection_content.add_child(_label("%s  ·  %s" % [str(item.get("name", reference)), str(item.get("slot", "equipment")).replace("_", " ").capitalize()], 15, Color("d5ddda")))
+
+
+func _show_selection_save() -> void:
+	_clear_selection_content()
+	selection_status.text = "Equipment, gold, and campaign progress are already written to this device as they change."
+	selection_content.add_child(_label("Save your current city room and position as a checkpoint.", 16, Color("d5ddda")))
+	selection_content.add_child(_button("SAVE CITY CHECKPOINT", _save_city_checkpoint))
+	selection_content.add_child(_button("LOAD CITY CHECKPOINT", _load_city_checkpoint))
+
+
+func _clear_selection_content() -> void:
+	for child in selection_content.get_children():
+		child.queue_free()
+
+
+func _save_city_checkpoint() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value(region_id, "screen", current_screen)
+	cfg.set_value(region_id, "player_x", player_sprite.position.x / maxf(1.0, size.x))
+	cfg.set_value(region_id, "player_y", player_sprite.position.y / maxf(1.0, size.y))
+	cfg.set_value(region_id, "selected_location", selected_location)
+	var result := cfg.save(CITY_SAVE_PATH)
+	selection_status.text = "City checkpoint saved." if result == OK else "Could not write the city checkpoint."
+
+
+func _load_city_checkpoint() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(CITY_SAVE_PATH) != OK or not cfg.has_section_key(region_id, "screen"):
+		selection_status.text = "No city checkpoint has been saved for this territory yet."
+		return
+	var screen := str(cfg.get_value(region_id, "screen", "plaza"))
+	_show_city_screen(screen)
+	selected_location = str(cfg.get_value(region_id, "selected_location", screen))
+	player_sprite.position = Vector2(size.x * float(cfg.get_value(region_id, "player_x", 0.5)), size.y * float(cfg.get_value(region_id, "player_y", 0.7)))
+	_select_location(selected_location)
+	selection_status.text = "City checkpoint loaded."
+	queue_redraw()
+
+
+func _restore_city_checkpoint() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(CITY_SAVE_PATH) != OK or not cfg.has_section_key(region_id, "screen"):
+		return
+	var screen := str(cfg.get_value(region_id, "screen", "plaza"))
+	_show_city_screen(screen)
+	selected_location = str(cfg.get_value(region_id, "selected_location", screen))
+	player_sprite.position = Vector2(size.x * float(cfg.get_value(region_id, "player_x", 0.5)), size.y * float(cfg.get_value(region_id, "player_y", 0.7)))
+	_select_location(selected_location)
+
+
+func _on_joystick_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			joystick_touch_index = event.index
+			_update_joystick(event.position)
+		else:
+			if event.index == joystick_touch_index:
+				joystick_touch_index = -1
+				joystick_vector = Vector2.ZERO
+				queue_redraw()
+	elif event is InputEventScreenDrag and event.index == joystick_touch_index:
+		_update_joystick(event.position)
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		joystick_mouse_down = event.pressed
+		if event.pressed:
+			_update_joystick(event.position)
+		else:
+			joystick_vector = Vector2.ZERO
+			queue_redraw()
+	elif event is InputEventMouseMotion and joystick_mouse_down:
+		_update_joystick(event.position)
+
+
+func _update_joystick(global_position: Vector2) -> void:
+	var local := joystick_area.get_global_transform_with_canvas().affine_inverse() * global_position
+	joystick_vector = ((local - joystick_area.size * 0.5) / 48.0).limit_length(1.0)
+	if joystick_vector.length() > 0.12:
+		if walking_tween and walking_tween.is_running():
+			walking_tween.kill()
+			walking_tween = null
+			walking = false
+	queue_redraw()
+
+
+func _on_b_pressed() -> void:
+	if selection_layer and selection_layer.visible:
+		_close_selection()
+	elif gear_dialog and gear_dialog.visible:
+		gear_dialog.hide()
+	elif current_screen != "plaza":
+		_return_to_plaza()
+
+
+func _screen_routes(screen_id: String) -> Array:
+	match screen_id:
+		"plaza": return ["market", "keep", "forge", "inn", "gate"]
+		"market": return ["plaza", "keep", "forge", "inn", "gate"]
+		"forge", "inn": return ["market"]
+		"keep", "gate": return ["plaza"]
+	return []
 
 
 func _city_background() -> Texture2D:
@@ -355,6 +662,7 @@ func _walk_player_to(destination: Vector2) -> void:
 
 func _finish_walk() -> void:
 	walking = false
+	walking_tween = null
 	player_sprite.frame = player_direction * 4
 	for hotspot in hotspot_buttons:
 		hotspot.disabled = false
@@ -369,10 +677,13 @@ func _finish_walk() -> void:
 
 
 func _on_city_resized() -> void:
+	if joystick_area:
+		joystick_area.position = Vector2(18.0, size.y - 174.0)
 	if not player_sprite:
 		return
 	player_sprite.position.x = clampf(player_sprite.position.x, 28.0, size.x - 28.0)
 	player_sprite.position.y = clampf(player_sprite.position.y, 104.0, size.y - 160.0)
+	queue_redraw()
 
 
 func _refresh_hotspots() -> void:
@@ -431,6 +742,7 @@ func _show_city_screen(screen_id: String, place_hero: bool = true) -> void:
 		player_sprite.position = Vector2(size.x * spawn.x, size.y * spawn.y)
 		player_sprite.frame = 0
 	_refresh_hotspots()
+	queue_redraw()
 
 
 func _select_location(id: String) -> void:
