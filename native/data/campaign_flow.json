@@ -1,0 +1,141 @@
+{
+  "campaign": {
+    "title": "The Shattered Realms",
+    "starting_territory": "ashen_wastes",
+    "starting_heroes": ["ignis", "vesper"],
+    "prologue": "The world broke when the Devouring Deep reached through the old beacon network. The fractures severed roads, turned guardians into monsters, and left every realm fighting alone. In Ashenreach, the Chosen rekindles the first beacon and discovers the break was deliberate.",
+    "core_goal": "Reconnect the beacon network, free the territories from their regional threats, and recover each champion's chest relic to recruit them before the Deep consumes the remaining realms.",
+    "choice_rule": "After a territory is secured, its connected neighbors become reachable. Choose any open route; regional arcs can be completed in any order, and returning to a secured region remains possible.",
+    "scaling_rule": "Enemies and monsters scale to the active hero's level. Each territory keeps a recommended danger floor, and elites and apex threats rise above the local baseline.",
+    "finale": {
+      "territory": "devouring_deep",
+      "name": "The Devouring Deep",
+      "boss": "The Devouring Deep",
+      "requires_recruited_heroes": 9,
+      "battle_groups": 3,
+      "story": "The restored beacons reveal the Deep beneath the broken sea. Divide the allied heroes into three strike groups to break its outer shell, sever its heart-tethers, and face the source of the fracture. Nine heroes can make the assault; all twelve make it safer."
+    }
+  },
+  "territories": {
+    "ashen_wastes": {
+      "name": "The Ashen Wastes",
+      "stronghold": "Ashenreach",
+      "recommended_level": 1,
+      "connected_to": ["ravenwood", "frostpeaks", "drakeshard_range", "golden_expanse"],
+      "hero": "ignis",
+      "threat": "Inferno-Lord Vulgrim",
+      "story": "The Chosen reaches the cracked beacon beneath Ashenreach. Secure the ruins, recover the Ember Seal from the Sundered Vault, and learn that the realm fractures are being pulled toward a single source."
+    },
+    "ravenwood": {
+      "name": "Ravenwood",
+      "stronghold": "Blackthorn",
+      "recommended_level": 2,
+      "connected_to": ["ashen_wastes", "shadowfen_forest", "iron_plains", "westhaven_coast"],
+      "hero": "lyra_vane",
+      "threat": "The Briarbound Hunt",
+      "story": "Blackthorn's wardens vanished along the old forest road. Find Lyra Vane, uncover who is steering the hunts, and reopen the western beacon path."
+    },
+    "frostpeaks": {
+      "name": "Frostpeaks",
+      "stronghold": "Icehelm",
+      "recommended_level": 3,
+      "connected_to": ["ashen_wastes", "stormcrown_mountains", "drakeshard_range"],
+      "hero": "vesper",
+      "threat": "The Whiteout Warden",
+      "story": "A living blizzard has sealed Icehelm beneath a wall of blue ice. Find Vesper, stabilize the mountain beacon, and learn what the storm is keeping buried."
+    },
+    "drakeshard_range": {
+      "name": "Drakeshard Range",
+      "stronghold": "Ironhold",
+      "recommended_level": 4,
+      "connected_to": ["ashen_wastes", "frostpeaks", "iron_plains", "dragons_rest"],
+      "hero": "dareth",
+      "threat": "The Scale-Crowned Brood",
+      "story": "Ironhold's dragon hunters are trapped between a fresh brood and a failing forge-beacon. Recruit Dareth and decide whether the brood is serving the Deep or fleeing it."
+    },
+    "iron_plains": {
+      "name": "The Iron Plains",
+      "stronghold": "Harrowstead",
+      "recommended_level": 3,
+      "connected_to": ["ravenwood", "drakeshard_range", "stormcrown_mountains", "cursed_mire"],
+      "hero": "cedric",
+      "threat": "The Hollow Legion",
+      "story": "Harrowstead's armies are marching without their living commanders. Find General Cedric, reclaim the signal towers, and choose which neighboring front receives the restored supply road first."
+    },
+    "shadowfen_forest": {
+      "name": "Shadowfen Forest",
+      "recommended_level": 5,
+      "connected_to": ["ravenwood", "blighted_marsh", "cursed_mire"],
+      "threat": "Xylos, Weaver of Rot",
+      "story": "Rot is threading through the roots between realms. Trace Xylos's web to the oldest tree and uncover how the Rot Weaver is tying the forests to the Deep."
+    },
+    "blighted_marsh": {
+      "name": "The Blighted Marsh",
+      "recommended_level": 4,
+      "connected_to": ["shadowfen_forest", "cursed_mire"],
+      "hero": "morana",
+      "threat": "Mirl-Mother Morvana",
+      "story": "The marsh's villages are disappearing into a spreading spore tide. Morana can read the plague's memory; follow it upstream to find the beacon buried below the bog."
+    },
+    "cursed_mire": {
+      "name": "The Cursed Mire",
+      "recommended_level": 5,
+      "connected_to": ["iron_plains", "shadowfen_forest", "blighted_marsh", "golden_expanse", "hollow_isles"],
+      "hero": "malakor",
+      "threat": "Golgotha the Soul-Tainted",
+      "story": "The Mire is collecting the names of the dead. Find the source of its soul-tide, confront Golgotha, and decide whether the trapped spirits should be released or bound to defend the living."
+    },
+    "dragons_rest": {
+      "name": "Dragon's Rest",
+      "recommended_level": 5,
+      "connected_to": ["drakeshard_range", "ember_coast"],
+      "hero": "ignacia",
+      "threat": "The Ashwing Tyrant",
+      "story": "The dragons have abandoned their nesting cliffs. Find Ignacia and learn why the eldest dragon is carrying fragments of a beacon into the coastal fires."
+    },
+    "ember_coast": {
+      "name": "The Ember Coast",
+      "stronghold": "Raven's Hold / Mistvale",
+      "recommended_level": 6,
+      "connected_to": ["dragons_rest", "westhaven_coast"],
+      "hero": "ignacia",
+      "threat": "The Cinder Fleet",
+      "story": "A burning fleet is cutting off the coast. Sail with Ignacia to recover the beacon lens before the firestorm reaches Westhaven."
+    },
+    "stormcrown_mountains": {
+      "name": "Stormcrown Mountains",
+      "stronghold": "Stormcrown Keep",
+      "recommended_level": 6,
+      "connected_to": ["frostpeaks", "iron_plains"],
+      "hero": "thorvald",
+      "threat": "The Thunderbound Colossus",
+      "story": "Stormcrown's lightning has begun striking the keep from below. Join Thorvald in the foundry, restore the peak beacon, and uncover the metal threaded through the storm."
+    },
+    "westhaven_coast": {
+      "name": "Westhaven Coast",
+      "stronghold": "Silverkeep / Westhaven",
+      "recommended_level": 5,
+      "connected_to": ["ravenwood", "ember_coast", "hollow_isles"],
+      "hero": "jora",
+      "threat": "The Drowned Admiralty",
+      "story": "Westhaven's lighthouse is calling ships toward reefs that were not there yesterday. Captain Jora can chart the shifting coast and open a safe route to the isles."
+    },
+    "golden_expanse": {
+      "name": "The Golden Expanse",
+      "stronghold": "Sunspire",
+      "recommended_level": 6,
+      "connected_to": ["ashen_wastes", "cursed_mire"],
+      "hero": "zephyr",
+      "threat": "The Glass Djinn",
+      "story": "Sunspire's mirage road loops back on every traveler. Follow Zephyr's shifting marks to the true beacon and decide which memory the desert should preserve."
+    },
+    "hollow_isles": {
+      "name": "The Hollow Isles",
+      "stronghold": "Isle Fortress",
+      "recommended_level": 7,
+      "connected_to": ["westhaven_coast", "cursed_mire"],
+      "threat": "The Hollow Admiral",
+      "story": "The isles move whenever the tide turns. Reconnect their scattered signal fires and use the old sea chart to locate the place where the Deep first touched the world."
+    }
+  }
+}

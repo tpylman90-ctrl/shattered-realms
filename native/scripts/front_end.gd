@@ -9,6 +9,7 @@ const TERRITORY_PREVIEW_SCENE := "res://scenes/TerritoryBoardPreview.tscn"
 const MAP_SCRIPT := preload("res://scripts/world_map_canvas.gd")
 const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
 const HeroProgressionService = preload("res://scripts/hero_progression.gd")
+const CampaignFlowService = preload("res://scripts/campaign_director.gd")
 
 var territories: Dictionary = {}
 var current_region := "ashen_wastes"
@@ -515,12 +516,47 @@ func _select_region(region_id: String) -> void:
     var stronghold := str(region.get("stronghold", "Uncharted stronghold"))
     detail_body.text = str(region.get("description", "%s%s" % [stronghold, "  •  %s" % guardian if guardian != "" else ""]))
     enter_button.visible = playable_board or has_preview or concept_ready
+    enter_button.disabled = false
+    var campaign_region := CampaignFlowService.territory(region_id)
+    if not campaign_region.is_empty():
+        var route_status := CampaignFlowService.route_status(region_id)
+        var progress: Dictionary = CampaignFlowService.state()
+        var secured: Array = progress.get("secured_territories", [])
+        var recruited: Array = progress.get("recruited_heroes", [])
+        detail_type.text = "CAMPAIGN • %s • RECOMMENDED LEVEL %d" % [route_status, int(campaign_region.get("recommended_level", 1))]
+        detail_body.text = "%s\n\n%s\n\nThreat: %s\nRoute: %s" % [
+            str(campaign_region.get("story", "")),
+            str(CampaignFlowService.campaign_text().get("choice_rule", "Choose any connected territory.")),
+            str(campaign_region.get("threat", guardian)),
+            route_status
+        ]
+        if region_id != "ashen_wastes" and route_status == "SEALED ROUTE":
+            detail_body.text += "\nSecure a connected territory to open this route."
+        if region_id == "devouring_deep":
+            var finale: Dictionary = CampaignFlowService.finale_status(recruited.size())
+            var finale_story := str(CampaignFlowService.campaign_text().get("finale", {}).get("story", ""))
+            detail_type.text = "CAMPAIGN FINALE • %d / %d HEROES" % [int(finale.get("recruited", 0)), int(finale.get("required", 9))]
+            detail_body.text = "%s\n\n%s" % [finale_story, "The strike is ready." if finale.get("ready", false) else "%d more heroes must join the campaign." % int(finale.get("remaining", 0))]
+            enter_button.visible = true
+            enter_button.disabled = not bool(finale.get("ready", false))
+        elif region_id in secured:
+            detail_type.text += " • RECONNECTED"
+        elif route_status == "SEALED ROUTE":
+            enter_button.disabled = true
+        if region_id == "ashen_wastes":
+            detail_body.text = "%s\n\n%s\n\nThreat: %s" % [
+                str(CampaignFlowService.campaign_text().get("prologue", "")),
+                str(campaign_region.get("story", "")),
+                str(campaign_region.get("threat", ""))
+            ]
     if region_id == "ravenwood":
         enter_button.text = "ENTER RAVENWOOD"
     elif region_id == "iron_plains":
         enter_button.text = "PREVIEW IRON PLAINS"
     elif region_id == "golden_expanse":
         enter_button.text = "EXPLORE GOLDEN EXPANSE"
+    elif region_id == "devouring_deep":
+        enter_button.text = "ASSAULT THE DEVOURING DEEP" if not enter_button.disabled else "FINALE LOCKED"
     elif concept_ready:
         enter_button.text = "PREVIEW BOARD"
     else:

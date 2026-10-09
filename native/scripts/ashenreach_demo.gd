@@ -2,6 +2,7 @@ extends Node3D
 
 const HeroProgressionService = preload("res://scripts/hero_progression.gd")
 const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
+const CampaignFlowService = preload("res://scripts/campaign_director.gd")
 
 @onready var yaw: Node3D = $CameraRig
 @onready var pitch: Node3D = $CameraRig/Pitch
@@ -549,6 +550,9 @@ func _refresh_unlocked_heroes() -> void:
 
     if selected_hero_id not in unlocked_heroes:
         selected_hero_id = "chosen_hero" if unlocked_heroes.has("chosen_hero") else (unlocked_heroes[0] if not unlocked_heroes.is_empty() else "")
+    for hero_id in unlocked_heroes:
+        if hero_id != "chosen_hero":
+            CampaignFlowService.recruit_hero(str(hero_id))
 
 func _refresh_chosen_hero_skill_unlocks() -> void:
     if not HeroProgressionService.chosen_hero_exists():
@@ -3089,12 +3093,14 @@ func _trigger_node_encounter(node_name: String) -> void:
     if not encounters.has(node_name) or completed_encounters.has(node_name):
         return
     var data: Dictionary = encounters[node_name]
+    var scaled := CampaignFlowService.scaled_enemy(data, _selected_hero_level(), str(board_data.get("territory", "ashen_wastes")))
     current_encounter_node = node_name
     encounter_title.text = str(data.get("name", "Encounter"))
-    encounter_body.text = "%s\n\nDanger %d  •  Reward %d XP" % [
+    encounter_body.text = "%s\n\nThreat Level %d  •  Danger %d  •  Reward %d XP" % [
         str(data.get("description", "")),
-        int(data.get("danger", 1)),
-        int(data.get("xp", 0))
+        int(scaled.get("enemy_level", 1)),
+        int(scaled.get("danger", 1)),
+        int(scaled.get("xp", 0))
     ]
     encounter_panel.visible = true
     movement_panel.visible = false
@@ -3111,6 +3117,7 @@ func _start_battle_test() -> void:
 
 
 func _start_standard_battle(encounter_id: String, data: Dictionary) -> void:
+    var scaled := CampaignFlowService.scaled_enemy(data, _selected_hero_level(), str(board_data.get("territory", "ashen_wastes")))
     var cfg := ConfigFile.new()
     cfg.set_value("battle", "hero_id", selected_hero_id)
     cfg.set_value("battle", "encounter_id", encounter_id)
@@ -3120,10 +3127,11 @@ func _start_standard_battle(encounter_id: String, data: Dictionary) -> void:
     cfg.set_value("battle", "hero_hp", hero_health)
     cfg.set_value("battle", "hero_max_hp", 100)
     cfg.set_value("battle", "hero_xp", hero_xp)
-    cfg.set_value("battle", "danger", int(data.get("danger", 1)))
-    cfg.set_value("battle", "enemy_hp", 48 + int(data.get("danger", 1)) * 22)
-    cfg.set_value("battle", "enemy_attack", 5 + int(data.get("danger", 1)) * 4)
-    cfg.set_value("battle", "reward_xp", int(data.get("xp", 0)))
+    cfg.set_value("battle", "danger", int(scaled.get("danger", 1)))
+    cfg.set_value("battle", "enemy_level", int(scaled.get("enemy_level", 1)))
+    cfg.set_value("battle", "enemy_hp", int(scaled.get("hp", 70)))
+    cfg.set_value("battle", "enemy_attack", int(scaled.get("attack", 9)))
+    cfg.set_value("battle", "reward_xp", int(scaled.get("xp", 0)))
     cfg.save(BATTLE_CONTEXT_PATH)
 
     # Save territory state before leaving so the return is lossless.
@@ -3169,6 +3177,13 @@ func _consume_battle_result() -> void:
     # HUD/enemy board may not exist yet during _ready; their refresh happens later.
     if victory and encounter_id == "__battle_test__":
         pending_battle_message = "Battle test complete. Campaign state unchanged."
+    elif victory and encounter_id == "__VULGRIM__":
+        vulgrim_defeated = true
+        vulgrim_available = false
+        territory_secured = true
+        HeroProgressionService.mark_territory_reconnected("ashen_wastes")
+        CampaignFlowService.secure_territory("ashen_wastes")
+        pending_battle_message = "Inferno-Lord Vulgrim defeated. Ashenreach is secured and the connected roads awaken."
     elif victory:
         pending_battle_message = "%s defeated in battle." % enemy_name
         if loot_name != "":
@@ -3181,7 +3196,16 @@ func _consume_battle_result() -> void:
 func _resolve_encounter(engage: bool) -> void:
     if current_encounter_node == "__VULGRIM__":
         if engage:
-            _resolve_vulgrim()
+            _start_standard_battle("__VULGRIM__", {
+                "name": "Inferno-Lord Vulgrim",
+                "battle_family": "vulgrim",
+                "danger": 5,
+                "level_offset": 2,
+                "base_level": 1,
+                "base_hp": 460,
+                "base_attack": 22,
+                "xp": 150
+            })
         else:
             encounter_panel.visible = false
             current_encounter_node = ""
@@ -3216,9 +3240,15 @@ func _open_vulgrim_encounter() -> void:
     if not vulgrim_available or vulgrim_defeated:
         return
     current_encounter_node = "__VULGRIM__"
+    var boss_data := {"danger": 5, "level_offset": 2, "base_level": 1, "base_hp": 460, "base_attack": 22, "xp": 150}
+    var scaled := CampaignFlowService.scaled_enemy(boss_data, _selected_hero_level(), "ashen_wastes")
     encounter_title.text = "Inferno-Lord Vulgrim"
-    encounter_body.text = "WORLD-ENDING THREAT / APEX ENTITY\n\nVulgrim erupts from the Ashen Wastes in a storm of magma and catastrophic heat. This is the territory's legendary confrontation.\n\nRecommended: secure Ashenreach first and enter with high health."
+    encounter_body.text = "WORLD-ENDING THREAT / APEX ENTITY\n\nVulgrim erupts from the Ashen Wastes in a storm of magma and catastrophic heat. This is the territory's legendary confrontation.\n\nThreat Level %d  •  %d HP  •  %d attack\nApex threats scale with your active hero." % [int(scaled.get("enemy_level", 1)), int(scaled.get("hp", 460)), int(scaled.get("attack", 22))]
     encounter_panel.visible = true
+
+func _selected_hero_level() -> int:
+    var profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    return maxi(1, int(profile.get("level", 1)))
 
 func _resolve_vulgrim() -> void:
     var damage: int = 35
@@ -4170,6 +4200,7 @@ func _on_poi_action() -> void:
         if _all_objectives_complete():
             territory_secured = true
             HeroProgressionService.mark_territory_reconnected("ashen_wastes")
+            CampaignFlowService.secure_territory("ashen_wastes")
             vulgrim_available = true
             event_log_label.text = "Ashenreach secured. Inferno-Lord Vulgrim can now be confronted."
             _refresh_unlocked_heroes()

@@ -72,6 +72,29 @@ jobs:
               for other in tile['blocked_edges']:
                   assert key in grid['tiles'][other]['blocked_edges']
           print('[ravenwood] movement grid verified:',grid['tile_count'])
+          flow=json.load(open('native/data/campaign_flow.json'))
+          catalog=json.load(open('native/data/world_catalog.json'))
+          territories=flow['territories']
+          start=flow['campaign']['starting_territory']
+          assert start in territories
+          assert flow['campaign']['finale']['requires_recruited_heroes']==9
+          assert flow['campaign']['finale']['battle_groups']==3
+          for territory_id,region in territories.items():
+              assert region.get('story') and region.get('recommended_level',0)>0, territory_id
+              for neighbor in region['connected_to']:
+                  assert neighbor in territories, (territory_id,neighbor)
+                  assert territory_id in territories[neighbor]['connected_to'], (territory_id,neighbor)
+          expected={key for key,value in catalog['territories'].items() if value.get('status') not in ('future_ocean_expansion','finale_gate')}
+          assert set(territories)==expected, (set(territories),expected)
+          reached={start}
+          frontier=[start]
+          while frontier:
+              for neighbor in territories[frontier.pop()]['connected_to']:
+                  if neighbor not in reached:
+                      reached.add(neighbor)
+                      frontier.append(neighbor)
+          assert reached==set(territories), reached
+          print('[campaign] connected territory graph verified:',len(territories))
           PY
 
       - name: Verify Golden Expanse terrain and crossings

@@ -36,6 +36,7 @@ var enemy_max_hp := 70
 var enemy_attack := 10
 var reward_xp := 25
 var danger := 1
+var enemy_level := 1
 
 var hero_atb := 0.0
 var enemy_atb := 0.0
@@ -162,6 +163,7 @@ func _load_context() -> void:
     enemy_attack = int(cfg.get_value("battle", "enemy_attack", 10))
     reward_xp = int(cfg.get_value("battle", "reward_xp", 25))
     danger = int(cfg.get_value("battle", "danger", 1))
+    enemy_level = int(cfg.get_value("battle", "enemy_level", 1))
 
 
 func _load_hero_data() -> void:
@@ -409,6 +411,8 @@ func _spawn_enemy_placeholder() -> void:
         _spawn_hound_placeholder()
     elif enemy_family == "revenant":
         _spawn_wraith_placeholder()
+    elif enemy_family == "vulgrim":
+        _spawn_placeholder(enemy_anchor, Color(0.62, 0.035, 0.012), 1.8)
     elif enemy_family == "warden":
         _spawn_placeholder(enemy_anchor, Color(0.46, 0.12, 0.06), 1.34)
     elif enemy_family == "stalker":
@@ -974,7 +978,7 @@ func _refresh_ui() -> void:
     var enemy_status := ""
     for effect in enemy_effects.keys():
         enemy_status += " • %s %d" % [str(effect).to_upper(), int(enemy_effects[effect])]
-    enemy_hp_label.text = "%s  HP %d/%d%s" % [enemy_name, enemy_hp, enemy_max_hp, enemy_status]
+    enemy_hp_label.text = "%s  LV %d  •  HP %d/%d%s" % [enemy_name, enemy_level, enemy_hp, enemy_max_hp, enemy_status]
 
     var hero_ratio := float(hero_hp) / float(maxi(1, hero_max_hp))
     if hero_ratio <= 0.30:
