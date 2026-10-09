@@ -10,9 +10,9 @@ const CITY_SAVE_PATH := "user://city_checkpoint.cfg"
 const CITY_SCREENS := {
 	"plaza": {"art": "res://assets/cities/ashenreach_city.jpg", "title": "ASHENREACH PLAZA", "spawn": Vector2(0.50, 0.70)},
 	"market": {"art": "res://assets/cities/ashenreach/market.jpg", "title": "MARKET LANE", "spawn": Vector2(0.50, 0.75)},
-	"forge": {"art": "res://assets/cities/ashenreach/forge.jpg", "title": "THE FORGE", "spawn": Vector2(0.50, 0.76)},
-	"inn": {"art": "res://assets/cities/ashenreach/inn.jpg", "title": "THE WAYFARER'S INN", "spawn": Vector2(0.50, 0.76)},
-	"keep": {"art": "res://assets/cities/ashenreach/keep.jpg", "title": "ASHENREACH KEEP", "spawn": Vector2(0.50, 0.80)},
+	"forge": {"art": "res://assets/cities/ashenreach/forge_interior.webp", "title": "THE FORGE", "spawn": Vector2(0.50, 0.77)},
+	"inn": {"art": "res://assets/cities/ashenreach/inn_interior.webp", "title": "THE WAYFARER'S INN", "spawn": Vector2(0.50, 0.78)},
+	"keep": {"art": "res://assets/cities/ashenreach/keep_interior.webp", "title": "ASHENREACH KEEP", "spawn": Vector2(0.50, 0.78)},
 	"gate": {"art": "res://assets/cities/ashenreach/gate.jpg", "title": "THE CITY GATE", "spawn": Vector2(0.50, 0.80)}
 }
 
@@ -26,6 +26,7 @@ var current_screen := "plaza"
 var city_names: Array[String] = []
 
 var background: TextureRect
+var character_stage: Node2D
 var player_sprite: Sprite2D
 var scene_back_button: Button
 var city_title: Label
@@ -50,6 +51,8 @@ var mini_map_hero: Panel
 var mini_map_pois: Array[Panel] = []
 var joystick_base: Panel
 var joystick_knob: Panel
+var npc_sprites: Array[Sprite2D] = []
+var dialogue_layer: Control
 var walking_tween: Tween
 var walk_clock := 0.0
 var walking := false
@@ -481,7 +484,9 @@ func _update_joystick(global_position: Vector2) -> void:
 
 
 func _on_b_pressed() -> void:
-	if selection_layer and selection_layer.visible:
+	if dialogue_layer and is_instance_valid(dialogue_layer):
+		_close_city_dialogue()
+	elif selection_layer and selection_layer.visible:
 		_close_selection()
 	elif gear_dialog and gear_dialog.visible:
 		gear_dialog.hide()
@@ -587,6 +592,10 @@ func _select_city(city_name: String) -> void:
 
 
 func _build_city_hero() -> void:
+	character_stage = Node2D.new()
+	character_stage.y_sort_enabled = true
+	character_stage.z_index = 1
+	add_child(character_stage)
 	player_sprite = Sprite2D.new()
 	player_sprite.texture = _build_pixel_sprite_sheet()
 	player_sprite.hframes = 4
@@ -595,7 +604,7 @@ func _build_city_hero() -> void:
 	player_sprite.scale = Vector2(2.35, 2.35)
 	player_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	player_sprite.z_index = 0
-	add_child(player_sprite)
+	character_stage.add_child(player_sprite)
 
 
 func _build_pixel_sprite_sheet() -> Texture2D:
@@ -689,6 +698,141 @@ func _add_hotspot(id: String, label_text: String, point: Vector2) -> void:
 	hotspot_buttons.append(hotspot)
 
 
+func _refresh_residents() -> void:
+	for resident in npc_sprites:
+		if is_instance_valid(resident):
+			resident.queue_free()
+	npc_sprites.clear()
+	if region_id != "ashen_wastes":
+		return
+	var residents: Array[Dictionary] = []
+	match current_screen:
+		"plaza":
+			residents = [
+				{"talk": "steward", "point": Vector2(0.53, 0.55), "tint": Color("d3c3a0")},
+				{"point": Vector2(0.35, 0.63), "tint": Color("9bab83")},
+				{"point": Vector2(0.68, 0.61), "tint": Color("9a829b")}
+			]
+		"market":
+			residents = [
+				{"talk": "innkeeper", "point": Vector2(0.62, 0.54), "tint": Color("c99e7b")},
+				{"point": Vector2(0.34, 0.65), "tint": Color("94a6a0")},
+				{"point": Vector2(0.78, 0.62), "tint": Color("a19472")}
+			]
+		"forge":
+			residents = [
+				{"talk": "smith", "point": Vector2(0.59, 0.57), "tint": Color("b78569")},
+				{"point": Vector2(0.33, 0.63), "tint": Color("889397")}
+			]
+		"inn":
+			residents = [
+				{"talk": "innkeeper", "point": Vector2(0.72, 0.54), "tint": Color("c99e7b")},
+				{"point": Vector2(0.34, 0.65), "tint": Color("98a783")},
+				{"point": Vector2(0.54, 0.64), "tint": Color("a98a70")}
+			]
+		"keep":
+			residents = [
+				{"talk": "steward", "point": Vector2(0.52, 0.57), "tint": Color("c2bec0")},
+				{"point": Vector2(0.32, 0.64), "tint": Color("899ab2")},
+				{"point": Vector2(0.72, 0.64), "tint": Color("899ab2")}
+			]
+		"gate":
+			residents = [{"talk": "gate_guard", "point": Vector2(0.68, 0.58), "tint": Color("899ab2")}]
+	for resident in residents:
+		var point: Vector2 = resident.get("point", Vector2(0.5, 0.6))
+		var sprite := Sprite2D.new()
+		sprite.texture = player_sprite.texture
+		sprite.hframes = 4
+		sprite.vframes = 4
+		sprite.frame = 0
+		sprite.scale = Vector2(2.0, 2.0)
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		sprite.modulate = resident.get("tint", Color.WHITE)
+		sprite.position = Vector2(size.x * point.x, size.y * point.y)
+		character_stage.add_child(sprite)
+		npc_sprites.append(sprite)
+		var talk_id := str(resident.get("talk", ""))
+		if talk_id != "":
+			_add_hotspot("npc:" + talk_id, "✦ TALK", Vector2(point.x, point.y - 0.075))
+
+
+func _show_city_dialogue(npc_id: String) -> void:
+	var conversations := {
+		"innkeeper": {
+			"name": "MARA • INNKEEPER",
+			"portrait": "innkeeper",
+			"text": "Welcome in, traveler. The roads are rough, but the hearth is warm. A night's rest costs 25 gold; the gate is where the hard news waits."
+		},
+		"smith": {
+			"name": "BROM • MASTER SMITH",
+			"portrait": "smith",
+			"text": "Bring me the gear you recover out there. I can tell you what it is worth and which pieces were made for fighting the Ashen Wastes."
+		},
+		"steward": {
+			"name": "ELRIC • KEEP STEWARD",
+			"portrait": "steward",
+			"text": "The old borders are opening again. Each road leads into a different realm; choose your route carefully, but remember that no single road decides the whole campaign."
+		},
+		"gate_guard": {
+			"name": "GATE WARDEN",
+			"portrait": "steward",
+			"text": "Beyond this arch, the territory roads reconnect with the frontier. Check the city map if you need to find your way back."
+		}
+	}
+	var conversation: Dictionary = conversations.get(npc_id, conversations["steward"])
+	if dialogue_layer and is_instance_valid(dialogue_layer):
+		dialogue_layer.queue_free()
+	dialogue_layer = Control.new()
+	dialogue_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dialogue_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	dialogue_layer.z_index = 40
+	add_child(dialogue_layer)
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.07
+	panel.anchor_top = 0.64
+	panel.anchor_right = 0.93
+	panel.anchor_bottom = 0.97
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.035, 0.04, 0.96), Color("d0aa69")))
+	dialogue_layer.add_child(panel)
+	var margin := MarginContainer.new()
+	_set_margins(margin, 20, 14, 16, 12)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 18)
+	margin.add_child(row)
+	var copy := VBoxContainer.new()
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	copy.add_theme_constant_override("separation", 8)
+	row.add_child(copy)
+	var speaker := _label(str(conversation.get("name", "TOWNSFOLK")), 16, Color("e6bd78"))
+	copy.add_child(speaker)
+	var words := _label(str(conversation.get("text", "")), 16, Color("f0e8d5"))
+	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	words.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	copy.add_child(words)
+	var continue_button := _button("B  •  CONTINUE", _close_city_dialogue)
+	continue_button.custom_minimum_size.x = 176
+	copy.add_child(continue_button)
+	var portrait := TextureRect.new()
+	portrait.custom_minimum_size = Vector2(190.0, 210.0)
+	portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var portrait_path := "res://assets/cities/ashenreach/portraits/%s.webp" % str(conversation.get("portrait", "steward"))
+	if ResourceLoader.exists(portrait_path):
+		portrait.texture = load(portrait_path)
+	row.add_child(portrait)
+	joystick_vector = Vector2.ZERO
+	_update_joystick_knob()
+
+
+func _close_city_dialogue() -> void:
+	if dialogue_layer and is_instance_valid(dialogue_layer):
+		dialogue_layer.queue_free()
+	dialogue_layer = null
+
+
 func _on_hotspot_pressed(id: String, point: Vector2) -> void:
 	_walk_to_location(id, Vector2(size.x * point.x, size.y * point.y))
 
@@ -739,7 +883,9 @@ func _finish_walk() -> void:
 		action_button.disabled = false
 	var destination := pending_location
 	pending_location = ""
-	if destination != "":
+	if destination.begins_with("npc:"):
+		_show_city_dialogue(destination.trim_prefix("npc:"))
+	elif destination != "":
 		_select_location(destination)
 
 
@@ -809,6 +955,7 @@ func _show_city_screen(screen_id: String, place_hero: bool = true) -> void:
 		player_sprite.position = Vector2(size.x * spawn.x, size.y * spawn.y)
 		player_sprite.frame = 0
 	_refresh_hotspots()
+	_refresh_residents()
 	queue_redraw()
 
 
