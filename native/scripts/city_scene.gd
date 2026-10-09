@@ -7,6 +7,7 @@ const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
 const HERO_PROGRESSION_SERVICE = preload("res://scripts/hero_progression.gd")
 const SPRITE_FRAME_SIZE := Vector2i(24, 32)
 const CITY_SAVE_PATH := "user://city_checkpoint.cfg"
+const CITY_NAV_CELL_SIZE := 24.0
 const CITY_SCREENS := {
 	"plaza": {"art": "res://assets/cities/ashenreach/plaza_legacy.webp", "title": "ASHENREACH PLAZA", "spawn": Vector2(0.50, 0.70)},
 	"market": {"art": "res://assets/cities/ashenreach/market_legacy.webp", "title": "MARKET LANE", "spawn": Vector2(0.50, 0.75)},
@@ -53,7 +54,10 @@ var joystick_base: Panel
 var joystick_knob: Panel
 var npc_sprites: Array[Sprite2D] = []
 var dialogue_layer: Control
-var walking_tween: Tween
+var walkable_polygons: Array[PackedVector2Array] = []
+var walk_path: Array[Vector2] = []
+var walk_path_index := 0
+var walking_to_target := false
 var walk_clock := 0.0
 var walking := false
 var player_direction := 0
@@ -72,24 +76,42 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	var movement := joystick_vector if joystick_vector.length() > 0.12 else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
-	if movement.length() > 0.12 and player_sprite and not (selection_layer and selection_layer.visible):
+	if not player_sprite:
+		return
+	var movement := Vector2.ZERO
+	if not (selection_layer and selection_layer.visible):
+		if walking_to_target:
+			while walk_path_index < walk_path.size() and player_sprite.position.distance_to(walk_path[walk_path_index]) < 4.0:
+				walk_path_index += 1
+			if walk_path_index >= walk_path.size():
+				_finish_walk()
+			else:
+				movement = player_sprite.position.direction_to(walk_path[walk_path_index])
+		else:
+			movement = joystick_vector if joystick_vector.length() > 0.12 else Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	if movement.length() > 0.12:
 		movement = movement.normalized()
 		player_direction = 2 if absf(movement.x) > absf(movement.y) and movement.x >= 0.0 else player_direction
 		if absf(movement.x) > absf(movement.y) and movement.x < 0.0:
 			player_direction = 1
 		elif absf(movement.y) >= absf(movement.x):
 			player_direction = 0 if movement.y > 0.0 else 3
-		walking = true
-		player_sprite.position += movement * 205.0 * delta
-		player_sprite.position.x = clampf(player_sprite.position.x, 28.0, size.x - 28.0)
-		player_sprite.position.y = clampf(player_sprite.position.y, 104.0, size.y - 160.0)
-	elif walking and not walking_tween:
+		var stride := movement * 205.0 * delta
+		if walking_to_target:
+			stride = movement * minf(205.0 * delta, player_sprite.position.distance_to(walk_path[walk_path_index]))
+		if _try_move_player(stride):
+			walking = true
+		else:
+			if walking_to_target:
+				_cancel_walk()
+			else:
+				walking = false
+	elif walking and not walking_to_target:
 		walking = false
 		player_sprite.frame = player_direction * 4
 	_update_minimap_markers()
 	_update_joystick_knob()
-	if not walking or not player_sprite:
+	if not walking:
 		return
 	walk_clock += delta
 	var walk_phase := 1 if int(walk_clock / 0.14) % 2 == 0 else 3
@@ -114,6 +136,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if target.x < 0.0 or walking or (gear_dialog and gear_dialog.visible):
 		return
 	if target.y < 84.0 or target.y > size.y - 152.0:
+		return
+	if not _is_walkable_position(target):
 		return
 	_walk_player_to(target)
 
@@ -342,11 +366,7 @@ func _build_selection_layer() -> void:
 
 func _open_selection() -> void:
 	joystick_vector = Vector2.ZERO
-	if walking_tween and walking_tween.is_running():
-		walking_tween.kill()
-		walking_tween = null
-		walking = false
-		pending_location = ""
+	_cancel_walk()
 	_update_joystick_knob()
 	selection_layer.visible = true
 	_show_selection_map()
@@ -474,14 +494,17 @@ func _on_joystick_input(event: InputEvent) -> void:
 		_update_joystick(event.position)
 
 
-func _update_joystick(global_position: Vector2) -> void:
-	var local := joystick_area.get_global_transform_with_canvas().affine_inverse() * global_position
-	joystick_vector = ((local - joystick_area.size * 0.5) / 48.0).limit_length(1.0)
+func _update_joystick(local_position: Vector2) -> void:
+	# GUI touch coordinates can be viewport-relative while mouse coordinates
+	# are control-local. Pick the representation nearest the joystick center;
+	# this also keeps a captured drag usable after it leaves the control bounds.
+	var center := joystick_area.size * 0.5
+	var transformed := joystick_area.get_global_transform_with_canvas().affine_inverse() * local_position
+	if transformed.distance_squared_to(center) < local_position.distance_squared_to(center):
+		local_position = transformed
+	joystick_vector = ((local_position - joystick_area.size * 0.5) / 48.0).limit_length(1.0)
 	if joystick_vector.length() > 0.12:
-		if walking_tween and walking_tween.is_running():
-			walking_tween.kill()
-			walking_tween = null
-			walking = false
+		_cancel_walk()
 	queue_redraw()
 
 
@@ -848,16 +871,20 @@ func _walk_to_location(location_id: String, destination: Vector2) -> void:
 func _walk_player_to(destination: Vector2) -> void:
 	if not player_sprite:
 		return
+	var safe_target := _nearest_walkable_position(destination)
+	if not _is_walkable_position(safe_target):
+		pending_location = ""
+		return
+	var route := _find_walk_path(player_sprite.position, safe_target)
+	if route.is_empty():
+		pending_location = ""
+		return
 	for hotspot in hotspot_buttons:
 		hotspot.disabled = true
 	if scene_back_button:
 		scene_back_button.disabled = true
 	if action_button:
 		action_button.disabled = true
-	var safe_target := Vector2(
-		clampf(destination.x, 28.0, size.x - 28.0),
-		clampf(destination.y, 104.0, size.y - 160.0)
-	)
 	var travel := safe_target - player_sprite.position
 	if absf(travel.x) > absf(travel.y):
 		player_direction = 2 if travel.x >= 0.0 else 1
@@ -866,17 +893,16 @@ func _walk_player_to(destination: Vector2) -> void:
 	player_sprite.frame = player_direction * 4 + 1
 	walk_clock = 0.0
 	walking = true
-	var duration := clampf(travel.length() / 260.0, 0.18, 1.6)
-	walking_tween = create_tween()
-	walking_tween.set_trans(Tween.TRANS_SINE)
-	walking_tween.set_ease(Tween.EASE_IN_OUT)
-	walking_tween.tween_property(player_sprite, "position", safe_target, duration)
-	walking_tween.finished.connect(_finish_walk)
+	walk_path = route
+	walk_path_index = 0
+	walking_to_target = true
 
 
 func _finish_walk() -> void:
 	walking = false
-	walking_tween = null
+	walking_to_target = false
+	walk_path.clear()
+	walk_path_index = 0
 	player_sprite.frame = player_direction * 4
 	for hotspot in hotspot_buttons:
 		hotspot.disabled = false
@@ -892,14 +918,191 @@ func _finish_walk() -> void:
 		_select_location(destination)
 
 
+func _cancel_walk() -> void:
+	walking = false
+	walking_to_target = false
+	walk_path.clear()
+	walk_path_index = 0
+	pending_location = ""
+	if player_sprite:
+		player_sprite.frame = player_direction * 4
+	for hotspot in hotspot_buttons:
+		if is_instance_valid(hotspot):
+			hotspot.disabled = false
+	if scene_back_button:
+		scene_back_button.disabled = false
+	if action_button:
+		action_button.disabled = false
+
+
 func _on_city_resized() -> void:
 	_update_joystick_knob()
 	_update_minimap_markers()
 	if not player_sprite:
 		return
-	player_sprite.position.x = clampf(player_sprite.position.x, 28.0, size.x - 28.0)
-	player_sprite.position.y = clampf(player_sprite.position.y, 104.0, size.y - 160.0)
+	player_sprite.position = _nearest_walkable_position(player_sprite.position)
 	queue_redraw()
+
+
+func _configure_city_walkable_areas() -> void:
+	walkable_polygons.clear()
+	match current_screen:
+		"plaza":
+			walkable_polygons = [
+				PackedVector2Array([Vector2(0.14, 0.63), Vector2(0.77, 0.61), Vector2(0.85, 0.90), Vector2(0.14, 0.90)]),
+				PackedVector2Array([Vector2(0.25, 0.46), Vector2(0.65, 0.43), Vector2(0.79, 0.67), Vector2(0.30, 0.71)]),
+				PackedVector2Array([Vector2(0.25, 0.29), Vector2(0.44, 0.29), Vector2(0.58, 0.52), Vector2(0.43, 0.60), Vector2(0.31, 0.51)])
+			]
+		"market":
+			walkable_polygons = [
+				PackedVector2Array([Vector2(0.25, 0.29), Vector2(0.58, 0.29), Vector2(0.77, 0.52), Vector2(0.85, 0.89), Vector2(0.15, 0.89), Vector2(0.16, 0.61)])
+			]
+		"forge", "inn", "keep":
+			walkable_polygons = [
+				PackedVector2Array([Vector2(0.14, 0.43), Vector2(0.86, 0.43), Vector2(0.92, 0.86), Vector2(0.10, 0.86)]),
+				PackedVector2Array([Vector2(0.42, 0.20), Vector2(0.58, 0.20), Vector2(0.63, 0.49), Vector2(0.37, 0.49)])
+			]
+		"gate":
+			walkable_polygons = [
+				PackedVector2Array([Vector2(0.27, 0.34), Vector2(0.70, 0.34), Vector2(0.84, 0.66), Vector2(0.80, 0.89), Vector2(0.18, 0.89), Vector2(0.16, 0.60)])
+			]
+		_:
+			walkable_polygons = [
+				PackedVector2Array([Vector2(0.25, 0.40), Vector2(0.75, 0.40), Vector2(0.86, 0.88), Vector2(0.14, 0.88)])
+			]
+
+
+func _is_walkable_position(position: Vector2) -> bool:
+	if position.x < 28.0 or position.x > size.x - 28.0 or position.y < 104.0 or position.y > size.y - 160.0:
+		return false
+	if size.x <= 0.0 or size.y <= 0.0:
+		return false
+	var normalized := Vector2(position.x / size.x, position.y / size.y)
+	for polygon in walkable_polygons:
+		if Geometry2D.is_point_in_polygon(normalized, polygon):
+			return true
+	return false
+
+
+func _nearest_walkable_position(target: Vector2) -> Vector2:
+	var clamped := Vector2(clampf(target.x, 28.0, size.x - 28.0), clampf(target.y, 104.0, size.y - 160.0))
+	if _is_walkable_position(clamped):
+		return clamped
+	for radius in range(8, 321, 8):
+		for sample in range(32):
+			var angle := TAU * float(sample) / 32.0
+			var candidate := clamped + Vector2(cos(angle), sin(angle)) * float(radius)
+			candidate.x = clampf(candidate.x, 28.0, size.x - 28.0)
+			candidate.y = clampf(candidate.y, 104.0, size.y - 160.0)
+			if _is_walkable_position(candidate):
+				return candidate
+	return Vector2(size.x * 0.5, size.y * 0.70)
+
+
+func _try_move_player(stride: Vector2) -> bool:
+	var origin := player_sprite.position
+	var target := origin + stride
+	if _is_walkable_position(target):
+		player_sprite.position = target
+		return true
+	var horizontal := Vector2(target.x, origin.y)
+	if _is_walkable_position(horizontal):
+		player_sprite.position = horizontal
+		return true
+	var vertical := Vector2(origin.x, target.y)
+	if _is_walkable_position(vertical):
+		player_sprite.position = vertical
+		return true
+	return false
+
+
+func _segment_is_walkable(from: Vector2, to: Vector2) -> bool:
+	var sample_count := maxi(1, ceili(from.distance_to(to) / 8.0))
+	for index in range(sample_count + 1):
+		if not _is_walkable_position(from.lerp(to, float(index) / float(sample_count))):
+			return false
+	return true
+
+
+func _nav_cell_center(cell: Vector2i) -> Vector2:
+	return (Vector2(cell) + Vector2(0.5, 0.5)) * CITY_NAV_CELL_SIZE
+
+
+func _nearest_walkable_nav_cell(seed: Vector2i) -> Vector2i:
+	for radius in range(0, 9):
+		for x_offset in range(-radius, radius + 1):
+			for y_offset in range(-radius, radius + 1):
+				if radius > 0 and maxi(absi(x_offset), absi(y_offset)) != radius:
+					continue
+				var candidate := seed + Vector2i(x_offset, y_offset)
+				if _is_walkable_position(_nav_cell_center(candidate)):
+					return candidate
+	return Vector2i(-1, -1)
+
+
+func _find_walk_path(start: Vector2, destination: Vector2) -> Array[Vector2]:
+	var path: Array[Vector2] = []
+	if start.distance_to(destination) < 4.0:
+		path.append(destination)
+		return path
+	if _segment_is_walkable(start, destination):
+		path.append(destination)
+		return path
+	var start_seed := Vector2i(floori(start.x / CITY_NAV_CELL_SIZE), floori(start.y / CITY_NAV_CELL_SIZE))
+	var end_seed := Vector2i(floori(destination.x / CITY_NAV_CELL_SIZE), floori(destination.y / CITY_NAV_CELL_SIZE))
+	var start_cell := _nearest_walkable_nav_cell(start_seed)
+	var end_cell := _nearest_walkable_nav_cell(end_seed)
+	if start_cell.x < 0 or end_cell.x < 0:
+		return path
+	var open_set: Array[Vector2i] = [start_cell]
+	var came_from: Dictionary = {}
+	var travel_cost: Dictionary = {start_cell: 0.0}
+	var score: Dictionary = {start_cell: _nav_cell_center(start_cell).distance_to(_nav_cell_center(end_cell))}
+	var directions: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1)]
+	var reached := false
+	while not open_set.is_empty():
+		var best_index := 0
+		for index in range(1, open_set.size()):
+			if float(score.get(open_set[index], INF)) < float(score.get(open_set[best_index], INF)):
+				best_index = index
+		var current := open_set.pop_at(best_index)
+		if current == end_cell:
+			reached = true
+			break
+		for direction in directions:
+			var neighbor := current + direction
+			var neighbor_center := _nav_cell_center(neighbor)
+			if not _is_walkable_position(neighbor_center) or not _segment_is_walkable(_nav_cell_center(current), neighbor_center):
+				continue
+			var move_cost := 1.0 if direction.x == 0 or direction.y == 0 else 1.41421356
+			var new_cost := float(travel_cost[current]) + move_cost
+			if new_cost >= float(travel_cost.get(neighbor, INF)):
+				continue
+			came_from[neighbor] = current
+			travel_cost[neighbor] = new_cost
+			score[neighbor] = new_cost + neighbor_center.distance_to(_nav_cell_center(end_cell)) / CITY_NAV_CELL_SIZE
+			if not open_set.has(neighbor):
+				open_set.append(neighbor)
+	if not reached:
+		return path
+	var cells: Array[Vector2i] = [end_cell]
+	while cells[0] != start_cell:
+		if not came_from.has(cells[0]):
+			return []
+		cells.push_front(came_from[cells[0]])
+	var previous := start
+	for cell in cells:
+		var center := _nav_cell_center(cell)
+		if previous.distance_to(center) > 4.0:
+			if not _segment_is_walkable(previous, center):
+				return []
+			path.append(center)
+			previous = center
+	if previous.distance_to(destination) > 4.0:
+		if not _segment_is_walkable(previous, destination):
+			return []
+		path.append(destination)
+	return path
 
 
 func _refresh_hotspots() -> void:
@@ -941,6 +1144,7 @@ func _show_city_screen(screen_id: String, place_hero: bool = true) -> void:
 	if not CITY_SCREENS.has(screen_id):
 		screen_id = "plaza"
 	current_screen = screen_id
+	_configure_city_walkable_areas()
 	var screen: Dictionary = CITY_SCREENS[screen_id]
 	if region_id == "ashen_wastes":
 		var art_path := str(screen.get("art", ASHENREACH_CITY_ART))
@@ -955,7 +1159,7 @@ func _show_city_screen(screen_id: String, place_hero: bool = true) -> void:
 	scene_back_button.visible = current_screen != "plaza"
 	if place_hero:
 		var spawn: Vector2 = screen.get("spawn", Vector2(0.5, 0.72))
-		player_sprite.position = Vector2(size.x * spawn.x, size.y * spawn.y)
+		player_sprite.position = _nearest_walkable_position(Vector2(size.x * spawn.x, size.y * spawn.y))
 		player_sprite.frame = 0
 	_refresh_hotspots()
 	_refresh_residents()
