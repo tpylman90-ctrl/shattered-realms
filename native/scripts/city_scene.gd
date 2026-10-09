@@ -1065,12 +1065,12 @@ func _find_walk_path(start: Vector2, destination: Vector2) -> Array[Vector2]:
 		for index in range(1, open_set.size()):
 			if float(score.get(open_set[index], INF)) < float(score.get(open_set[best_index], INF)):
 				best_index = index
-		var current := open_set.pop_at(best_index)
+		var current: Vector2i = open_set.pop_at(best_index)
 		if current == end_cell:
 			reached = true
 			break
-		for direction in directions:
-			var neighbor := current + direction
+		for direction: Vector2i in directions:
+			var neighbor: Vector2i = current + direction
 			var neighbor_center := _nav_cell_center(neighbor)
 			if not _is_walkable_position(neighbor_center) or not _segment_is_walkable(_nav_cell_center(current), neighbor_center):
 				continue
