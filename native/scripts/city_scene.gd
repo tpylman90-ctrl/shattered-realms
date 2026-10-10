@@ -22,10 +22,9 @@ const CITY_SCREENS := {
 }
 const CITY_TRANSITIONS := {
 	"plaza": [
-		{"to": "market", "label": "CINDER MARKET", "point": Vector2(0.25, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.37, 0.78)},
-		{"to": "living", "label": "LIVING QUARTER", "point": Vector2(0.75, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.65, 0.78)},
-		{"to": "keep", "label": "THE KEEP", "point": Vector2(0.50, 0.23), "radius": Vector2(0.08, 0.05), "spawn": Vector2(0.50, 0.72)},
-		{"to": "gate", "label": "OUTER GATE", "point": Vector2(0.50, 0.80), "radius": Vector2(0.08, 0.035), "spawn": Vector2(0.50, 0.38)}
+		{"to": "market", "label": "BUSINESS DISTRICT", "point": Vector2(0.25, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.37, 0.78)},
+		{"to": "living", "label": "RESIDENTIAL QUARTER", "point": Vector2(0.75, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.65, 0.78)},
+		{"to": "keep", "label": "THE CASTLE", "point": Vector2(0.50, 0.23), "radius": Vector2(0.08, 0.05), "spawn": Vector2(0.50, 0.72)}
 	],
 	"market": [
 		{"to": "plaza", "label": "CENTRAL WARD", "point": Vector2(0.50, 0.17), "radius": Vector2(0.07, 0.05), "spawn": Vector2(0.50, 0.66)},
@@ -52,9 +51,7 @@ const CITY_TRANSITIONS := {
 	]
 }
 const CITY_POIS := {
-	"plaza": [
-		{"id": "fallen_standard", "label": "INSPECT FALLEN STANDARD", "kind": "lore", "point": Vector2(0.68, 0.61), "text": "A scorched banner is pinned beneath a block of black stone. Its colors have almost vanished under ash."}
-	],
+	"plaza": [],
 	"market": [
 		{"id": "sealed_storehouse", "label": "SEALED STOREHOUSE", "kind": "chest_anchor", "point": Vector2(0.70, 0.58), "text": "The delivery hatch is buried under cinders. A box-shaped lump presses against the warped timber."},
 		{"id": "market_notice", "label": "READ IRON NOTICE", "kind": "lore", "point": Vector2(0.42, 0.61), "text": "The notice lists ration prices, closed streets, and a warning about the unstable lower tunnels."},
@@ -1905,7 +1902,7 @@ func _select_location(id: String) -> void:
 		return
 	selected_location = id
 	var descriptions := {
-		"plaza": ["CITADEL CROSSROADS", "Four roads split from the central ward. Walk west for the cinder market, east for the living quarter, north to the keep, or south to the outer gate."],
+		"plaza": ["CITADEL CROSSROADS", "Three clear paths meet here: left into the business district, right into the residential quarter, and straight ahead toward the castle. This crossing has no shops or homes to enter."],
 		"market": ["CINDER MARKET", "Stalls and the foundry line the ash-dark street. The alley loops back toward the lower ward; walk to each doorway to enter."],
 		"living": ["LIVING QUARTER", "Crowded houses and sealed doors press against the lower ward's road. The inn and side alleys open only from this district."],
 		"keep": ["ASHENREACH KEEP", "The keep's audience hall is cut into the volcanic fortress. Return through the western arch to the central ward."],
@@ -1921,6 +1918,7 @@ func _select_location(id: String) -> void:
 		"inn": action_button.text = "REST • 25 GOLD"
 		"gate": action_button.text = "FOLLOW FRONTIER ROAD"
 		"living": action_button.text = "VIEW DISTRICT ROUTES"
+		"plaza": action_button.text = "VIEW DISTRICT ROUTES"
 		_: action_button.text = "VIEW OPEN ROUTES"
 	scene_back_button.visible = current_screen != "plaza"
 
@@ -1935,6 +1933,8 @@ func _activate_location() -> void:
 			_travel_to_screen("territory")
 		"living":
 			_open_selection_map()
+		"plaza":
+			info_body.text = "Left: business district. Right: residential quarter. Straight ahead: Ashenreach Castle."
 		_:
 			var open := CAMPAIGN_SERVICE.open_routes()
 			var names: PackedStringArray = []
