@@ -3,7 +3,7 @@ extends Control
 const WORLD_DATA_PATH := "res://data/world_catalog.json"
 const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach/ashenreach_crossroads.webp"
 const ASHENREACH_DEPTH_CARD_PATHS := {
-	"balustrade": "res://assets/cities/ashenreach/foreground/basalt_balustrade.png"
+	"foreground": "res://assets/cities/ashenreach/foreground/crossroads_foreground.webp"
 }
 const CAMPAIGN_SERVICE = preload("res://scripts/campaign_director.gd")
 const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
@@ -1072,8 +1072,7 @@ func _foreground_layout_for_screen() -> Array[Dictionary]:
 	if current_screen != "plaza":
 		return []
 	return [
-		{"asset": "balustrade", "point": Vector2(0.065, 0.87), "width": 0.155},
-		{"asset": "balustrade", "point": Vector2(0.935, 0.87), "width": 0.155, "flip_h": true}
+		{"asset": "foreground", "point": Vector2(0.50, 1.0), "width": 1.0}
 	]
 
 func _refresh_foreground_cards() -> void:
