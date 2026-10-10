@@ -1075,8 +1075,8 @@ func _foreground_layout_for_screen() -> Array[Dictionary]:
 	if current_screen != "plaza":
 		return []
 	return [
-		{"asset": "balustrade", "point": Vector2(0.065, 0.94), "width": 0.155},
-		{"asset": "balustrade", "point": Vector2(0.935, 0.94), "width": 0.155, "flip_h": true}
+		{"asset": "balustrade", "point": Vector2(0.065, 0.87), "width": 0.155},
+		{"asset": "balustrade", "point": Vector2(0.935, 0.87), "width": 0.155, "flip_h": true}
 	]
 
 func _refresh_foreground_cards() -> void:
