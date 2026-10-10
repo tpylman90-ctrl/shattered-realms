@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 44749)
-Total output lines: 4255
-
 extends Node3D
 
 const HeroProgressionService = preload("res://scripts/hero_progression.gd")
@@ -17,7 +14,7 @@ const CampaignFlowService = preload("res://scripts/campaign_director.gd")
 @onready var poi_action: Button = $UI/POIPanel/Margin/VBox/ActionButton
 @onready var selected_label: Label3D = $SelectedLabel
 @onready var selected_ring: MeshInstance3D = $SelectedPOIRing
-@onready var status_label: Label = $UI/TopBar/Status
+@onready var status_label: Label = $UI/TopBar/Row/Status
 @onready var hero_unit: Area3D = $MovementBoard/HeroUnit
 @onready var movement_panel: PanelContainer = $UI/MovementPanel
 @onready var movement_stats: Label = $UI/MovementPanel/Margin/VBox/Stats
@@ -274,7 +271,7 @@ func _ready() -> void:
     poi_panel.visible = false
     poi_action.pressed.connect(_on_poi_action)
     $UI/POIPanel/Margin/VBox/CloseButton.pressed.connect(_close_poi_panel)
-    $UI/TopBar/ResetButton.pressed.connect(reset_camera)
+    $UI/TopBar/Row/ResetButton.pressed.connect(reset_camera)
     movement_confirm.pressed.connect(_confirm_unit_move)
     $UI/MovementPanel/Margin/VBox/CancelButton.pressed.connect(_cancel_unit_move)
     movement_panel.visible = false
@@ -929,24 +926,20 @@ func _build_equipment_panel() -> void:
     var stats_panel := PanelContainer.new()
     stats_panel.custom_minimum_size.x = 175
     stats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    stats_panel.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.07, 0.09, 0…24749 tokens truncated…ero_health = max(0, hero_health - damage)
-    hero_xp += 150
-    vulgrim_defeated = true
-    vulgrim_available = false
-    territory_secured = true
-    HeroProgressionService.mark_territory_reconnected("ashen_wastes")
-    _refresh_unlocked_heroes()
-    _refresh_chosen_hero_skill_unlocks()
-    encounter_panel.visible = false
-    current_encounter_node = ""
-    event_log_label.text = "Inferno-Lord Vulgrim defeated. Ashenreach is fully secured."
-    var gear_drop := HeroEquipmentService.claim_equipment_reward("boss", "vulgrim")
-    if not gear_drop.is_empty():
-        event_log_label.text += " Loot: %s (%s, quality %d)." % [str(gear_drop.get("name", "")), str(gear_drop.get("rarity", "")).capitalize(), int(gear_drop.get("quality", 0))]
-    _refresh_game_hud()
-    _save_game_state()
-    if victory_panel:
-        victory_panel.visible = true
+    stats_panel.add_theme_stylebox_override("panel", _equipment_column_style(Color(0.07, 0.09, 0.11, 0.97)))
+    body.add_child(stats_panel)
+    var stats_margin := MarginContainer.new()
+    stats_margin.add_theme_constant_override("margin_left", 10)
+    stats_margin.add_theme_constant_override("margin_right", 10)
+    stats_margin.add_theme_constant_override("margin_top", 8)
+    stats_margin.add_theme_constant_override("margin_bottom", 8)
+    stats_panel.add_child(stats_margin)
+    equipment_stats_box = VBoxContainer.new()
+    stats_margin.add_child(equipment_stats_box)
+    var stats_note := Label.new()
+    stats_note.text = "Choose a hero to review available equipment."
+    stats_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    equipment_stats_box.add_child(stats_note)
 
 func _handle_hero_defeat() -> void:
     hero_health = 50
@@ -1930,3 +1923,1565 @@ func _tune_imported_terrain_materials(node: Node) -> void:
                     mesh_instance.set_surface_override_material(surface_index, tuned)
     for child in node.get_children():
         _tune_imported_terrain_materials(child)
+
+## Core Ashenreach campaign board routines restored after a refactor removed
+## the runtime methods while leaving their startup and UI call sites behind.
+func _consume_battle_result() -> void:
+    if not FileAccess.file_exists(BATTLE_RESULT_PATH):
+        return
+    var result := ConfigFile.new()
+    if result.load(BATTLE_RESULT_PATH) != OK:
+        push_warning("Could not load the latest battle result.")
+        return
+
+    var victory := bool(result.get_value("battle", "victory", false))
+    var encounter_id := str(result.get_value("battle", "encounter_id", ""))
+    hero_health = clampi(int(result.get_value("battle", "hero_hp", hero_health)), 0, 100)
+    hero_xp = maxi(hero_xp, int(result.get_value("battle", "hero_xp", hero_xp)))
+    var loot: Array = result.get_value("battle", "reward_loot", [])
+
+    if victory:
+        if encounter_id == "__VULGRIM__":
+            vulgrim_defeated = true
+            vulgrim_available = false
+            territory_secured = true
+        elif encounter_id != "":
+            completed_encounters[encounter_id] = true
+        moves_remaining = 0
+        pending_battle_message = "%s defeated. +%d XP, +%d gold." % [
+            str(result.get_value("battle", "enemy_name", "Enemy")),
+            int(result.get_value("battle", "reward_xp", 0)),
+            int(result.get_value("battle", "reward_gold", 0))
+        ]
+        if not loot.is_empty():
+            pending_battle_message += " Loot: %s." % ", ".join(PackedStringArray(loot))
+    else:
+        pending_battle_message = "The battle was lost. Recover, then return to the encounter."
+
+    if FileAccess.file_exists(BATTLE_RESULT_PATH):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(BATTLE_RESULT_PATH))
+    _save_game_state()
+
+
+func _close_equipment_panel() -> void:
+    if equipment_panel:
+        equipment_panel.visible = false
+
+
+func _select_equipment_hero(index: int) -> void:
+    if not equipment_hero_picker or index < 0 or index >= equipment_hero_picker.item_count:
+        return
+    equipment_view_hero_id = str(equipment_hero_picker.get_item_metadata(index))
+
+
+func _equipment_column_style(background: Color) -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = background
+    style.border_color = Color(0.32, 0.42, 0.44, 0.8)
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(8)
+    style.content_margin_left = 10
+    style.content_margin_right = 10
+    style.content_margin_top = 8
+    style.content_margin_bottom = 8
+    return style
+
+func _open_hero_select() -> void:
+    _cancel_unit_move()
+    _close_poi_panel()
+    for child in hero_roster_box.get_children():
+        child.queue_free()
+    for hero_id in unlocked_heroes:
+        if not hero_catalog.has(hero_id):
+            continue
+        var data: Dictionary = hero_catalog[hero_id]
+        var button := Button.new()
+        button.text = "%s  •  %s" % [data.get("name", hero_id), data.get("class", "Hero")]
+        button.custom_minimum_size = Vector2(0, 52)
+        button.disabled = hero_id == selected_hero_id
+        button.pressed.connect(_select_hero.bind(hero_id))
+        hero_roster_box.add_child(button)
+    hero_select_panel.visible = true
+
+func _close_hero_select() -> void:
+    hero_select_panel.visible = false
+
+func _select_hero(hero_id: String) -> void:
+    if hero_id not in unlocked_heroes or not hero_catalog.has(hero_id):
+        return
+    selected_hero_id = hero_id
+    _apply_selected_hero()
+    hero_select_panel.visible = false
+
+func _apply_selected_hero() -> void:
+    if not hero_catalog.has(selected_hero_id):
+        return
+    var data: Dictionary = hero_catalog[selected_hero_id]
+    hero_move_points = int(data.get("movement_points", 3))
+    var display_name: String = data.get("name", selected_hero_id)
+    var short_name := display_name.split(",")[0].to_upper()
+    hero_label.text = short_name
+    status_label.text = "%s selected" % display_name
+    $UI/TopBar/Row/HeroButton.text = short_name
+    _apply_hero_visual(data)
+    if movement_title:
+        movement_title.text = "MOVE %s" % short_name
+
+func _apply_hero_visual(data: Dictionary) -> void:
+    if active_hero_model and is_instance_valid(active_hero_model):
+        active_hero_model.queue_free()
+        active_hero_model = null
+
+    var placeholder := hero_unit.get_node_or_null("Body") as MeshInstance3D
+    var asset_path: String = data.get("piece_asset", "")
+    if asset_path == "" or not ResourceLoader.exists(asset_path):
+        if placeholder:
+            placeholder.visible = true
+        return
+
+    var packed := load(asset_path) as PackedScene
+    if not packed:
+        if placeholder:
+            placeholder.visible = true
+        return
+
+    var instance := packed.instantiate()
+    if not instance is Node3D:
+        instance.queue_free()
+        if placeholder:
+            placeholder.visible = true
+        return
+
+    active_hero_model = instance as Node3D
+    active_hero_model.name = "HeroModel"
+    var piece_scale := float(data.get("piece_scale", 1.0))
+    var y_offset := float(data.get("piece_y_offset", 0.0))
+    var piece_offset = data.get("piece_offset", [0.0, 0.0, 0.0])
+    var x_offset := float(piece_offset[0]) if piece_offset.size() > 0 else 0.0
+    var extra_y := float(piece_offset[1]) if piece_offset.size() > 1 else 0.0
+    var z_offset := float(piece_offset[2]) if piece_offset.size() > 2 else 0.0
+    active_hero_model.scale = Vector3.ONE * piece_scale
+    active_hero_model.position = Vector3(x_offset, y_offset + extra_y, z_offset)
+    hero_unit.add_child(active_hero_model)
+    await get_tree().process_frame
+    _snap_visual_to_ground(active_hero_model, 0.0)
+
+    if placeholder:
+        placeholder.visible = false
+
+func _snap_visual_to_ground(root: Node3D, target_y: float = 0.02) -> void:
+    var lowest: float = INF
+    lowest = _lowest_mesh_y_in_parent(root, root.get_parent() as Node3D, lowest)
+    if lowest < INF:
+        root.position.y += target_y - lowest
+
+func _lowest_mesh_y_in_parent(node: Node, parent_space: Node3D, current_lowest: float) -> float:
+    var lowest := current_lowest
+
+    if node is MeshInstance3D:
+        var mesh_instance := node as MeshInstance3D
+        if mesh_instance.mesh:
+            var box: AABB = mesh_instance.get_aabb()
+            var corners: Array[Vector3] = [
+                box.position,
+                box.position + Vector3(box.size.x, 0.0, 0.0),
+                box.position + Vector3(0.0, box.size.y, 0.0),
+                box.position + Vector3(0.0, 0.0, box.size.z),
+                box.position + Vector3(box.size.x, box.size.y, 0.0),
+                box.position + Vector3(box.size.x, 0.0, box.size.z),
+                box.position + Vector3(0.0, box.size.y, box.size.z),
+                box.position + box.size
+            ]
+            for corner in corners:
+                var world_corner: Vector3 = mesh_instance.to_global(corner)
+                var parent_corner: Vector3 = parent_space.to_local(world_corner)
+                lowest = minf(lowest, parent_corner.y)
+
+    for child in node.get_children():
+        lowest = _lowest_mesh_y_in_parent(child, parent_space, lowest)
+
+    return lowest
+
+func _select_unit(_unit: Area3D) -> void:
+    if nav_debug_mode:
+        return
+    if campaign_phase != PHASE_PLAYER or moves_remaining <= 0:
+        return
+    _close_poi_panel()
+    unit_selected = true
+    hero_label.visible = true
+    pending_move_cost = 0
+    movement_panel.visible = true
+    movement_confirm.disabled = true
+    var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
+    var hero_short: String = hero_name.split(",")[0].to_upper()
+    if movement_title:
+        movement_title.text = "MOVE %s" % hero_short
+    var neighbor_count: int = _hex_neighbors(current_hex_key).size()
+    var raw_neighbor_count: int = _hex_raw_neighbor_count(current_hex_key)
+    movement_stats.text = "%s selected. Action points remaining: %d\nAdjacent open hexes: %d / %d. Each hex costs 1 AP." % [
+        hero_name, moves_remaining, neighbor_count, raw_neighbor_count
+    ]
+    status_label.text = "%s — choose a destination" % hero_name
+    _focus_on_poi(hero_unit.global_position)
+    if hex_grid_overlay:
+        hex_grid_overlay.visible = true
+    _show_reachable_hexes()
+
+func _confirm_unit_move() -> void:
+    if pending_hex_key != "":
+        await _confirm_hex_move()
+
+func _build_hex_board() -> void:
+    hex_root = Node3D.new()
+    hex_root.name = "HexBoard"
+    add_child(hex_root)
+
+    hex_material_idle = StandardMaterial3D.new()
+    hex_material_idle.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    hex_material_idle.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    hex_material_idle.albedo_color = Color(0.07, 0.30, 0.26, 0.22)
+    hex_material_idle.emission_enabled = true
+    hex_material_idle.emission = Color(0.08, 0.32, 0.28, 1.0)
+    hex_material_idle.emission_energy_multiplier = 0.48
+
+    hex_material_reachable = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_reachable.albedo_color = Color(0.10, 0.82, 0.68, 0.46)
+    hex_material_reachable.emission = Color(0.08, 0.92, 0.74, 1.0)
+    hex_material_reachable.emission_energy_multiplier = 0.9
+
+    hex_material_target = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_target.albedo_color = Color(0.95, 0.58, 0.12, 0.38)
+    hex_material_target.emission = Color(1.0, 0.42, 0.05, 1.0)
+    hex_material_target.emission_energy_multiplier = 1.2
+
+    hex_material_current = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_current.albedo_color = Color(0.20, 0.62, 0.95, 0.34)
+    hex_material_current.emission = Color(0.12, 0.52, 1.0, 1.0)
+    hex_material_current.emission_energy_multiplier = 1.1
+
+    hex_material_blocked = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_blocked.albedo_color = Color(0.34, 0.06, 0.035, 0.16)
+    hex_material_blocked.emission = Color(0.42, 0.05, 0.02, 1.0)
+    hex_material_blocked.emission_energy_multiplier = 0.22
+
+    hex_material_forced_open = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_forced_open.albedo_color = Color(0.08, 0.72, 0.30, 0.34)
+    hex_material_forced_open.emission = Color(0.05, 0.95, 0.30, 1.0)
+    hex_material_forced_open.emission_energy_multiplier = 0.9
+
+    hex_material_forced_blocked = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_forced_blocked.albedo_color = Color(0.78, 0.08, 0.04, 0.34)
+    hex_material_forced_blocked.emission = Color(1.0, 0.12, 0.04, 1.0)
+    hex_material_forced_blocked.emission_energy_multiplier = 0.85
+
+    hex_material_nav_edit = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_nav_edit.albedo_color = Color(0.06, 0.62, 0.72, 0.40)
+    hex_material_nav_edit.emission = Color(0.04, 0.72, 0.86, 1.0)
+    hex_material_nav_edit.emission_energy_multiplier = 0.75
+
+    hex_material_nav_selected = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_nav_selected.albedo_color = Color(0.98, 0.72, 0.10, 0.62)
+    hex_material_nav_selected.emission = Color(1.0, 0.58, 0.04, 1.0)
+    hex_material_nav_selected.emission_energy_multiplier = 1.35
+
+    hex_material_bridge_candidate = hex_material_idle.duplicate() as StandardMaterial3D
+    hex_material_bridge_candidate.albedo_color = Color(0.66, 0.18, 0.92, 0.48)
+    hex_material_bridge_candidate.emission = Color(0.72, 0.20, 1.0, 1.0)
+    hex_material_bridge_candidate.emission_energy_multiplier = 1.0
+
+    var q_min := -23
+    var q_max := 23
+    var r_min := -30
+    var r_max := 30
+
+    for r in range(r_min, r_max + 1):
+        for q in range(q_min, q_max + 1):
+            var center2 := _hex_to_world_2d(q, r)
+            if absf(center2.x) > HEX_WORLD_LIMIT or absf(center2.y) > HEX_WORLD_LIMIT:
+                continue
+
+            var key := _hex_key(q, r)
+            var sample: Dictionary = _sample_hex_surface(key, center2.x, center2.y)
+            var has_surface: bool = bool(sample.get("has_surface", false))
+            var sampled_position: Vector3 = sample.get(
+                "position",
+                Vector3(center2.x, CAMPAIGN_START_POSITION.y, center2.y)
+            ) as Vector3
+
+            var area := Area3D.new()
+            area.name = "Hex_%s" % key
+            area.add_to_group("hex_cell")
+            area.set_meta("hex_key", key)
+            area.position = sampled_position
+            area.collision_layer = 2
+            area.collision_mask = 0
+
+            var collision := CollisionShape3D.new()
+            collision.name = "PickShape"
+            var shape := CylinderShape3D.new()
+            shape.radius = HEX_SIZE * 0.82
+            shape.height = 0.20
+            collision.shape = shape
+            collision.position.y = 0.08
+            collision.disabled = not has_surface
+            area.add_child(collision)
+
+            var visual := MeshInstance3D.new()
+            visual.name = "Visual"
+            var mesh := CylinderMesh.new()
+            mesh.top_radius = HEX_SIZE * 0.93
+            mesh.bottom_radius = HEX_SIZE * 0.93
+            mesh.height = 0.018
+            mesh.radial_segments = 6
+            visual.mesh = mesh
+            visual.position.y = 0.045
+            visual.rotation_degrees.y = 30.0
+            visual.material_override = hex_material_idle
+            visual.visible = has_surface
+            area.add_child(visual)
+
+            hex_root.add_child(area)
+            hex_cells[key] = {
+                "q": q,
+                "r": r,
+                "position": area.position,
+                "area": area,
+                "height": float(area.position.y),
+                "has_surface": has_surface,
+                "generated_has_surface": has_surface,
+                "generated_position": area.position,
+                "generated_height": float(area.position.y),
+                "up_dot": float(sample.get("up_dot", -1.0)),
+                "inferred_bridge": bool(sample.get("inferred_bridge", false)),
+                "auto_blocked": bool(sample.get("auto_blocked", false)),
+                "walkable": has_surface and not bool(sample.get("auto_blocked", false)),
+                "auto_walkable": has_surface and not bool(sample.get("auto_blocked", false)),
+                "blocked_reason": "auto_hazard" if bool(sample.get("auto_blocked", false)) else ("" if has_surface else "void"),
+                "nav_source": "auto"
+            }
+
+    _normalize_hex_surface_heights()
+    _classify_hex_cells()
+    _build_hex_grid_overlay()
+    _clear_hex_highlights()
+
+func _normalize_hex_surface_heights() -> void:
+    # Correct obvious prop-top outliers against the complete neighboring lattice.
+    # Nothing is deleted here.
+    var corrections: Dictionary = {}
+    var directions := [
+        Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
+        Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
+    ]
+
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        if not bool(cell.get("has_surface", false)):
+            continue
+
+        var q: int = int(cell["q"])
+        var r: int = int(cell["r"])
+        var neighbor_heights: Array[float] = []
+
+        for d in directions:
+            var neighbor_key := _hex_key(q + d.x, r + d.y)
+            if not hex_cells.has(neighbor_key):
+                continue
+            var neighbor: Dictionary = hex_cells[neighbor_key]
+            if bool(neighbor.get("has_surface", false)):
+                neighbor_heights.append(float(neighbor["height"]))
+
+        if neighbor_heights.size() < 3:
+            continue
+
+        neighbor_heights.sort()
+        var median_height: float = neighbor_heights[int(neighbor_heights.size() / 2)]
+        var cell_height: float = float(cell["height"])
+        if cell_height - median_height >= HEX_HIGH_OUTLIER:
+            corrections[key] = median_height
+
+    for key_variant in corrections.keys():
+        var key := str(key_variant)
+        if not hex_cells.has(key):
+            continue
+        var corrected_height: float = float(corrections[key])
+        var cell: Dictionary = hex_cells[key]
+        var area := cell["area"] as Area3D
+        var pos: Vector3 = cell["position"]
+        pos.y = corrected_height
+        cell["height"] = corrected_height
+        cell["position"] = pos
+        hex_cells[key] = cell
+        if area:
+            area.position = pos
+
+func _classify_hex_cells() -> void:
+    # Generated nav data provides the cleaned board footprint, repaired bridge
+    # continuity, and conservative auto-hazard hints. The authored mask remains
+    # the final gameplay authority.
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        var has_surface: bool = bool(cell.get("has_surface", false))
+        var auto_blocked: bool = bool(cell.get("auto_blocked", false))
+        var auto_open: bool = has_surface and not auto_blocked
+
+        cell["walkable"] = auto_open
+        cell["auto_walkable"] = auto_open
+        cell["blocked_reason"] = "auto_hazard" if auto_blocked else ("" if has_surface else "void")
+        cell["nav_source"] = "auto"
+        hex_cells[key] = cell
+
+    _apply_nav_mask_overrides()
+    _apply_hex_classification_visuals()
+
+func _apply_hex_classification_visuals() -> void:
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        var area := cell["area"] as Area3D
+        if not area:
+            continue
+
+        var walkable: bool = bool(cell.get("walkable", false))
+        var has_surface: bool = bool(cell.get("has_surface", false))
+        var bridge_candidate: bool = nav_debug_mode and (not has_surface) and (
+            _is_bridge_repair_candidate(key) or _is_force_bridge_candidate(key)
+        )
+        var visual := area.get_node_or_null("Visual") as MeshInstance3D
+        var pick_shape := area.get_node_or_null("PickShape") as CollisionShape3D
+
+        # Reset to the cell's current authoritative position before applying
+        # editor-only preview placement for missing bridge cells.
+        area.position = cell["position"]
+
+        if bridge_candidate:
+            var bridge_height: float = _estimate_bridge_repair_height(key)
+            if bridge_height > -INF:
+                var preview_position: Vector3 = area.position
+                preview_position.y = bridge_height
+                area.position = preview_position
+
+        if visual:
+            visual.visible = has_surface or bridge_candidate
+            var source: String = str(cell.get("nav_source", "auto"))
+
+            if nav_debug_mode and key == nav_selected_hex:
+                visual.material_override = hex_material_nav_selected
+            elif bridge_candidate:
+                visual.material_override = hex_material_bridge_candidate
+            elif source == "debug_open" or source == "mask_open":
+                visual.material_override = hex_material_forced_open
+            elif source == "debug_blocked" or source == "mask_blocked":
+                visual.material_override = hex_material_forced_blocked
+            elif nav_debug_mode and bool(cell.get("auto_blocked", false)):
+                visual.material_override = hex_material_blocked
+            elif nav_debug_mode:
+                visual.material_override = hex_material_nav_edit
+            else:
+                visual.material_override = hex_material_idle if walkable else hex_material_blocked
+
+        if pick_shape:
+            pick_shape.disabled = not (has_surface or bridge_candidate)
+
+func _build_hex_grid_overlay() -> void:
+    if hex_grid_overlay and is_instance_valid(hex_grid_overlay):
+        hex_grid_overlay.queue_free()
+
+    hex_grid_overlay = MeshInstance3D.new()
+    hex_grid_overlay.name = "HexGridOverlay"
+    hex_grid_overlay.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    hex_root.add_child(hex_grid_overlay)
+
+    var mesh := ImmediateMesh.new()
+    var material := StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.albedo_color = Color(0.18, 0.78, 0.72, 0.34)
+    material.emission_enabled = true
+    material.emission = Color(0.10, 0.62, 0.58, 1.0)
+    material.emission_energy_multiplier = 0.55
+
+    mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+    for key_variant in hex_cells.keys():
+        var key := str(key_variant)
+        var overlay_cell: Dictionary = hex_cells[key]
+        if not bool(overlay_cell.get("has_surface", false)):
+            continue
+        var center: Vector3 = overlay_cell["position"] + Vector3(0.0, 0.065, 0.0)
+        for i in range(6):
+            var a_angle := deg_to_rad(60.0 * float(i))
+            var b_angle := deg_to_rad(60.0 * float((i + 1) % 6))
+            var a := center + Vector3(cos(a_angle) * HEX_SIZE * 0.93, 0.0, sin(a_angle) * HEX_SIZE * 0.93)
+            var b := center + Vector3(cos(b_angle) * HEX_SIZE * 0.93, 0.0, sin(b_angle) * HEX_SIZE * 0.93)
+            mesh.surface_add_vertex(a)
+            mesh.surface_add_vertex(b)
+    mesh.surface_end()
+
+    hex_grid_overlay.mesh = mesh
+    hex_grid_overlay.visible = false
+
+func _hex_to_world_2d(q: int, r: int) -> Vector2:
+    # Flat-top axial coordinates aligned to the hex pattern baked into Ashenreach.
+    var x: float = HEX_SIZE * 1.5 * float(q)
+    var z: float = HEX_SIZE * sqrt(3.0) * (float(r) + float(q) * 0.5)
+    return Vector2(x, z) + HEX_GRID_OFFSET
+
+func _hex_key(q: int, r: int) -> String:
+    return "%d,%d" % [q, r]
+
+func _sample_hex_surface(key: String, x: float, z: float) -> Dictionary:
+    # The build-time generator already solved the cleaned navigation height for
+    # every supported cell. Read that result directly instead of raycasting the
+    # generated mesh and rediscovering the same data at runtime.
+    if not nav_grid_tiles.has(key):
+        return {
+            "has_surface": false
+        }
+
+    var tile_variant: Variant = nav_grid_tiles[key]
+    if not tile_variant is Dictionary:
+        return {
+            "has_surface": false
+        }
+
+    var tile: Dictionary = tile_variant as Dictionary
+    var position := Vector3(
+        float(tile.get("x", x)),
+        float(tile.get("y", CAMPAIGN_START_POSITION.y)) + HERO_GROUND_CLEARANCE,
+        float(tile.get("z", z))
+    )
+
+    return {
+        "has_surface": true,
+        "position": position,
+        "up_dot": 1.0,
+        "inferred_bridge": bool(tile.get("inferred_bridge", false)),
+        "auto_blocked": bool(tile.get("auto_blocked", false))
+    }
+
+func _hex_raw_neighbor_count(key: String) -> int:
+    if not hex_cells.has(key):
+        return 0
+    var cell: Dictionary = hex_cells[key]
+    var q: int = int(cell["q"])
+    var r: int = int(cell["r"])
+    var directions := [
+        Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
+        Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
+    ]
+    var count := 0
+    for d in directions:
+        if hex_cells.has(_hex_key(q + d.x, r + d.y)):
+            count += 1
+    return count
+
+func _hex_neighbors(key: String) -> Array[String]:
+    if not _is_hex_walkable(key):
+        return []
+
+    var cell: Dictionary = hex_cells[key]
+    var q: int = int(cell["q"])
+    var r: int = int(cell["r"])
+    var directions := [
+        Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
+        Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1)
+    ]
+    var result: Array[String] = []
+
+    for d in directions:
+        var neighbor_key := _hex_key(q + d.x, r + d.y)
+        if not _is_hex_walkable(neighbor_key):
+            continue
+        if _is_nav_edge_blocked(key, neighbor_key):
+            continue
+        result.append(neighbor_key)
+
+    return result
+
+func _is_hex_walkable(key: String) -> bool:
+    if key == "" or not hex_cells.has(key):
+        return false
+    var cell: Dictionary = hex_cells[key]
+    return bool(cell.get("walkable", false))
+
+func _canonical_edge_key(a: String, b: String) -> String:
+    if a < b:
+        return "%s|%s" % [a, b]
+    return "%s|%s" % [b, a]
+
+func _is_nav_edge_blocked(a: String, b: String) -> bool:
+    return nav_blocked_edges.has(_canonical_edge_key(a, b))
+
+func _nearest_hex_key(world_position: Vector3) -> String:
+    var best_key := ""
+    var best_distance := INF
+    var p := Vector2(world_position.x, world_position.z)
+    for key_variant in hex_cells.keys():
+        var key: String = str(key_variant)
+        var cell: Dictionary = hex_cells[key]
+        if not bool(cell.get("walkable", false)):
+            continue
+        var pos: Vector3 = cell["position"]
+        var distance := p.distance_to(Vector2(pos.x, pos.z))
+        if distance < best_distance:
+            best_distance = distance
+            best_key = key
+    return best_key
+
+func _snap_hero_to_nearest_hex() -> void:
+    if hex_cells.is_empty():
+        return
+    if not _is_hex_walkable(current_hex_key):
+        current_hex_key = _nearest_hex_key(hero_unit.global_position)
+    if not _is_hex_walkable(current_hex_key):
+        return
+    var cell: Dictionary = hex_cells[current_hex_key]
+    hero_unit.global_position = cell["position"]
+
+func _hex_reachable(start_key: String, max_steps: int) -> Dictionary:
+    var reached := {start_key: 0}
+    var frontier: Array[String] = [start_key]
+
+    while not frontier.is_empty():
+        var current: String = frontier.pop_front()
+        var depth: int = int(reached[current])
+        if depth >= max_steps:
+            continue
+        for neighbor in _hex_neighbors(current):
+            if reached.has(neighbor):
+                continue
+            reached[neighbor] = depth + 1
+            frontier.append(neighbor)
+    return reached
+
+func _show_reachable_hexes() -> void:
+    _clear_hex_highlights()
+    if current_hex_key == "":
+        current_hex_key = _nearest_hex_key(hero_unit.global_position)
+    var reachable := _hex_reachable(current_hex_key, moves_remaining)
+    for key_variant in reachable.keys():
+        var key: String = str(key_variant)
+        if not hex_cells.has(key):
+            continue
+        var cell: Dictionary = hex_cells[key]
+        var area := cell["area"] as Area3D
+        var visual := area.get_node_or_null("Visual") as MeshInstance3D
+        if not visual:
+            continue
+        if key == current_hex_key:
+            visual.material_override = hex_material_current
+        else:
+            visual.material_override = hex_material_reachable
+
+    var walkable_count := 0
+    for cell_variant in hex_cells.values():
+        var cell: Dictionary = cell_variant
+        if bool(cell.get("walkable", false)):
+            walkable_count += 1
+
+    var inferred_count := 0
+    var hazard_count := 0
+    for cell_variant in hex_cells.values():
+        var nav_cell: Dictionary = cell_variant
+        if bool(nav_cell.get("inferred_bridge", false)):
+            inferred_count += 1
+        if bool(nav_cell.get("auto_blocked", false)):
+            hazard_count += 1
+
+    status_label.text = "Grid %d • Nav %d • Open %d • Bridge+ %d • Hazard %d • Reach %d • AP %d" % [
+        hex_cells.size(),
+        nav_grid_tiles.size(),
+        walkable_count,
+        inferred_count,
+        hazard_count,
+        maxi(0, reachable.size() - 1),
+        moves_remaining
+    ]
+
+func _clear_hex_highlights() -> void:
+    _apply_hex_classification_visuals()
+
+func _select_hex_destination(area: Area3D) -> void:
+    if campaign_phase != PHASE_PLAYER or moves_remaining <= 0:
+        return
+    var key: String = str(area.get_meta("hex_key", ""))
+    if key == "" or key == current_hex_key:
+        return
+    if not hex_cells.has(key) or not bool(hex_cells[key].get("walkable", false)):
+        return
+    var reachable := _hex_reachable(current_hex_key, moves_remaining)
+    if not reachable.has(key):
+        return
+
+    pending_hex_path = _shortest_hex_path(current_hex_key, key)
+    if pending_hex_path.size() < 2:
+        return
+
+    pending_hex_key = key
+    pending_move_cost = pending_hex_path.size() - 1
+    movement_stats.text = "Destination hex: %s\nMovement cost: %d / %d remaining" % [
+        key, pending_move_cost, moves_remaining
+    ]
+    movement_confirm.disabled = false
+    _show_hex_route_preview(pending_hex_path)
+
+    var target_cell: Dictionary = hex_cells[key]
+    var target_area := target_cell["area"] as Area3D
+    var target_visual := target_area.get_node_or_null("Visual") as MeshInstance3D
+    if target_visual:
+        target_visual.material_override = hex_material_target
+
+func _shortest_hex_path(start_key: String, goal_key: String) -> Array[String]:
+    var frontier: Array[String] = [start_key]
+    var came_from := {start_key: ""}
+
+    while not frontier.is_empty():
+        var current: String = frontier.pop_front()
+        if current == goal_key:
+            break
+        for neighbor in _hex_neighbors(current):
+            if came_from.has(neighbor):
+                continue
+            came_from[neighbor] = current
+            frontier.append(neighbor)
+
+    if not came_from.has(goal_key):
+        return []
+
+    var path: Array[String] = [goal_key]
+    var cursor: String = str(came_from[goal_key])
+    while cursor != "":
+        path.push_front(cursor)
+        cursor = str(came_from[cursor])
+    return path
+
+func _show_hex_route_preview(path: Array[String]) -> void:
+    if not route_preview or path.size() < 2:
+        return
+    var mesh := ImmediateMesh.new()
+    var material := StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+    material.albedo_color = Color(0.10, 0.78, 0.68, 0.62)
+    material.emission_enabled = true
+    material.emission = Color(0.06, 0.88, 0.72, 1.0)
+    material.emission_energy_multiplier = 0.8
+    mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+
+    for i in range(path.size() - 1):
+        var a: Vector3 = hex_cells[path[i]]["position"] + Vector3(0.0, 0.08, 0.0)
+        var b: Vector3 = hex_cells[path[i + 1]]["position"] + Vector3(0.0, 0.08, 0.0)
+        mesh.surface_add_vertex(a)
+        mesh.surface_add_vertex(b)
+
+    mesh.surface_end()
+    route_preview.mesh = mesh
+    route_preview.visible = true
+
+func _confirm_hex_move() -> void:
+    if campaign_phase != PHASE_PLAYER or pending_hex_path.size() < 2:
+        return
+
+    movement_confirm.disabled = true
+    movement_stats.text = "Moving..."
+    _clear_hex_highlights()
+    _hide_route_preview()
+
+    for i in range(1, pending_hex_path.size()):
+        var key: String = pending_hex_path[i]
+        var target: Vector3 = hex_cells[key]["position"]
+        var tween := create_tween()
+        tween.set_trans(Tween.TRANS_SINE)
+        tween.set_ease(Tween.EASE_IN_OUT)
+        tween.tween_property(hero_unit, "global_position", target, 0.22)
+        await tween.finished
+
+    var spent_ap := pending_move_cost
+    moves_remaining = maxi(0, moves_remaining - spent_ap)
+    current_hex_key = pending_hex_key
+    pending_hex_key = ""
+    pending_hex_path.clear()
+    pending_move_cost = 0
+    unit_selected = false
+    hero_label.visible = false
+    movement_panel.visible = false
+    if hex_grid_overlay:
+        hex_grid_overlay.visible = false
+
+    _refresh_fog_reveal()
+    _reveal_nearby_pois()
+    _refresh_poi_visibility()
+    _refresh_enemy_visibility()
+    _resolve_hex_contact()
+    status_label.text = "Moved %d tile%s • %d AP remaining" % [
+        spent_ap,
+        "" if spent_ap == 1 else "s",
+        moves_remaining
+    ]
+    _refresh_game_hud()
+    _save_game_state()
+
+func _build_terrain_collision(node: Node) -> void:
+    if node is MeshInstance3D:
+        var mesh_instance := node as MeshInstance3D
+        if mesh_instance.mesh and mesh_instance.mesh.get_surface_count() > 0:
+            var shape := mesh_instance.mesh.create_trimesh_shape()
+            if shape:
+                var body := StaticBody3D.new()
+                body.name = "RuntimeTerrainCollision"
+                body.collision_layer = 8
+                body.collision_mask = 0
+
+                var collision := CollisionShape3D.new()
+                collision.shape = shape
+                body.add_child(collision)
+                mesh_instance.add_child(body)
+
+    for child in node.get_children():
+        if child.name != "RuntimeTerrainCollision":
+            _build_terrain_collision(child)
+
+func _cancel_unit_move() -> void:
+    _hide_route_preview()
+    _clear_hex_highlights()
+    pending_hex_key = ""
+    pending_hex_path.clear()
+    unit_selected = false
+    movement_panel.visible = false
+    hero_label.visible = false
+    if hex_grid_overlay:
+        hex_grid_overlay.visible = false
+
+func _build_game_hud() -> void:
+    game_hud = PanelContainer.new()
+    game_hud.name = "GameHUD"
+    game_hud.offset_left = 18.0
+    game_hud.offset_top = 88.0
+    game_hud.offset_right = 350.0
+    game_hud.offset_bottom = 252.0
+    ui_root.add_child(game_hud)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 14)
+    margin.add_theme_constant_override("margin_top", 12)
+    margin.add_theme_constant_override("margin_right", 14)
+    margin.add_theme_constant_override("margin_bottom", 12)
+    game_hud.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 7)
+    margin.add_child(box)
+
+    turn_label = Label.new()
+    turn_label.add_theme_font_size_override("font_size", 16)
+    box.add_child(turn_label)
+
+    hero_stats_label = Label.new()
+    box.add_child(hero_stats_label)
+
+    objective_label = Label.new()
+    objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    objective_label.add_theme_font_size_override("font_size", 12)
+    objective_label.visible = false
+    box.add_child(objective_label)
+
+    threat_label = Label.new()
+    box.add_child(threat_label)
+
+    campaign_status_label = Label.new()
+    campaign_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    campaign_status_label.add_theme_font_size_override("font_size", 12)
+    box.add_child(campaign_status_label)
+
+    ability_button = Button.new()
+    ability_button.custom_minimum_size = Vector2(0, 42)
+    ability_button.pressed.connect(_prime_signature_ability)
+    box.add_child(ability_button)
+
+    boss_button = Button.new()
+    boss_button.text = "Confront Vulgrim"
+    boss_button.custom_minimum_size = Vector2(0, 44)
+    boss_button.visible = false
+    boss_button.pressed.connect(_open_vulgrim_encounter)
+    box.add_child(boss_button)
+
+    var actions := HBoxContainer.new()
+    actions.add_theme_constant_override("separation", 6)
+    box.add_child(actions)
+
+    end_turn_button = Button.new()
+    end_turn_button.text = "End Turn"
+    end_turn_button.custom_minimum_size = Vector2(122, 38)
+    end_turn_button.pressed.connect(_end_turn)
+    actions.add_child(end_turn_button)
+
+    hud_details_button = Button.new()
+    hud_details_button.text = "Details"
+    hud_details_button.custom_minimum_size = Vector2(92, 38)
+    hud_details_button.pressed.connect(_toggle_hud_details)
+    actions.add_child(hud_details_button)
+
+    restart_button = Button.new()
+    restart_button.text = "Restart Ashenreach"
+    restart_button.custom_minimum_size = Vector2(0, 36)
+    restart_button.visible = false
+    restart_button.pressed.connect(_restart_campaign)
+    box.add_child(restart_button)
+
+    nav_debug_button = Button.new()
+    nav_debug_button.text = "NAV EDIT: OFF"
+    nav_debug_button.custom_minimum_size = Vector2(0, 36)
+    nav_debug_button.visible = false
+    nav_debug_button.pressed.connect(_toggle_nav_debug)
+    box.add_child(nav_debug_button)
+
+    event_log_label = Label.new()
+    event_log_label.text = "Ashenreach expedition begun."
+    event_log_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    event_log_label.add_theme_font_size_override("font_size", 11)
+    event_log_label.visible = false
+    box.add_child(event_log_label)
+
+    _build_encounter_panel()
+    _build_nav_edit_panel()
+
+func _toggle_hud_details() -> void:
+    hud_expanded = not hud_expanded
+    if objective_label:
+        objective_label.visible = hud_expanded
+    if event_log_label:
+        event_log_label.visible = hud_expanded
+    if restart_button:
+        restart_button.visible = hud_expanded
+    if nav_debug_button:
+        nav_debug_button.visible = hud_expanded
+    if hud_details_button:
+        hud_details_button.text = "Hide" if hud_expanded else "Details"
+    if game_hud:
+        game_hud.offset_bottom = 460.0 if hud_expanded else 252.0
+
+func _build_encounter_panel() -> void:
+    encounter_panel = PanelContainer.new()
+    encounter_panel.name = "EncounterPanel"
+    encounter_panel.visible = false
+    encounter_panel.anchor_left = 0.5
+    encounter_panel.anchor_top = 0.5
+    encounter_panel.anchor_right = 0.5
+    encounter_panel.anchor_bottom = 0.5
+    encounter_panel.offset_left = -250.0
+    encounter_panel.offset_top = -150.0
+    encounter_panel.offset_right = 250.0
+    encounter_panel.offset_bottom = 150.0
+    ui_root.add_child(encounter_panel)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 18)
+    margin.add_theme_constant_override("margin_top", 16)
+    margin.add_theme_constant_override("margin_right", 18)
+    margin.add_theme_constant_override("margin_bottom", 16)
+    encounter_panel.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 10)
+    margin.add_child(box)
+
+    var type_label := Label.new()
+    type_label.text = "ENCOUNTER"
+    type_label.add_theme_font_size_override("font_size", 13)
+    box.add_child(type_label)
+
+    encounter_title = Label.new()
+    encounter_title.add_theme_font_size_override("font_size", 24)
+    box.add_child(encounter_title)
+
+    encounter_body = Label.new()
+    encounter_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(encounter_body)
+
+    var engage := Button.new()
+    engage.text = "Engage"
+    engage.custom_minimum_size = Vector2(0, 48)
+    engage.pressed.connect(_resolve_encounter.bind(true))
+    box.add_child(engage)
+
+    var withdraw := Button.new()
+    withdraw.text = "Withdraw"
+    withdraw.custom_minimum_size = Vector2(0, 44)
+    withdraw.pressed.connect(_resolve_encounter.bind(false))
+    box.add_child(withdraw)
+
+func _refresh_game_hud() -> void:
+    if not game_hud:
+        return
+    var hero_name: String = str(hero_catalog.get(selected_hero_id, {}).get("name", "Hero"))
+    var phase_text := campaign_phase.capitalize()
+    turn_label.text = "TURN %d  •  %s PHASE  •  AP %d/%d" % [turn_number, phase_text, moves_remaining, hero_move_points]
+    var level: int = 1 + int(hero_xp / 100)
+    hero_stats_label.text = "%s\nLevel %d  •  Health %d/100  •  XP %d" % [hero_name, level, hero_health, hero_xp]
+    objective_label.text = _objective_text()
+    var objective_total: int = board_data.get("objectives", []).size()
+    var objective_done: int = 0
+    for raw_objective in board_data.get("objectives", []):
+        if raw_objective is Dictionary and _objective_complete(raw_objective):
+            objective_done += 1
+    threat_label.text = "Objectives %d/%d  •  Vulgrim %d%% %s" % [objective_done, objective_total, vulgrim_heat, _threat_stage()]
+    if vulgrim_defeated:
+        campaign_status_label.text = "ASHENREACH SECURED • VULGRIM DEFEATED"
+    elif territory_secured:
+        campaign_status_label.text = "Stronghold secured. Vulgrim can now be hunted."
+    elif _all_objectives_complete():
+        campaign_status_label.text = "Primary objectives complete. Secure the territory."
+    else:
+        campaign_status_label.text = "Explore, survive, and secure Ashenreach."
+    if ability_button:
+        var ability_name: String = str(hero_catalog.get(selected_hero_id, {}).get("signature_ability", "Signature Ability"))
+        ability_button.text = ("%s READY" % ability_name) if not signature_ability_used else ("%s USED" % ability_name)
+        ability_button.disabled = signature_ability_used or campaign_phase != PHASE_PLAYER
+    var bonuses: Array[String] = []
+    if claimed_pois.has("CapitalRuins"):
+        bonuses.append("Capital: recovery")
+    if claimed_pois.has("Overlook"):
+        bonuses.append("Overlook: +reveal")
+    if claimed_pois.has("ElevatedOutpost"):
+        bonuses.append("Outpost: enemy intel")
+    if claimed_pois.has("RitualTotems"):
+        bonuses.append("Totems: slower threat")
+    if not bonuses.is_empty():
+        campaign_status_label.text += "\n" + " • ".join(bonuses)
+    if end_turn_button:
+        end_turn_button.disabled = campaign_phase != PHASE_PLAYER
+        if campaign_phase == PHASE_ENEMY:
+            end_turn_button.text = "Enemy Phase"
+        elif campaign_phase == PHASE_WORLD:
+            end_turn_button.text = "World Phase"
+        elif moves_remaining <= 0:
+            end_turn_button.text = "End Turn • Ready"
+        else:
+            end_turn_button.text = "End Turn"
+    if boss_button:
+        boss_button.visible = vulgrim_available and not vulgrim_defeated
+
+func _objective_text() -> String:
+    var lines: Array[String] = ["OBJECTIVES"]
+    var objectives = board_data.get("objectives", [])
+    for raw in objectives:
+        if not raw is Dictionary:
+            continue
+        var objective: Dictionary = raw
+        var done := _objective_complete(objective)
+        var mark := "✓" if done else "◇"
+        lines.append("%s %s" % [mark, str(objective.get("label", "Objective"))])
+    return "\n".join(lines)
+
+func _objective_complete(objective: Dictionary) -> bool:
+    var kind: String = str(objective.get("type", ""))
+    if kind == "discover_poi":
+        return discovered_pois.has(str(objective.get("target", "")))
+    if kind == "claim_poi":
+        return claimed_pois.has(str(objective.get("target", "")))
+    if kind == "discover_count":
+        return discovered_pois.size() >= int(objective.get("target", 0))
+    if kind == "dungeon_clear":
+        return sundered_vault_cleared
+    return false
+
+func _all_objectives_complete() -> bool:
+    var objectives = board_data.get("objectives", [])
+    if objectives.is_empty():
+        return false
+    for raw in objectives:
+        if raw is Dictionary and not _objective_complete(raw):
+            return false
+    return true
+
+func _threat_stage() -> String:
+    if vulgrim_heat >= 80:
+        return "ERUPTION IMMINENT"
+    if vulgrim_heat >= 55:
+        return "Violent"
+    if vulgrim_heat >= 30:
+        return "Stirring"
+    return "Dormant"
+
+func _prime_signature_ability() -> void:
+    if campaign_phase != PHASE_PLAYER or signature_ability_used:
+        return
+    signature_ability_used = true
+    signature_ability_primed = true
+    var ability_name: String = str(hero_catalog.get(selected_hero_id, {}).get("signature_ability", "Signature Ability"))
+    event_log_label.text = "%s primed for the next encounter." % ability_name
+    _refresh_game_hud()
+    _save_game_state()
+
+func _end_turn() -> void:
+    if campaign_phase != PHASE_PLAYER:
+        return
+    if encounter_panel and encounter_panel.visible:
+        return
+    _cancel_unit_move()
+    campaign_phase = PHASE_ENEMY
+    last_enemy_phase_summary = ""
+    _refresh_game_hud()
+    await _run_enemy_phase()
+
+    campaign_phase = PHASE_WORLD
+    _refresh_game_hud()
+    await get_tree().create_timer(0.35).timeout
+    _resolve_world_phase()
+
+    if hero_health <= 0:
+        _handle_hero_defeat()
+        return
+
+    turn_number += 1
+    moves_remaining = hero_move_points
+    signature_ability_used = false
+    signature_ability_primed = false
+    campaign_phase = PHASE_PLAYER
+
+    if claimed_pois.has("CapitalRuins") and _hero_near_named_poi("CapitalRuins", 4.0):
+        hero_health = mini(100, hero_health + 10)
+
+    if last_enemy_phase_summary != "":
+        event_log_label.text = "Turn %d • %s" % [turn_number, last_enemy_phase_summary]
+    else:
+        event_log_label.text = "Turn %d begins. Choose how to spend your %d action points." % [turn_number, hero_move_points]
+
+    _refresh_enemy_visibility()
+    _refresh_game_hud()
+    _save_game_state()
+
+func _reveal_nearby_pois() -> void:
+    var rules: Dictionary = board_data.get("poi_rules", {})
+    for child in $POIs.get_children():
+        if not child is Area3D:
+            continue
+        var poi := child as Area3D
+        var radius := 5.0
+        if rules.has(poi.name):
+            var rule: Dictionary = rules[poi.name]
+            radius = float(rule.get("discovery_radius", 5.0))
+        var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+        var poi_flat := Vector2(poi.global_position.x, poi.global_position.z)
+        if hero_flat.distance_to(poi_flat) <= radius and not discovered_pois.has(poi.name):
+            discovered_pois[poi.name] = true
+            if event_log_label:
+                event_log_label.text = "Discovered: %s" % str(POI_DATA.get(poi.name, {}).get("title", poi.name))
+
+func _refresh_poi_visibility() -> void:
+    for child in $POIs.get_children():
+        if not child is Area3D:
+            continue
+        var poi := child as Area3D
+        var marker := poi.get_node_or_null("Marker") as MeshInstance3D
+        if marker:
+            marker.visible = discovered_pois.has(poi.name)
+
+func _build_victory_panel() -> void:
+    victory_panel = PanelContainer.new()
+    victory_panel.name = "VictoryPanel"
+    victory_panel.visible = false
+    victory_panel.anchor_left = 0.5
+    victory_panel.anchor_top = 0.5
+    victory_panel.anchor_right = 0.5
+    victory_panel.anchor_bottom = 0.5
+    victory_panel.offset_left = -280.0
+    victory_panel.offset_top = -155.0
+    victory_panel.offset_right = 280.0
+    victory_panel.offset_bottom = 155.0
+    ui_root.add_child(victory_panel)
+
+    var margin := MarginContainer.new()
+    margin.add_theme_constant_override("margin_left", 20)
+    margin.add_theme_constant_override("margin_top", 18)
+    margin.add_theme_constant_override("margin_right", 20)
+    margin.add_theme_constant_override("margin_bottom", 18)
+    victory_panel.add_child(margin)
+
+    var box := VBoxContainer.new()
+    box.add_theme_constant_override("separation", 10)
+    margin.add_child(box)
+
+    var title := Label.new()
+    title.text = "ASHENREACH SECURED"
+    title.add_theme_font_size_override("font_size", 30)
+    box.add_child(title)
+
+    var body := Label.new()
+    body.text = "Inferno-Lord Vulgrim has fallen. The Ashen Wastes stronghold is under your control.\n\nThis territory is complete, but you may continue exploring or restart the Ashenreach campaign."
+    body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    box.add_child(body)
+
+    var continue_button := Button.new()
+    continue_button.text = "Continue Exploring"
+    continue_button.custom_minimum_size = Vector2(0, 48)
+    continue_button.pressed.connect(func(): victory_panel.visible = false)
+    box.add_child(continue_button)
+
+    var restart_button := Button.new()
+    restart_button.text = "Restart Ashenreach"
+    restart_button.custom_minimum_size = Vector2(0, 44)
+    restart_button.pressed.connect(func():
+        victory_panel.visible = false
+        _restart_campaign()
+    )
+    box.add_child(restart_button)
+
+func _build_fog_of_war() -> void:
+    fog_root = Node3D.new()
+    fog_root.name = "FogOfWar"
+    add_child(fog_root)
+
+    var fog_material := ShaderMaterial.new()
+    var fog_shader := Shader.new()
+    fog_shader.code = """
+shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_never, blend_mix;
+
+void fragment() {
+    vec2 p = UV - vec2(0.5);
+    float d = length(p);
+    float soft_edge = 1.0 - smoothstep(0.33, 0.72, d);
+    float wave_a = sin((UV.x * 17.0) + (UV.y * 11.0));
+    float wave_b = sin((UV.x * 7.0) - (UV.y * 19.0));
+    float center_texture = 0.88 + 0.08 * wave_a + 0.04 * wave_b;
+    ALBEDO = vec3(0.01, 0.014, 0.018);
+    ALPHA = soft_edge * 0.48 * center_texture;
+}
+"""
+    fog_material.shader = fog_shader
+
+    var x_index: int = 0
+    var x: float = -16.0
+    while x <= 16.0:
+        var z_index: int = 0
+        var z: float = -12.0
+        while z <= 16.0:
+            var key := "%d_%d" % [x_index, z_index]
+            var tile := MeshInstance3D.new()
+            tile.name = "Fog_%s" % key
+            var plane := PlaneMesh.new()
+            plane.size = Vector2(FOG_CELL_SIZE * 1.9, FOG_CELL_SIZE * 1.9)
+            tile.mesh = plane
+            tile.material_override = fog_material
+            tile.position = Vector3(x, 7.05, z)
+            tile.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+            fog_root.add_child(tile)
+            fog_tiles[key] = tile
+            z += FOG_CELL_SIZE
+            z_index += 1
+        x += FOG_CELL_SIZE
+        x_index += 1
+
+    _refresh_fog_tiles()
+
+func _refresh_fog_reveal() -> void:
+    if not fog_root:
+        return
+    var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+    for key_variant in fog_tiles.keys():
+        var key: String = str(key_variant)
+        var tile := fog_tiles[key] as MeshInstance3D
+        if not tile:
+            continue
+        var tile_flat := Vector2(tile.global_position.x, tile.global_position.z)
+        var reveal_radius: float = FOG_REVEAL_RADIUS
+        if claimed_pois.has("Overlook"):
+            reveal_radius += 3.0
+        if hero_flat.distance_to(tile_flat) <= reveal_radius:
+            revealed_fog_cells[key] = true
+    _refresh_fog_tiles()
+
+func _refresh_fog_tiles() -> void:
+    for key_variant in fog_tiles.keys():
+        var key: String = str(key_variant)
+        var tile := fog_tiles[key] as MeshInstance3D
+        if tile:
+            tile.visible = not revealed_fog_cells.has(key)
+
+func _build_route_preview() -> void:
+    route_preview = MeshInstance3D.new()
+    route_preview.name = "RoutePreview"
+    route_preview.visible = false
+    add_child(route_preview)
+
+func _hide_route_preview() -> void:
+    if route_preview:
+        route_preview.visible = false
+        route_preview.mesh = null
+
+func _build_enemy_board() -> void:
+    enemy_root = Node3D.new()
+    enemy_root.name = "EnemyBoard"
+    add_child(enemy_root)
+    _refresh_enemy_board()
+
+func _refresh_enemy_board() -> void:
+    if not enemy_root:
+        return
+
+    for child in enemy_root.get_children():
+        child.queue_free()
+    enemy_pieces.clear()
+
+    var encounters: Dictionary = board_data.get("encounters", {})
+    for node_name_variant in encounters.keys():
+        var node_name: String = str(node_name_variant)
+        if completed_encounters.has(node_name):
+            continue
+        if not ENCOUNTER_START_POSITIONS.has(node_name):
+            continue
+
+        var data: Dictionary = encounters[node_name]
+        var piece := Node3D.new()
+        piece.name = "Enemy_%s" % node_name
+        enemy_root.add_child(piece)
+        piece.global_position = ENCOUNTER_START_POSITIONS[node_name]
+
+        var material := StandardMaterial3D.new()
+        material.albedo_color = Color(0.17, 0.055, 0.035, 1.0)
+        material.emission_enabled = true
+        material.emission = Color(0.48, 0.07, 0.025, 1.0)
+        material.emission_energy_multiplier = 0.48
+        material.roughness = 0.86
+
+        var body := MeshInstance3D.new()
+        var body_mesh := SphereMesh.new()
+        body_mesh.radius = 0.36
+        body_mesh.height = 0.72
+        body_mesh.radial_segments = 12
+        body_mesh.rings = 6
+        body.mesh = body_mesh
+        body.scale = Vector3(1.25, 0.78, 1.65)
+        body.position = Vector3(0.0, 0.38, 0.0)
+        body.material_override = material
+        piece.add_child(body)
+
+        var head := MeshInstance3D.new()
+        var head_mesh := SphereMesh.new()
+        head_mesh.radius = 0.20
+        head_mesh.height = 0.40
+        head_mesh.radial_segments = 10
+        head_mesh.rings = 5
+        head.mesh = head_mesh
+        head.position = Vector3(0.0, 0.58, -0.46)
+        head.material_override = material
+        piece.add_child(head)
+
+        var ring := MeshInstance3D.new()
+        var ring_mesh := TorusMesh.new()
+        ring_mesh.inner_radius = 0.44
+        ring_mesh.outer_radius = 0.53
+        ring_mesh.rings = 18
+        ring_mesh.ring_segments = 8
+        ring.mesh = ring_mesh
+        ring.position = Vector3(0.0, 0.035, 0.0)
+
+        var ring_material := StandardMaterial3D.new()
+        ring_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        ring_material.albedo_color = Color(0.72, 0.10, 0.035, 0.42)
+        ring_material.emission_enabled = true
+        ring_material.emission = Color(0.72, 0.09, 0.025, 1.0)
+        ring_material.emission_energy_multiplier = 0.75
+        ring.material_override = ring_material
+        piece.add_child(ring)
+
+        var label := Label3D.new()
+        label.text = str(data.get("name", "Threat"))
+        label.font_size = 14
+        label.pixel_size = 0.012
+        label.position = Vector3(0.0, 1.22, 0.0)
+        label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+        label.no_depth_test = true
+        piece.add_child(label)
+
+        await get_tree().process_frame
+        _snap_visual_children_to_ground(piece, 0.0)
+        if not hex_cells.is_empty():
+            var enemy_hex := str(enemy_hex_positions.get(node_name, ""))
+            if enemy_hex == "" or not hex_cells.has(enemy_hex):
+                enemy_hex = _nearest_hex_key(piece.global_position)
+            if enemy_hex != "" and hex_cells.has(enemy_hex):
+                enemy_hex_positions[node_name] = enemy_hex
+                piece.global_position = hex_cells[enemy_hex]["position"]
+        enemy_pieces[node_name] = piece
+
+    _refresh_enemy_visibility()
+
+func _snap_visual_children_to_ground(root: Node3D, target_y: float = 0.02) -> void:
+    var visual_nodes: Array[Node3D] = []
+    for child in root.get_children():
+        if child is MeshInstance3D and child.name != "BaseRing":
+            visual_nodes.append(child as Node3D)
+
+    if visual_nodes.is_empty():
+        return
+
+    var lowest: float = INF
+    for visual in visual_nodes:
+        lowest = _lowest_mesh_y_in_parent(visual, root, lowest)
+
+    if lowest >= INF:
+        return
+
+    var shift: float = target_y - lowest
+    for visual in visual_nodes:
+        visual.position.y += shift
+
+func _refresh_enemy_visibility() -> void:
+    if enemy_pieces.is_empty():
+        return
+    var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+    for node_name_variant in enemy_pieces.keys():
+        var node_name: String = str(node_name_variant)
+        var piece := enemy_pieces[node_name] as Node3D
+        if not piece or not is_instance_valid(piece):
+            continue
+        var enemy_flat := Vector2(piece.global_position.x, piece.global_position.z)
+        var visibility_radius: float = 9.0
+        if claimed_pois.has("ElevatedOutpost"):
+            visibility_radius = 18.0
+        piece.visible = hero_flat.distance_to(enemy_flat) <= visibility_radius or str(enemy_hex_positions.get(node_name, "")) == current_hex_key
+
+func _node_has_active_encounter(node_name: String) -> bool:
+    var encounters: Dictionary = board_data.get("encounters", {})
+    return encounters.has(node_name) and not completed_encounters.has(node_name)
+
+func _refresh_claimed_poi_style() -> void:
+    for child in $POIs.get_children():
+        if not child is Area3D:
+            continue
+        var poi := child as Area3D
+        var marker := poi.get_node_or_null("Marker") as MeshInstance3D
+        if not marker:
+            continue
+        if poi.name == "SunderedVault" and sundered_vault_cleared:
+            var vault_material := StandardMaterial3D.new()
+            vault_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+            vault_material.albedo_color = Color(0.82, 0.42, 0.12, 0.72)
+            vault_material.emission_enabled = true
+            vault_material.emission = Color(1.0, 0.30, 0.06, 1.0)
+            vault_material.emission_energy_multiplier = 1.5
+            vault_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+            marker.material_override = vault_material
+        elif claimed_pois.has(poi.name):
+            var controlled_material := StandardMaterial3D.new()
+            controlled_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+            controlled_material.albedo_color = Color(0.18, 0.72, 0.34, 0.66)
+            controlled_material.emission_enabled = true
+            controlled_material.emission = Color(0.12, 0.8, 0.28, 1.0)
+            controlled_material.emission_energy_multiplier = 1.25
+            controlled_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+            marker.material_override = controlled_material
+
+func _hero_near_poi(poi: Node3D, radius: float = 2.2) -> bool:
+    var hero_flat := Vector2(hero_unit.global_position.x, hero_unit.global_position.z)
+    var poi_flat := Vector2(poi.global_position.x, poi.global_position.z)
+    return hero_flat.distance_to(poi_flat) <= radius
+
+func _poi_rule(poi_name: String) -> Dictionary:
+    var rules: Dictionary = board_data.get("poi_rules", {})
+    if rules.has(poi_name):
+        return rules[poi_name]
+    return {}
+
+func _trigger_node_encounter(node_name: String) -> void:
+    var encounters: Dictionary = board_data.get("encounters", {})
+    if not encounters.has(node_name) or completed_encounters.has(node_name):
+        return
+    var data: Dictionary = encounters[node_name]
+    current_encounter_node = node_name
+    encounter_title.text = str(data.get("name", "Encounter"))
+    encounter_body.text = "%s\n\nDanger %d  •  Reward %d XP" % [
+        str(data.get("description", "")),
+        int(data.get("danger", 1)),
+        int(data.get("xp", 0))
+    ]
+    encounter_panel.visible = true
+    movement_panel.visible = false
+    event_log_label.text = "Encounter: %s" % str(data.get("name", "Unknown threat"))
+
+func _resolve_encounter(engage: bool) -> void:
+    if current_encounter_node == "__VULGRIM__":
+        if engage:
+            _resolve_vulgrim()
+        else:
+            encounter_panel.visible = false
+            current_encounter_node = ""
+            moves_remaining = 0
+            event_log_label.text = "You withdrew from Vulgrim. Movement exhausted this turn."
+            _refresh_game_hud()
+            _save_game_state()
+        return
+    if current_encounter_node == "":
+        encounter_panel.visible = false
+        return
+    var encounters: Dictionary = board_data.get("encounters", {})
+    if not encounters.has(current_encounter_node):
+        encounter_panel.visible = false
+        current_encounter_node = ""
+        return
+
+    var data: Dictionary = encounters[current_encounter_node]
+    if engage:
+        var loss: int = int(data.get("health_loss", 0))
+        var gain: int = int(data.get("xp", 0))
+        var ability_note := ""
+        if signature_ability_primed:
+            if selected_hero_id == "vesper":
+                loss = 0
+                ability_note = " Glacial Bastion absorbed the incoming damage."
+            elif selected_hero_id == "ignis":
+                loss = int(floor(float(loss) * 0.5))
+                gain += 10
+                ability_note = " Eruption Strike broke the enemy line."
+            signature_ability_primed = false
+        hero_health = max(0, hero_health - loss)
+        hero_xp += gain
+        completed_encounters[current_encounter_node] = true
+        _refresh_enemy_board()
+        event_log_label.text = "%s defeated. +%d XP, -%d health.%s" % [str(data.get("name", "Enemy")), gain, loss, ability_note]
+        if hero_health <= 0:
+            _handle_hero_defeat()
+    else:
+        moves_remaining = 0
+        event_log_label.text = "Withdrew from %s. Movement exhausted this turn." % str(data.get("name", "encounter"))
+
+    current_encounter_node = ""
+    encounter_panel.visible = false
+    _refresh_game_hud()
+    _save_game_state()
+
+func _open_vulgrim_encounter() -> void:
+    if not vulgrim_available or vulgrim_defeated:
+        return
+    current_encounter_node = "__VULGRIM__"
+    encounter_title.text = "Inferno-Lord Vulgrim"
+    encounter_body.text = "WORLD-ENDING THREAT / APEX ENTITY\n\nVulgrim erupts from the Ashen Wastes in a storm of magma and catastrophic heat. This is the territory's legendary confrontation.\n\nRecommended: secure Ashenreach first and enter with high health."
+    encounter_panel.visible = true
+
+func _resolve_vulgrim() -> void:
+    var damage: int = 35
+    if territory_secured:
+        damage = 22
+    if signature_ability_primed:
+        if selected_hero_id == "vesper":
+            damage = int(floor(float(damage) * 0.5))
+        elif selected_hero_id == "ignis":
+            damage = int(floor(float(damage) * 0.65))
+        signature_ability_primed = false
+    hero_health = max(0, hero_health - damage)
+    hero_xp += 150
+    vulgrim_defeated = true
+    vulgrim_available = false
+    territory_secured = true
+    encounter_panel.visible = false
+    current_encounter_node = ""
+    event_log_label.text = "Inferno-Lord Vulgrim defeated. Ashenreach is fully secured."
+    _refresh_game_hud()
+    _save_game_state()
+    if victory_panel:
+        victory_panel.visible = true
