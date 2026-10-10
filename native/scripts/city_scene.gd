@@ -2,9 +2,7 @@ extends Control
 
 const WORLD_DATA_PATH := "res://data/world_catalog.json"
 const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach/ashenreach_crossroads.webp"
-const ASHENREACH_DEPTH_CARD_PATHS := {
-	"foreground": "res://assets/cities/ashenreach/foreground/crossroads_foreground.webp"
-}
+
 const CAMPAIGN_SERVICE = preload("res://scripts/campaign_director.gd")
 const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
 const HERO_PROGRESSION_SERVICE = preload("res://scripts/hero_progression.gd")
@@ -110,8 +108,6 @@ var city_names: Array[String] = []
 
 var background: TextureRect
 var character_stage: Node2D
-var foreground_card_nodes: Array[Sprite2D] = []
-var foreground_card_textures: Dictionary = {}
 var player_sprite: Sprite2D
 var scene_back_button: Button
 var city_title: Label
@@ -1068,50 +1064,6 @@ func _build_ember_texture() -> Texture2D:
 
 
 
-func _foreground_layout_for_screen() -> Array[Dictionary]:
-	if current_screen != "plaza":
-		return []
-	return [
-		{"asset": "foreground", "point": Vector2(0.50, 1.0), "width": 1.0}
-	]
-
-func _refresh_foreground_cards() -> void:
-	if not character_stage:
-		return
-	for card in foreground_card_nodes:
-		if is_instance_valid(card):
-			card.queue_free()
-	foreground_card_nodes.clear()
-	if region_id != "ashen_wastes":
-		return
-	for card_data in _foreground_layout_for_screen():
-		var asset_id := str(card_data.get("asset", ""))
-		var texture := foreground_card_textures.get(asset_id) as Texture2D
-		if not texture:
-			var asset_path := str(ASHENREACH_DEPTH_CARD_PATHS.get(asset_id, ""))
-			if asset_path == "" or not ResourceLoader.exists(asset_path):
-				continue
-			texture = load(asset_path) as Texture2D
-			if not texture:
-				continue
-			foreground_card_textures[asset_id] = texture
-		var point: Vector2 = card_data.get("point", Vector2(0.5, 0.7))
-		var width_fraction := float(card_data.get("width", 0.10))
-		var depth_scale := lerpf(0.58, 1.0, clampf(point.y, 0.12, 0.95))
-		var target_width := maxf(1.0, size.x * width_fraction * depth_scale)
-		var scale_factor := target_width / maxf(1.0, float(texture.get_width()))
-		var sprite := Sprite2D.new()
-		sprite.name = "AshenreachDepthCard_" + asset_id
-		sprite.texture = texture
-		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-		sprite.position = Vector2(size.x * point.x, size.y * point.y)
-		sprite.scale = Vector2.ONE * scale_factor
-		sprite.offset = Vector2(0.0, -float(texture.get_height()) * 0.5)
-		sprite.flip_h = bool(card_data.get("flip_h", false))
-		character_stage.add_child(sprite)
-		foreground_card_nodes.append(sprite)
-
-
 func _update_city_perspective() -> void:
 	if not player_sprite:
 		return
@@ -1127,7 +1079,7 @@ func _update_city_perspective() -> void:
 	if city_embers:
 		city_embers.position = Vector2(size.x * 0.5, size.y * 0.82)
 		city_embers.emission_rect_extents = Vector2(size.x * 0.58, size.y * 0.42)
-		city_embers.emitting = region_id == "ashen_wastes"
+		city_embers.emitting = region_id == "ashen_wastes" and current_screen != "plaza"
 
 
 func _update_interaction_prompt() -> void:
@@ -1331,7 +1283,7 @@ func _refresh_residents() -> void:
 			resident.queue_free()
 	npc_sprites.clear()
 	npc_textures.clear()
-	if region_id != "ashen_wastes":
+	if region_id != "ashen_wastes" or current_screen == "plaza":
 		return
 	var residents: Array[Dictionary] = []
 	match current_screen:
@@ -1576,7 +1528,6 @@ func _cancel_walk() -> void:
 func _on_city_resized() -> void:
 	_update_joystick_knob()
 	_update_minimap_markers()
-	_refresh_foreground_cards()
 	if not player_sprite:
 		return
 	player_sprite.position = _nearest_walkable_position(player_sprite.position)
@@ -1823,6 +1774,8 @@ func _refresh_hotspots() -> void:
 			hotspot.queue_free()
 	hotspot_buttons.clear()
 	hotspot_targets.clear()
+	if region_id == "ashen_wastes" and current_screen == "plaza":
+		return
 	for transition in _transitions_for_screen(current_screen):
 		_add_hotspot(str(transition.to), str(transition.label), transition.point)
 	for poi in CITY_POIS.get(current_screen, []):
@@ -1887,7 +1840,6 @@ func _show_city_screen(screen_id: String, place_hero: bool = true, spawn_overrid
 		player_sprite.frame = 0
 	_refresh_hotspots()
 	_refresh_residents()
-	_refresh_foreground_cards()
 	_update_city_perspective()
 	queue_redraw()
 
