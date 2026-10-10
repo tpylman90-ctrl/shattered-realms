@@ -61,7 +61,7 @@ func sync_actor(proxy: Object, texture: Texture2D, frame: int, screen_point: Vec
 	sprite.texture = texture
 	sprite.region_rect = Rect2(
 		float(frame % 4) * FRAME_SIZE.x,
-		float(frame / 4) * FRAME_SIZE.y,
+		float(floori(float(frame) / 4.0)) * FRAME_SIZE.y,
 		FRAME_SIZE.x,
 		FRAME_SIZE.y
 	)
