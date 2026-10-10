@@ -1682,9 +1682,9 @@ func _show_city_poi_dialogue(poi_id: String) -> void:
 		add_child(dialogue_layer)
 		var panel := PanelContainer.new()
 		panel.anchor_left = 0.12
-	panel.anchor_top = 0.18
+		panel.anchor_top = 0.18
 		panel.anchor_right = 0.88
-	panel.anchor_bottom = 0.50
+		panel.anchor_bottom = 0.50
 		panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.035, 0.04, 0.96), Color("d0aa69")))
 		dialogue_layer.add_child(panel)
 		var margin := MarginContainer.new()
