@@ -2372,16 +2372,18 @@ func _apply_hex_classification_visuals() -> void:
                 visual.material_override = hex_material_nav_selected
             elif bridge_candidate:
                 visual.material_override = hex_material_bridge_candidate
-            elif source == "debug_open" or source == "mask_open":
+            elif nav_debug_mode and (source == "debug_open" or source == "mask_open"):
                 visual.material_override = hex_material_forced_open
-            elif source == "debug_blocked" or source == "mask_blocked":
+            elif nav_debug_mode and (source == "debug_blocked" or source == "mask_blocked"):
                 visual.material_override = hex_material_forced_blocked
             elif nav_debug_mode and bool(cell.get("auto_blocked", false)):
                 visual.material_override = hex_material_blocked
             elif nav_debug_mode:
                 visual.material_override = hex_material_nav_edit
             else:
-                visual.material_override = hex_material_idle if walkable else hex_material_blocked
+                # Walkability colors are editor diagnostics. Keep blocked cells
+                # visually blended into the terrain during normal board play.
+                visual.material_override = hex_material_idle
 
         if pick_shape:
             pick_shape.disabled = not (has_surface or bridge_candidate)
@@ -3407,7 +3409,12 @@ func _trigger_node_encounter(node_name: String) -> void:
 func _resolve_encounter(engage: bool) -> void:
     if current_encounter_node == "__VULGRIM__":
         if engage:
-            _resolve_vulgrim()
+            _launch_battle("__VULGRIM__", {
+                "name": "Inferno-Lord Vulgrim",
+                "danger": 5,
+                "xp": 150,
+                "battle_family": "vulgrim"
+            })
         else:
             encounter_panel.visible = false
             current_encounter_node = ""
@@ -3427,25 +3434,8 @@ func _resolve_encounter(engage: bool) -> void:
 
     var data: Dictionary = encounters[current_encounter_node]
     if engage:
-        var loss: int = int(data.get("health_loss", 0))
-        var gain: int = int(data.get("xp", 0))
-        var ability_note := ""
-        if signature_ability_primed:
-            if selected_hero_id == "vesper":
-                loss = 0
-                ability_note = " Glacial Bastion absorbed the incoming damage."
-            elif selected_hero_id == "ignis":
-                loss = int(floor(float(loss) * 0.5))
-                gain += 10
-                ability_note = " Eruption Strike broke the enemy line."
-            signature_ability_primed = false
-        hero_health = max(0, hero_health - loss)
-        hero_xp += gain
-        completed_encounters[current_encounter_node] = true
-        _refresh_enemy_board()
-        event_log_label.text = "%s defeated. +%d XP, -%d health.%s" % [str(data.get("name", "Enemy")), gain, loss, ability_note]
-        if hero_health <= 0:
-            _handle_hero_defeat()
+        _launch_battle(current_encounter_node, data)
+        return
     else:
         moves_remaining = 0
         event_log_label.text = "Withdrew from %s. Movement exhausted this turn." % str(data.get("name", "encounter"))
@@ -3454,6 +3444,36 @@ func _resolve_encounter(engage: bool) -> void:
     encounter_panel.visible = false
     _refresh_game_hud()
     _save_game_state()
+
+func _launch_battle(encounter_id: String, data: Dictionary) -> void:
+    var danger := int(data.get("danger", 1))
+    var hero_profile := HeroProgressionService.ensure_profile(selected_hero_id, hero_xp)
+    var hero_stats: Dictionary = hero_profile.get("stats", {})
+    var hero_max_hp := int(hero_stats.get("hp", 100))
+    var battle_context := ConfigFile.new()
+    battle_context.set_value("battle", "hero_id", selected_hero_id)
+    battle_context.set_value("battle", "encounter_id", encounter_id)
+    battle_context.set_value("battle", "region_id", "ashen_wastes")
+    battle_context.set_value("battle", "enemy_name", str(data.get("name", "Ashen Wastes threat")))
+    battle_context.set_value("battle", "enemy_family", str(data.get("battle_family", "skirmisher")))
+    battle_context.set_value("battle", "hero_hp", hero_health)
+    battle_context.set_value("battle", "hero_max_hp", hero_max_hp)
+    battle_context.set_value("battle", "hero_xp", hero_xp)
+    battle_context.set_value("battle", "enemy_hp", 48 + danger * 24 if encounter_id != "__VULGRIM__" else 260)
+    battle_context.set_value("battle", "enemy_attack", 7 + danger * 4 if encounter_id != "__VULGRIM__" else 22)
+    battle_context.set_value("battle", "reward_xp", int(data.get("xp", 25)))
+    battle_context.set_value("battle", "danger", danger)
+    battle_context.set_value("battle", "enemy_level", maxi(1, 1 + int(turn_number / 3) + danger - 1))
+    var save_error := battle_context.save(BATTLE_CONTEXT_PATH)
+    if save_error != OK:
+        push_error("Could not save battle context: %s" % error_string(save_error))
+        return
+    if encounter_id == "__VULGRIM__":
+        signature_ability_primed = false
+    encounter_panel.visible = false
+    movement_panel.visible = false
+    event_log_label.text = "%s enters the battle." % str(data.get("name", "The enemy"))
+    get_tree().change_scene_to_file(BATTLE_SCENE_PATH)
 
 func _open_vulgrim_encounter() -> void:
     if not vulgrim_available or vulgrim_defeated:
