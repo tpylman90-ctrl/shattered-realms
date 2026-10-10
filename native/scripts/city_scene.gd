@@ -17,7 +17,7 @@ const CITY_STORY_PATH := "user://city_story.cfg"
 const CITY_NETWORK_PATH := "user://city_network.cfg"
 const CITY_NAV_CELL_SIZE := 24.0
 const CITY_SCREENS := {
-	"plaza": {"art": "res://assets/cities/ashenreach/ashenreach_crossroads.webp", "title": "CITADEL CROSSROADS", "district": "THE CENTRAL WARD", "spawn": Vector2(0.50, 0.70)},
+	"plaza": {"art": "res://assets/cities/ashenreach/ashenreach_crossroads_depth_plate.webp", "title": "CITADEL CROSSROADS", "district": "THE CENTRAL WARD", "spawn": Vector2(0.50, 0.70)},
 	"market": {"art": "res://assets/cities/ashenreach/cinder_market.webp", "title": "CINDER MARKET", "district": "THE COMMERCE WARD", "spawn": Vector2(0.50, 0.72)},
 	"living": {"art": "res://assets/cities/ashenreach/living_quarter.webp", "title": "LIVING QUARTER", "district": "THE LOWER WARD", "spawn": Vector2(0.50, 0.74)},
 	"forge": {"art": "res://assets/cities/ashenreach/cinder_foundry.webp", "title": "THE CINDER FOUNDRY", "district": "THE COMMERCE WARD", "spawn": Vector2(0.52, 0.72)},
@@ -1072,54 +1072,12 @@ func _build_ember_texture() -> Texture2D:
 
 
 func _foreground_layout_for_screen() -> Array[Dictionary]:
-	match current_screen:
-		"plaza":
-			return [
-				{"asset": "balustrade", "point": Vector2(0.12, 0.80), "width": 0.245},
-				{"asset": "balustrade", "point": Vector2(0.88, 0.80), "width": 0.245, "flip_h": true},
-				{"asset": "brazier", "point": Vector2(0.27, 0.76), "width": 0.105},
-				{"asset": "brazier", "point": Vector2(0.73, 0.76), "width": 0.105}
-			]
-		"market":
-			return [
-				{"asset": "banner", "point": Vector2(0.13, 0.70), "width": 0.105},
-				{"asset": "lantern", "point": Vector2(0.86, 0.70), "width": 0.085},
-				{"asset": "brazier", "point": Vector2(0.21, 0.79), "width": 0.09}
-			]
-		"living":
-			return [
-				{"asset": "lantern", "point": Vector2(0.15, 0.70), "width": 0.085},
-				{"asset": "banner", "point": Vector2(0.87, 0.68), "width": 0.10},
-				{"asset": "brazier", "point": Vector2(0.79, 0.79), "width": 0.09}
-			]
-		"forge":
-			return [
-				{"asset": "balustrade", "point": Vector2(0.11, 0.80), "width": 0.22},
-				{"asset": "balustrade", "point": Vector2(0.89, 0.80), "width": 0.22, "flip_h": true},
-				{"asset": "brazier", "point": Vector2(0.25, 0.74), "width": 0.105},
-				{"asset": "brazier", "point": Vector2(0.75, 0.74), "width": 0.105}
-			]
-		"inn":
-			return [
-				{"asset": "banner", "point": Vector2(0.14, 0.68), "width": 0.10},
-				{"asset": "lantern", "point": Vector2(0.84, 0.70), "width": 0.09}
-			]
-		"keep":
-			return [
-				{"asset": "balustrade", "point": Vector2(0.11, 0.78), "width": 0.22},
-				{"asset": "balustrade", "point": Vector2(0.89, 0.78), "width": 0.22, "flip_h": true},
-				{"asset": "banner", "point": Vector2(0.18, 0.51), "width": 0.095},
-				{"asset": "banner", "point": Vector2(0.82, 0.51), "width": 0.095, "flip_h": true}
-			]
-		"gate":
-			return [
-				{"asset": "balustrade", "point": Vector2(0.12, 0.80), "width": 0.235},
-				{"asset": "balustrade", "point": Vector2(0.88, 0.80), "width": 0.235, "flip_h": true},
-				{"asset": "brazier", "point": Vector2(0.25, 0.73), "width": 0.10},
-				{"asset": "brazier", "point": Vector2(0.75, 0.73), "width": 0.10}
-			]
-	return []
-
+	if current_screen != "plaza":
+		return []
+	return [
+		{"asset": "balustrade", "point": Vector2(0.065, 0.94), "width": 0.155},
+		{"asset": "balustrade", "point": Vector2(0.935, 0.94), "width": 0.155, "flip_h": true}
+	]
 
 func _refresh_foreground_cards() -> void:
 	if not character_stage:
