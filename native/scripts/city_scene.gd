@@ -2,6 +2,7 @@ extends Control
 
 const WORLD_DATA_PATH := "res://data/world_catalog.json"
 const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach/ashenreach_crossroads.webp"
+
 const CAMPAIGN_SERVICE = preload("res://scripts/campaign_director.gd")
 const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
 const HERO_PROGRESSION_SERVICE = preload("res://scripts/hero_progression.gd")
@@ -11,8 +12,8 @@ const CITY_STORY_PATH := "user://city_story.cfg"
 const CITY_NETWORK_PATH := "user://city_network.cfg"
 const CITY_NAV_CELL_SIZE := 24.0
 const CITY_SCREENS := {
-	"plaza": {"art": "res://assets/cities/ashenreach/ashenreach_crossroads.webp", "title": "CITADEL CROSSROADS", "district": "THE CENTRAL WARD", "spawn": Vector2(0.50, 0.70)},
-	"market": {"art": "res://assets/cities/ashenreach/cinder_market.webp", "title": "CINDER MARKET", "district": "THE COMMERCE WARD", "spawn": Vector2(0.50, 0.72)},
+	"plaza": {"art": "res://assets/cities/ashenreach/ashenreach_crossroads_depth_plate.webp", "title": "CITADEL CROSSROADS", "district": "THE CENTRAL WARD", "spawn": Vector2(0.50, 0.70)},
+	"market": {"art": "res://assets/cities/ashenreach/ashenreach_business_district.webp", "title": "CINDER MARKET", "district": "THE COMMERCE WARD", "spawn": Vector2(0.52, 0.40)},
 	"living": {"art": "res://assets/cities/ashenreach/living_quarter.webp", "title": "LIVING QUARTER", "district": "THE LOWER WARD", "spawn": Vector2(0.50, 0.74)},
 	"forge": {"art": "res://assets/cities/ashenreach/cinder_foundry.webp", "title": "THE CINDER FOUNDRY", "district": "THE COMMERCE WARD", "spawn": Vector2(0.52, 0.72)},
 	"inn": {"art": "res://assets/cities/ashenreach/wayfarer_inn.webp", "title": "THE WAYFARER'S INN", "district": "THE LOWER WARD", "spawn": Vector2(0.50, 0.76)},
@@ -21,15 +22,13 @@ const CITY_SCREENS := {
 }
 const CITY_TRANSITIONS := {
 	"plaza": [
-		{"to": "market", "label": "CINDER MARKET", "point": Vector2(0.25, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.37, 0.78)},
-		{"to": "living", "label": "LIVING QUARTER", "point": Vector2(0.75, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.65, 0.78)},
-		{"to": "keep", "label": "THE KEEP", "point": Vector2(0.50, 0.23), "radius": Vector2(0.08, 0.05), "spawn": Vector2(0.50, 0.72)},
-		{"to": "gate", "label": "OUTER GATE", "point": Vector2(0.50, 0.80), "radius": Vector2(0.08, 0.035), "spawn": Vector2(0.50, 0.38)}
+		{"to": "market", "label": "BUSINESS DISTRICT", "point": Vector2(0.25, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.52, 0.40)},
+		{"to": "living", "label": "RESIDENTIAL QUARTER", "point": Vector2(0.75, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.65, 0.78)},
+		{"to": "keep", "label": "THE CASTLE", "point": Vector2(0.50, 0.23), "radius": Vector2(0.08, 0.05), "spawn": Vector2(0.50, 0.72)},
+		{"to": "gate", "label": "SOUTH GATE", "point": Vector2(0.50, 0.80), "radius": Vector2(0.08, 0.035), "spawn": Vector2(0.50, 0.38)}
 	],
 	"market": [
-		{"to": "plaza", "label": "CENTRAL WARD", "point": Vector2(0.50, 0.17), "radius": Vector2(0.07, 0.05), "spawn": Vector2(0.50, 0.66)},
-		{"to": "forge", "label": "CINDER FOUNDRY", "point": Vector2(0.24, 0.48), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.78, 0.60)},
-		{"to": "living", "label": "LOWER WARD ALLEY", "point": Vector2(0.25, 0.68), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.38, 0.77)}
+		{"to": "plaza", "label": "CENTRAL WARD", "point": Vector2(0.52, 0.34), "radius": Vector2(0.08, 0.05), "spawn": Vector2(0.25, 0.53)}
 	],
 	"living": [
 		{"to": "plaza", "label": "CENTRAL WARD", "point": Vector2(0.50, 0.17), "radius": Vector2(0.07, 0.05), "spawn": Vector2(0.50, 0.66)},
@@ -51,14 +50,10 @@ const CITY_TRANSITIONS := {
 	]
 }
 const CITY_POIS := {
-	"plaza": [
-		{"id": "fallen_standard", "label": "INSPECT FALLEN STANDARD", "kind": "lore", "point": Vector2(0.68, 0.61), "text": "A scorched banner is pinned beneath a block of black stone. Its colors have almost vanished under ash."}
-	],
+	"plaza": [],
 	"market": [
-		{"id": "sealed_storehouse", "label": "SEALED STOREHOUSE", "kind": "chest_anchor", "point": Vector2(0.70, 0.58), "text": "The delivery hatch is buried under cinders. A box-shaped lump presses against the warped timber."},
-		{"id": "market_notice", "label": "READ IRON NOTICE", "kind": "lore", "point": Vector2(0.42, 0.61), "text": "The notice lists ration prices, closed streets, and a warning about the unstable lower tunnels."},
-		{"id": "apothecary_stall", "label": "ASH APOTHECARY", "kind": "shop_anchor", "point": Vector2(0.58, 0.65), "text": "Bottles rattle behind the chained shutters. Their labels have all been blackened by smoke."},
-		{"id": "ration_stall", "label": "CINDER RATIONS", "kind": "shop_anchor", "point": Vector2(0.82, 0.69), "text": "A ration stall sits beneath a patched awning. Its owner has gone to help reinforce the lower gate."}
+		{"id": "armor_store", "label": "ASHEN PLATE ARMORER", "kind": "shop_anchor", "point": Vector2(0.29, 0.57), "text": "Black iron breastplates and ash-hardened mail hang beneath the armorer’s lava-lit awning."},
+		{"id": "weapon_store", "label": "BLACK IRON WEAPONSMITH", "kind": "shop_anchor", "point": Vector2(0.76, 0.58), "text": "The weaponsmith displays forged blades, spears, and axes along the shopfront. The forge glow runs through the ironwork."}
 	],
 	"living": [
 		{"id": "vacant_house", "label": "CHECK VACANT HOUSE", "kind": "chest_anchor", "point": Vector2(0.32, 0.63), "text": "Cold ash coats the empty hearth. A loose floorboard clicks underfoot."},
@@ -1061,6 +1056,8 @@ func _build_ember_texture() -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
+
+
 func _update_city_perspective() -> void:
 	if not player_sprite:
 		return
@@ -1076,7 +1073,7 @@ func _update_city_perspective() -> void:
 	if city_embers:
 		city_embers.position = Vector2(size.x * 0.5, size.y * 0.82)
 		city_embers.emission_rect_extents = Vector2(size.x * 0.58, size.y * 0.42)
-		city_embers.emitting = region_id == "ashen_wastes"
+		city_embers.emitting = region_id == "ashen_wastes" and current_screen not in ["plaza", "market"]
 
 
 func _update_interaction_prompt() -> void:
@@ -1280,7 +1277,7 @@ func _refresh_residents() -> void:
 			resident.queue_free()
 	npc_sprites.clear()
 	npc_textures.clear()
-	if region_id != "ashen_wastes":
+	if region_id != "ashen_wastes" or current_screen in ["plaza", "market"]:
 		return
 	var residents: Array[Dictionary] = []
 	match current_screen:
@@ -1557,13 +1554,18 @@ func _configure_city_walkable_areas() -> void:
 		"market":
 			walkable_polygons = [
 				PackedVector2Array([
-					Vector2(0.40, 0.12), Vector2(0.57, 0.12), Vector2(0.61, 0.32), Vector2(0.74, 0.45),
-					Vector2(0.82, 0.58), Vector2(0.94, 0.73), Vector2(0.98, 0.88), Vector2(0.05, 0.88),
-					Vector2(0.10, 0.76), Vector2(0.20, 0.63), Vector2(0.30, 0.53), Vector2(0.38, 0.40)
+					Vector2(0.43, 0.31), Vector2(0.58, 0.31), Vector2(0.61, 0.43), Vector2(0.57, 0.52),
+					Vector2(0.61, 0.61), Vector2(0.69, 0.70), Vector2(0.78, 0.82), Vector2(0.69, 0.93),
+					Vector2(0.31, 0.93), Vector2(0.22, 0.82), Vector2(0.33, 0.68), Vector2(0.44, 0.58),
+					Vector2(0.46, 0.48)
 				]),
 				PackedVector2Array([
-					Vector2(0.08, 0.37), Vector2(0.25, 0.35), Vector2(0.40, 0.42), Vector2(0.39, 0.54),
-					Vector2(0.22, 0.58), Vector2(0.08, 0.51)
+					Vector2(0.08, 0.44), Vector2(0.25, 0.42), Vector2(0.40, 0.48), Vector2(0.40, 0.61),
+					Vector2(0.28, 0.66), Vector2(0.14, 0.58)
+				]),
+				PackedVector2Array([
+					Vector2(0.61, 0.47), Vector2(0.80, 0.43), Vector2(0.98, 0.48), Vector2(0.99, 0.62),
+					Vector2(0.82, 0.68), Vector2(0.67, 0.62)
 				])
 			]
 		"living":
@@ -1771,6 +1773,8 @@ func _refresh_hotspots() -> void:
 			hotspot.queue_free()
 	hotspot_buttons.clear()
 	hotspot_targets.clear()
+	if region_id == "ashen_wastes" and current_screen == "plaza":
+		return
 	for transition in _transitions_for_screen(current_screen):
 		_add_hotspot(str(transition.to), str(transition.label), transition.point)
 	for poi in CITY_POIS.get(current_screen, []):
@@ -1900,8 +1904,8 @@ func _select_location(id: String) -> void:
 		return
 	selected_location = id
 	var descriptions := {
-		"plaza": ["CITADEL CROSSROADS", "Four roads split from the central ward. Walk west for the cinder market, east for the living quarter, north to the keep, or south to the outer gate."],
-		"market": ["CINDER MARKET", "Stalls and the foundry line the ash-dark street. The alley loops back toward the lower ward; walk to each doorway to enter."],
+		"plaza": ["CITADEL CROSSROADS", "Four routes meet here: left into the business district, right into the residential quarter, straight ahead toward the castle, and south through the gate."],
+		"market": ["CINDER MARKET", "A steep black-stone lane joins the crossroads to the business district. The armorer is on the left and the weaponsmith on the right; approach either shopfront to inspect it."],
 		"living": ["LIVING QUARTER", "Crowded houses and sealed doors press against the lower ward's road. The inn and side alleys open only from this district."],
 		"keep": ["ASHENREACH KEEP", "The keep's audience hall is cut into the volcanic fortress. Return through the western arch to the central ward."],
 		"forge": ["THE CINDER FOUNDRY", "The foundry opens directly onto Cinder Market. Return through its arch to reach the district street."],
@@ -1916,6 +1920,7 @@ func _select_location(id: String) -> void:
 		"inn": action_button.text = "REST • 25 GOLD"
 		"gate": action_button.text = "FOLLOW FRONTIER ROAD"
 		"living": action_button.text = "VIEW DISTRICT ROUTES"
+		"plaza": action_button.text = "VIEW DISTRICT ROUTES"
 		_: action_button.text = "VIEW OPEN ROUTES"
 	scene_back_button.visible = current_screen != "plaza"
 
@@ -1930,6 +1935,8 @@ func _activate_location() -> void:
 			_travel_to_screen("territory")
 		"living":
 			_open_selection_map()
+		"plaza":
+			info_body.text = "Left: business district. Right: residential quarter. Straight ahead: Ashenreach Castle."
 		_:
 			var open := CAMPAIGN_SERVICE.open_routes()
 			var names: PackedStringArray = []
