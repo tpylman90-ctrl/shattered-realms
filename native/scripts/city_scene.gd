@@ -3,10 +3,7 @@ extends Control
 const WORLD_DATA_PATH := "res://data/world_catalog.json"
 const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach/ashenreach_crossroads.webp"
 const ASHENREACH_DEPTH_CARD_PATHS := {
-	"balustrade": "res://assets/cities/ashenreach/foreground/basalt_balustrade.png",
-	"brazier": "res://assets/cities/ashenreach/foreground/iron_brazier.png",
-	"lantern": "res://assets/cities/ashenreach/foreground/street_lantern.png",
-	"banner": "res://assets/cities/ashenreach/foreground/crimson_banner.png"
+	"balustrade": "res://assets/cities/ashenreach/foreground/basalt_balustrade.png"
 }
 const CAMPAIGN_SERVICE = preload("res://scripts/campaign_director.gd")
 const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
