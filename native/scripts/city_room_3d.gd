@@ -133,6 +133,7 @@ func _rebuild_walkmesh() -> void:
 	mesh.agent_height = 1.7
 	mesh.edge_connection_margin = 0.20
 	var vertices := PackedVector3Array()
+	var navigation_polygons: Array[PackedInt32Array] = []
 	for normalized_polygon in _walkable_polygons:
 		if normalized_polygon.size() < 3:
 			continue
@@ -150,12 +151,14 @@ func _rebuild_walkmesh() -> void:
 			vertices.append(floor_point)
 		for index in range(0, triangle_indices.size(), 3):
 			# Screen Y maps to world +Z, so reverse winding to face +Y.
-			mesh.add_polygon(PackedInt32Array([
+			navigation_polygons.append(PackedInt32Array([
 				base_index + triangle_indices[index],
 				base_index + triangle_indices[index + 2],
 				base_index + triangle_indices[index + 1]
 			]))
 	mesh.vertices = vertices
+	for polygon in navigation_polygons:
+		mesh.add_polygon(polygon)
 	walk_region.navigation_mesh = mesh
 	var map := walk_region.get_navigation_map()
 	if map.is_valid():
