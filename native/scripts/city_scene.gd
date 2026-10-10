@@ -7,6 +7,8 @@ const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
 const HERO_PROGRESSION_SERVICE = preload("res://scripts/hero_progression.gd")
 const SPRITE_FRAME_SIZE := Vector2i(24, 32)
 const CITY_SAVE_PATH := "user://city_checkpoint.cfg"
+const CITY_STORY_PATH := "user://city_story.cfg"
+const CITY_NETWORK_PATH := "user://city_network.cfg"
 const CITY_NAV_CELL_SIZE := 24.0
 const CITY_SCREENS := {
 	"plaza": {"art": "res://assets/cities/ashenreach/ashenreach_crossroads.webp", "title": "CITADEL CROSSROADS", "district": "THE CENTRAL WARD", "spawn": Vector2(0.50, 0.70)},
@@ -64,6 +66,35 @@ const CITY_POIS := {
 		{"id": "blacksmith_family_home", "label": "KNOCK ON THE IRONWORKER'S HOME", "kind": "house_anchor", "point": Vector2(0.25, 0.76), "text": "A dim light still burns upstairs. The ironworker's family has not answered the door."}
 	]
 }
+const CITY_MOMENTS := {
+	"ashen_wastes": {
+		"plaza": [
+			{"id": "beacon_without_flame", "title": "A BEACON WITHOUT FLAME", "beats": [
+				{"speaker": "ELRIC • KEEP STEWARD", "text": "The old beacon used to answer every border light. Now it answers only in ash."},
+				{"speaker": "MARA • INNKEEPER", "text": "Then we send word by hand. A dark road is still a road if someone is waiting at the other end."}
+			]},
+		],
+		"market": [
+			{"id": "sera_and_the_sealed_letter", "title": "SERA AND THE SEALED LETTER", "beats": [
+				{"speaker": "SERA • CINDER MARKET", "text": "Blackthorn's quartermaster once kept my family alive through a winter blockade. If the roads have opened, this should reach them."},
+				{"speaker": "BROM • MASTER SMITH", "text": "I'll seal it in a slagglass tube. Rain, ash, and most bandits can't read through one of those."}
+			]},
+		],
+		"inn": [
+			{"id": "names_at_the_hearth", "title": "NAMES AT THE HEARTH", "beats": [
+				{"speaker": "MARA • INNKEEPER", "text": "Every traveler asks how many beds are left. No one asks how many families are still on the road."},
+				{"speaker": "BROM • MASTER SMITH", "text": "Then keep the fire lit. When the roads join again, they'll need somewhere to come home to."}
+			]},
+		]
+	}
+}
+const CITY_POST_LETTERS := [
+	{"id": "sera_to_blackthorn", "from": "ashen_wastes", "to": "ravenwood", "title": "A sealed note for Blackthorn", "text": "Sera asks you to carry her family's old trade pledge to the quartermaster at Blackthorn. The sealed slagglass tube is warm to the touch.", "reward": 40, "requires": []},
+	{"id": "blackthorn_reply", "from": "ravenwood", "to": "ashen_wastes", "title": "A reply from Blackthorn", "text": "Blackthorn's quartermaster sends a reply for Sera: the northern track is still watched, but a forester can guide a small company through.", "reward": 55, "requires": ["sera_to_blackthorn"]}
+]
+const CITY_SYNTHESIS := {
+	"cinder_sovereign": {"ingredients": ["ashen_wastes_vanguard", "ashen_wastes_sigil"], "output": "ashen_wastes_signature", "cost": 90}
+}
 
 var world_data: Dictionary = {}
 var territories: Dictionary = {}
@@ -105,6 +136,7 @@ var npc_sprites: Array[Sprite2D] = []
 var npc_textures: Dictionary = {}
 var hotspot_targets: Array[Dictionary] = []
 var dialogue_layer: Control
+var dialogue_moment_id := ""
 var walkable_polygons: Array[PackedVector2Array] = []
 var walk_path: Array[Vector2] = []
 var walk_path_index := 0
@@ -368,9 +400,9 @@ func _build_touch_controls() -> void:
 	b_button.anchor_right = 1.0
 	b_button.anchor_bottom = 1.0
 	b_button.offset_left = -102.0
-	b_button.offset_top = -112.0
+	b_button.offset_top = -254.0
 	b_button.offset_right = -24.0
-	b_button.offset_bottom = -34.0
+	b_button.offset_bottom = -176.0
 	b_button.add_theme_font_size_override("font_size", 25)
 	b_button.z_index = 8
 	add_child(b_button)
@@ -381,13 +413,13 @@ func _build_touch_controls() -> void:
 	a_button.anchor_right = 1.0
 	a_button.anchor_bottom = 1.0
 	a_button.offset_left = -190.0
-	a_button.offset_top = -112.0
+	a_button.offset_top = -254.0
 	a_button.offset_right = -112.0
-	a_button.offset_bottom = -34.0
+	a_button.offset_bottom = -176.0
 	a_button.add_theme_font_size_override("font_size", 25)
-	a_button.z_index = 30
+	a_button.z_index = 50
 	add_child(a_button)
-	b_button.z_index = 30
+	b_button.z_index = 50
 
 
 func _build_selection_layer() -> void:
@@ -424,6 +456,7 @@ func _build_selection_layer() -> void:
 	stack.add_child(tabs)
 	tabs.add_child(_button("CITY MAP", _show_selection_map))
 	tabs.add_child(_button("EQUIPMENT", _show_selection_equipment))
+	tabs.add_child(_button("POST", _show_selection_post))
 	tabs.add_child(_button("SAVE", _show_selection_save))
 	selection_status = _label("Equipment and campaign rewards save automatically on this device.", 13, Color("aebbb9"))
 	stack.add_child(selection_status)
@@ -472,6 +505,17 @@ func _show_selection_map() -> void:
 			var poi_button := _button("INSPECT  •  %s" % str(poi.get("label", "LOCAL POINT")), _travel_to_poi.bind(str(poi.get("id", ""))))
 			poi_button.custom_minimum_size.y = 48
 			selection_content.add_child(poi_button)
+	var moments: Array = CITY_MOMENTS.get(region_id, {}).get(current_screen, [])
+	var available_moments: Array[Dictionary] = []
+	for moment in moments:
+		if not _city_moment_completed(str(moment.get("id", ""))):
+			available_moments.append(moment)
+	if not available_moments.is_empty():
+		selection_content.add_child(_label("PARTY CUTAWAYS  •  OPTIONAL", 15, Color("e6bd78")))
+		for moment in available_moments:
+			var moment_button := _button("VIEW CITY MOMENT  •  %s" % str(moment.get("title", "PARTY SCENE")), _open_city_moment.bind(str(moment.get("id", ""))))
+			moment_button.custom_minimum_size.y = 48
+			selection_content.add_child(moment_button)
 	if local_transitions.is_empty() and local_pois.is_empty():
 		selection_content.add_child(_label("There are no marked exits or points in this room.", 15, Color("d5ddda")))
 
@@ -528,6 +572,187 @@ func _show_selection_equipment() -> void:
 		for reference in owned:
 			var item: Dictionary = catalog.get(reference, {})
 			selection_content.add_child(_label("%s  ·  %s" % [str(item.get("name", reference)), str(item.get("slot", "equipment")).replace("_", " ").capitalize()], 15, Color("d5ddda")))
+	if region_id == "ashen_wastes" and current_screen == "forge":
+		var recipe: Dictionary = CITY_SYNTHESIS["cinder_sovereign"]
+		var components: Array = recipe.ingredients
+		selection_content.add_child(_label("CINDER FOUNDRY SYNTHESIS", 17, Color("e6bd78")))
+		selection_content.add_child(_label("Ashen Greatblade + Ashen Sigil  •  %d gold" % int(recipe.cost), 14, Color("d5ddda")))
+		var available := HERO_EQUIPMENT_SERVICE.unassigned_inventory_references()
+		var ready := true
+		for component in components:
+			ready = ready and available.has(str(component))
+		var craft_button := _button("FORGE CINDER SOVEREIGN", _synthesize_cinder_sovereign)
+		craft_button.disabled = not ready or HERO_EQUIPMENT_SERVICE.owns_template(str(recipe.output))
+		selection_content.add_child(craft_button)
+		if not ready:
+			selection_content.add_child(_label("Both components must be recovered and unequipped. Equipped gear is protected.", 13, Color("aebbb9")))
+
+
+func _show_selection_post() -> void:
+	_clear_selection_content()
+	selection_status.text = "Carry sealed messages between territory hubs. Deliveries are optional, saved, and rewarded once."
+	selection_content.add_child(_label("EMBERPOST  •  THE COURIER NETWORK", 17, Color("e6bd78")))
+	var state := _load_city_network_state()
+	var accepted: Array = state.get("accepted", [])
+	var delivered: Array = state.get("delivered", [])
+	var has_local_message := false
+	for letter in CITY_POST_LETTERS:
+		var letter_id := str(letter.get("id", ""))
+		var from_region := str(letter.get("from", ""))
+		var to_region := str(letter.get("to", ""))
+		var requirements: Array = letter.get("requires", [])
+		var unlocked := true
+		for required in requirements:
+			unlocked = unlocked and delivered.has(str(required))
+		if delivered.has(letter_id):
+			continue
+		if not accepted.has(letter_id) and region_id == from_region and unlocked:
+			has_local_message = true
+			selection_content.add_child(_label("%s  •  TO %s" % [str(letter.get("title", "LETTER")).to_upper(), _city_hub_name(to_region)], 15, Color("f1dbac")))
+			selection_content.add_child(_label(str(letter.get("text", "A sealed message awaits.")), 14, Color("d5ddda")))
+			selection_content.add_child(_button("ACCEPT SEALED LETTER", _accept_city_letter.bind(letter_id)))
+		elif accepted.has(letter_id) and region_id == to_region:
+			has_local_message = true
+			selection_content.add_child(_label("DELIVER  •  %s" % str(letter.get("title", "LETTER")).to_upper(), 15, Color("f1dbac")))
+			selection_content.add_child(_label(str(letter.get("text", "A sealed message is ready.")), 14, Color("d5ddda")))
+			selection_content.add_child(_button("DELIVER TO %s  •  %d GOLD" % [_city_hub_name(to_region).to_upper(), int(letter.get("reward", 0))], _deliver_city_letter.bind(letter_id)))
+		elif accepted.has(letter_id):
+			has_local_message = has_local_message or region_id == from_region
+			selection_content.add_child(_label("CARRYING: %s  →  %s" % [_city_hub_name(from_region), _city_hub_name(to_region)], 14, Color("d5ddda")))
+	if not has_local_message:
+		selection_content.add_child(_label("No new letter is waiting here. Messages you carry will appear when you reach their destination.", 14, Color("aebbb9")))
+	if not accepted.is_empty() or not delivered.is_empty():
+		selection_content.add_child(_label("NETWORK RECORD  •  %d delivered" % delivered.size(), 13, Color("aebbb9")))
+
+
+func _city_moment_completed(moment_id: String) -> bool:
+	var cfg := ConfigFile.new()
+	cfg.load(CITY_STORY_PATH)
+	return (cfg.get_value(region_id, "completed_moments", []) as Array).has(moment_id)
+
+
+func _open_city_moment(moment_id: String) -> void:
+	var found: Dictionary = {}
+	for moment in CITY_MOMENTS.get(region_id, {}).get(current_screen, []):
+		if str(moment.get("id", "")) == moment_id:
+			found = moment
+			break
+	if found.is_empty() or _city_moment_completed(moment_id):
+		return
+	if dialogue_layer and is_instance_valid(dialogue_layer):
+		dialogue_layer.queue_free()
+	dialogue_layer = Control.new()
+	dialogue_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dialogue_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+	dialogue_layer.z_index = 40
+	add_child(dialogue_layer)
+	var shade := ColorRect.new()
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.color = Color(0.01, 0.015, 0.02, 0.55)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dialogue_layer.add_child(shade)
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.14
+	panel.anchor_top = 0.14
+	panel.anchor_right = 0.86
+	panel.anchor_bottom = 0.51
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.035, 0.04, 0.98), Color("d0aa69")))
+	dialogue_layer.add_child(panel)
+	var margin := MarginContainer.new()
+	_set_margins(margin, 22, 18, 22, 18)
+	panel.add_child(margin)
+	var copy := VBoxContainer.new()
+	copy.add_theme_constant_override("separation", 10)
+	margin.add_child(copy)
+	copy.add_child(_label("CITY MOMENT  •  OPTIONAL PARTY CUTAWAY", 13, Color("aebbb9")))
+	copy.add_child(_label(str(found.get("title", "A CITY MOMENT")), 20, Color("f1dbac")))
+	for beat in found.get("beats", []):
+		copy.add_child(_label(str(beat.get("speaker", "COMPANION")), 13, Color("e6bd78")))
+		var words := _label(str(beat.get("text", "")), 15, Color("f0e8d5"))
+		words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		copy.add_child(words)
+	var close_button := _button("A  •  CONTINUE", _close_city_dialogue)
+	close_button.custom_minimum_size.y = 42
+	copy.add_child(close_button)
+	dialogue_moment_id = moment_id
+	joystick_vector = Vector2.ZERO
+	_update_joystick_knob()
+
+
+func _load_city_network_state() -> Dictionary:
+	var cfg := ConfigFile.new()
+	cfg.load(CITY_NETWORK_PATH)
+	return {
+		"accepted": cfg.get_value("letters", "accepted", []),
+		"delivered": cfg.get_value("letters", "delivered", [])
+	}
+
+
+func _save_city_network_state(state: Dictionary) -> bool:
+	var cfg := ConfigFile.new()
+	cfg.load(CITY_NETWORK_PATH)
+	cfg.set_value("letters", "accepted", state.get("accepted", []))
+	cfg.set_value("letters", "delivered", state.get("delivered", []))
+	return cfg.save(CITY_NETWORK_PATH) == OK
+
+
+func _city_hub_name(id: String) -> String:
+	return str(territories.get(id, {}).get("stronghold", territories.get(id, {}).get("name", id.replace("_", " ").capitalize())))
+
+
+func _accept_city_letter(letter_id: String) -> void:
+	var state := _load_city_network_state()
+	var accepted: Array = state.accepted
+	var delivered: Array = state.delivered
+	for letter in CITY_POST_LETTERS:
+		if str(letter.get("id", "")) != letter_id or str(letter.get("from", "")) != region_id:
+			continue
+		var unlocked := true
+		for required in letter.get("requires", []):
+			unlocked = unlocked and delivered.has(str(required))
+		if unlocked and not accepted.has(letter_id):
+			accepted.append(letter_id)
+			state["accepted"] = accepted
+			if _save_city_network_state(state):
+				_show_selection_post()
+				selection_status.text = "Letter accepted. Deliver it when you reach %s." % _city_hub_name(str(letter.to))
+			return
+
+
+func _deliver_city_letter(letter_id: String) -> void:
+	var state := _load_city_network_state()
+	var accepted: Array = state.accepted
+	var delivered: Array = state.delivered
+	if not accepted.has(letter_id) or delivered.has(letter_id):
+		return
+	for letter in CITY_POST_LETTERS:
+		if str(letter.get("id", "")) != letter_id or str(letter.get("to", "")) != region_id:
+			continue
+		delivered.append(letter_id)
+		state["delivered"] = delivered
+		if not _save_city_network_state(state):
+			return
+		var gold_awarded := HERO_EQUIPMENT_SERVICE.award_gold("city_mail", letter_id, int(letter.get("reward", 0)))
+		HERO_PROGRESSION_SERVICE.add_xp(HERO_PROGRESSION_SERVICE.CHOSEN_HERO_ID, 35)
+		gold_label.text = "◈ %d GOLD" % HERO_EQUIPMENT_SERVICE.gold()
+		_show_selection_post()
+		selection_status.text = "Delivered at %s.  +%d gold  •  +35 XP" % [_city_hub_name(region_id), gold_awarded]
+		return
+
+
+func _synthesize_cinder_sovereign() -> void:
+	if not CITY_SYNTHESIS.has("cinder_sovereign"):
+		return
+	var recipe: Dictionary = CITY_SYNTHESIS["cinder_sovereign"]
+	var components: Array[String] = []
+	for component in recipe.get("ingredients", []):
+		components.append(str(component))
+	var result := HERO_EQUIPMENT_SERVICE.synthesize("cinder_sovereign", components, str(recipe.get("output", "")), int(recipe.get("cost", 0)))
+	_show_selection_equipment()
+	if bool(result.get("ok", false)):
+		selection_status.text = "Synthesis complete: %s. Components were consumed; equipped gear was untouched." % str(result.get("item", {}).get("name", "Cinder Sovereign"))
+	else:
+		selection_status.text = str(result.get("reason", "The synthesis failed."))
 
 
 func _show_selection_save() -> void:
@@ -1046,9 +1271,9 @@ func _show_city_dialogue(npc_id: String) -> void:
 	add_child(dialogue_layer)
 	var panel := PanelContainer.new()
 	panel.anchor_left = 0.07
-	panel.anchor_top = 0.64
+	panel.anchor_top = 0.14
 	panel.anchor_right = 0.93
-	panel.anchor_bottom = 0.97
+	panel.anchor_bottom = 0.53
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.035, 0.04, 0.96), Color("d0aa69")))
 	dialogue_layer.add_child(panel)
 	var margin := MarginContainer.new()
@@ -1088,6 +1313,15 @@ func _close_city_dialogue() -> void:
 	if dialogue_layer and is_instance_valid(dialogue_layer):
 		dialogue_layer.queue_free()
 	dialogue_layer = null
+	if dialogue_moment_id != "":
+		var cfg := ConfigFile.new()
+		cfg.load(CITY_STORY_PATH)
+		var completed: Array = cfg.get_value(region_id, "completed_moments", [])
+		if not completed.has(dialogue_moment_id):
+			completed.append(dialogue_moment_id)
+		cfg.set_value(region_id, "completed_moments", completed)
+		cfg.save(CITY_STORY_PATH)
+		dialogue_moment_id = ""
 
 
 func _on_hotspot_pressed(id: String, point: Vector2) -> void:
@@ -1448,9 +1682,9 @@ func _show_city_poi_dialogue(poi_id: String) -> void:
 		add_child(dialogue_layer)
 		var panel := PanelContainer.new()
 		panel.anchor_left = 0.12
-		panel.anchor_top = 0.70
+	panel.anchor_top = 0.18
 		panel.anchor_right = 0.88
-		panel.anchor_bottom = 0.96
+	panel.anchor_bottom = 0.50
 		panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.035, 0.04, 0.96), Color("d0aa69")))
 		dialogue_layer.add_child(panel)
 		var margin := MarginContainer.new()
@@ -1581,20 +1815,8 @@ func _return_to_plaza() -> void:
 
 
 func _show_armory() -> void:
-	var pool := HERO_EQUIPMENT_SERVICE.region_pool(region_id)
-	var item_catalog := HERO_EQUIPMENT_SERVICE.items()
-	var lines: PackedStringArray = ["PURSE: %d GOLD" % HERO_EQUIPMENT_SERVICE.gold(), "", "Regional designs:"]
-	for item_id in pool.get("common", []):
-		lines.append("• %s" % str(item_catalog.get(str(item_id), {}).get("name", item_id)))
-	var signature := str(pool.get("signature", ""))
-	if signature != "":
-		lines.append("• %s  (signature)" % str(item_catalog.get(signature, {}).get("name", signature)))
-	if pool.is_empty():
-		lines.append("No regional gear designs are listed here yet.")
-	var owned_items := HERO_EQUIPMENT_SERVICE.inventory()
-	lines.append("\nFound: %d equipment templates" % owned_items.size())
-	gear_dialog.dialog_text = "\n".join(lines)
-	gear_dialog.popup_centered()
+	_open_selection()
+	_show_selection_equipment()
 
 
 func _rest_at_inn() -> void:

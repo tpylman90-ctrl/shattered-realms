@@ -43,6 +43,91 @@ static func inventory() -> Array[String]:
             result.append(str(item_id))
     return result
 
+static func _is_equipped_in_config(cfg: ConfigFile, reference: String) -> bool:
+    for section in cfg.get_sections():
+        if not str(section).begins_with("hero:"):
+            continue
+        for slot in SLOTS:
+            if str(cfg.get_value(section, slot, "")) == reference:
+                return true
+    return false
+
+static func is_equipped(reference: String) -> bool:
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    return _is_equipped_in_config(cfg, reference)
+
+static func unassigned_inventory_references() -> Array[String]:
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var result: Array[String] = []
+    for reference in cfg.get_value("loot", "inventory", []):
+        var item_id := str(reference)
+        if items().has(item_id) and not _is_equipped_in_config(cfg, item_id):
+            result.append(item_id)
+    for instance in cfg.get_value("gear", "instances", []):
+        var instance_id := str(instance.get("id", ""))
+        if instance_id != "" and not _is_equipped_in_config(cfg, instance_id):
+            result.append(instance_id)
+    return result
+
+static func owns_template(template_id: String) -> bool:
+    if inventory().has(template_id):
+        return true
+    for instance in gear_instances():
+        if str(instance.get("template", "")) == template_id:
+            return true
+    return false
+
+# Foundry synthesis consumes only unassigned inventory, never a piece worn by
+# any hero. The transaction writes inputs, output, and gold together.
+static func synthesize(recipe_id: String, ingredients: Array[String], output_id: String, cost: int) -> Dictionary:
+    if ingredients.size() < 2 or not items().has(output_id) or cost < 0:
+        return {"ok": false, "reason": "The foundry cannot read this design."}
+    var cfg := ConfigFile.new()
+    cfg.load(SAVE_PATH)
+    var balance := int(cfg.get_value("economy", "gold", 0))
+    if balance < cost:
+        return {"ok": false, "reason": "You need %d more gold to commission this item." % (cost - balance)}
+    var loot: Array = cfg.get_value("loot", "inventory", [])
+    var instances: Array = cfg.get_value("gear", "instances", [])
+    var output_owned := loot.has(output_id)
+    for instance in instances:
+        if str(instance.get("template", "")) == output_id:
+            output_owned = true
+            break
+    if output_owned:
+        return {"ok": false, "reason": "Your company already owns this forged design."}
+    var refs_to_consume: Array[String] = []
+    for reference in ingredients:
+        if reference.is_empty() or refs_to_consume.has(reference) or _is_equipped_in_config(cfg, reference):
+            return {"ok": false, "reason": "The listed components must be distinct and unequipped."}
+        var found := loot.has(reference)
+        if reference.begins_with("gear:"):
+            found = false
+            for instance in instances:
+                if str(instance.get("id", "")) == reference:
+                    found = true
+                    break
+        if not found:
+            return {"ok": false, "reason": "Missing an unequipped component: %s." % str(item_for(reference).get("name", reference))}
+        refs_to_consume.append(reference)
+    for reference in refs_to_consume:
+        if reference.begins_with("gear:"):
+            for index in range(instances.size() - 1, -1, -1):
+                if str(instances[index].get("id", "")) == reference:
+                    instances.remove_at(index)
+                    break
+        else:
+            loot.erase(reference)
+    loot.append(output_id)
+    cfg.set_value("loot", "inventory", loot)
+    cfg.set_value("gear", "instances", instances)
+    cfg.set_value("economy", "gold", balance - cost)
+    if cfg.save(SAVE_PATH) != OK:
+        return {"ok": false, "reason": "The foundry ledger could not be saved."}
+    return {"ok": true, "recipe": recipe_id, "item": items()[output_id].duplicate(true), "gold": balance - cost}
+
 static func gold() -> int:
     var cfg := ConfigFile.new()
     cfg.load(SAVE_PATH)
