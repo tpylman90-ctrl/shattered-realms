@@ -50,6 +50,8 @@ jobs:
       - name: Verify required game assets exist
         run: |
           test -f native/assets/3d/game-ready/ashenreach-hex-board/ashenreach_hex_board.glb
+          test -s native/assets/dungeons/sundered_vault/sundered_vault_background.png
+          test -s native/assets/dungeons/sundered_vault/sundered_vault_depth_cards.png
           for part in {00..09}; do test -f "native/assets/3d/game-ready/ravenwood-board/ravenwood_section_${part}.glb"; done
           for map in albedo normal metal_rough; do test -f "native/assets/3d/game-ready/ravenwood-board/ravenwood_${map}.jpg"; done
           test -f native/assets/3d/game-ready/ravenwood-board/generated/ravenwood_nav_surface.glb
@@ -155,7 +157,7 @@ jobs:
             echo "Godot validation exited with code $GODOT_EXIT."
             exit "$GODOT_EXIT"
           fi
-          for scene in "res://scenes/BoardWorkshop.tscn" "res://scenes/HexBoardBuilder.tscn" "res://scenes/RavenwoodPreview.tscn" "res://scenes/CityScene.tscn"; do
+          for scene in "res://scenes/BoardWorkshop.tscn" "res://scenes/HexBoardBuilder.tscn" "res://scenes/RavenwoodPreview.tscn" "res://scenes/CityScene.tscn" "res://scenes/SunderedVault.tscn"; do
             echo "Smoke testing $scene"
             set +e
             timeout 90 "$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE/native" --scene "$scene" --quit-after 30 2>&1 | tee "$RUNNER_TEMP/godot-scene-smoke.log"
