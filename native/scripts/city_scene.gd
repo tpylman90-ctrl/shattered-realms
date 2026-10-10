@@ -35,7 +35,7 @@ const CITY_TRANSITIONS := {
 		{"to": "inn", "label": "WAYFARER'S INN", "point": Vector2(0.76, 0.51), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.82, 0.66)}
 	],
 	"forge": [
-		{"to": "market", "label": "CINDER MARKET", "point": Vector2(0.12, 0.34), "radius": Vector2(0.06, 0.06), "spawn": Vector2(0.72, 0.55)}
+		{"to": "market", "label": "CINDER MARKET", "point": Vector2(0.66, 0.32), "radius": Vector2(0.055, 0.045), "spawn": Vector2(0.72, 0.55)}
 	],
 	"inn": [
 		{"to": "living", "label": "LIVING QUARTER", "point": Vector2(0.14, 0.28), "radius": Vector2(0.06, 0.06), "spawn": Vector2(0.38, 0.77)}
@@ -94,6 +94,7 @@ var joystick_vector := Vector2.ZERO
 var joystick_touch_index := -1
 var joystick_mouse_down := false
 var b_button: Button
+var a_button: Button
 var mini_map_button: Button
 var mini_map_panel: Panel
 var mini_map_hero: Panel
@@ -101,6 +102,8 @@ var mini_map_pois: Array[Panel] = []
 var joystick_base: Panel
 var joystick_knob: Panel
 var npc_sprites: Array[Sprite2D] = []
+var npc_textures: Dictionary = {}
+var hotspot_targets: Array[Dictionary] = []
 var dialogue_layer: Control
 var walkable_polygons: Array[PackedVector2Array] = []
 var walk_path: Array[Vector2] = []
@@ -178,6 +181,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B:
 		_on_b_pressed()
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_A:
+		_on_a_pressed()
 		get_viewport().set_input_as_handled()
 		return
 	var target := Vector2(-1, -1)
@@ -367,6 +374,20 @@ func _build_touch_controls() -> void:
 	b_button.add_theme_font_size_override("font_size", 25)
 	b_button.z_index = 8
 	add_child(b_button)
+	a_button = _button("A", _on_a_pressed)
+	a_button.custom_minimum_size = Vector2(72.0, 72.0)
+	a_button.anchor_left = 1.0
+	a_button.anchor_top = 1.0
+	a_button.anchor_right = 1.0
+	a_button.anchor_bottom = 1.0
+	a_button.offset_left = -190.0
+	a_button.offset_top = -112.0
+	a_button.offset_right = -112.0
+	a_button.offset_bottom = -34.0
+	a_button.add_theme_font_size_override("font_size", 25)
+	a_button.z_index = 30
+	add_child(a_button)
+	b_button.z_index = 30
 
 
 func _build_selection_layer() -> void:
@@ -606,6 +627,27 @@ func _on_b_pressed() -> void:
 		_return_to_plaza()
 
 
+func _on_a_pressed() -> void:
+	if dialogue_layer and is_instance_valid(dialogue_layer):
+		_close_city_dialogue()
+		return
+	if selection_layer and selection_layer.visible:
+		_close_selection()
+		return
+	if hotspot_targets.is_empty() or not player_sprite:
+		return
+	var closest: Dictionary = {}
+	var closest_distance := INF
+	for target in hotspot_targets:
+		var point: Vector2 = target.get("point", Vector2.ZERO)
+		var distance := player_sprite.position.distance_to(Vector2(size.x * point.x, size.y * point.y))
+		if distance < closest_distance:
+			closest = target
+			closest_distance = distance
+	if not closest.is_empty():
+		_on_hotspot_pressed(str(closest.get("id", "")), closest.get("point", Vector2.ZERO))
+
+
 func _screen_routes(screen_id: String) -> Array:
 	var routes: Array = []
 	for transition in _transitions_for_screen(screen_id):
@@ -806,6 +848,82 @@ func _paint_pixel_rect(image: Image, cell_x: int, cell_y: int, x: int, y: int, w
 			image.set_pixel(cell_x + pixel_x, cell_y + pixel_y, color)
 
 
+func _build_magma_sprite_sheet(variant: String) -> Texture2D:
+	var image := Image.create(SPRITE_FRAME_SIZE.x * 4, SPRITE_FRAME_SIZE.y * 4, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	var skin := Color("342d2c")
+	var skin_lit := Color("51403a")
+	var ember := Color("ff8a35")
+	var ember_bright := Color("ffd16a")
+	var hair := Color("201d20")
+	var cloth := Color("49352f")
+	var cloth_trim := Color("9a5535")
+	var accessory := Color("a98250")
+	match variant:
+		"ash_elder":
+			hair = Color("9b8a79")
+			cloth = Color("48443f")
+			cloth_trim = Color("897558")
+			accessory = Color("c08b51")
+		"forge_guard":
+			hair = Color("332b26")
+			cloth = Color("3d4040")
+			cloth_trim = Color("a34929")
+			accessory = Color("76736c")
+		"ember_scout":
+			hair = Color("a64a25")
+			cloth = Color("455044")
+			cloth_trim = Color("bd6031")
+			accessory = Color("d0a15b")
+	for direction in range(4):
+		for frame_index in range(4):
+			var cell_x := frame_index * SPRITE_FRAME_SIZE.x
+			var cell_y := direction * SPRITE_FRAME_SIZE.y
+			var stride := -2 if frame_index == 1 else (2 if frame_index == 3 else 0)
+			_paint_pixel_rect(image, cell_x, cell_y, 6, 28, 12, 2, Color(0.02, 0.015, 0.012, 0.42))
+			if direction == 0:
+				_paint_pixel_rect(image, cell_x, cell_y, 8, 3, 8, 3, hair)
+				_paint_pixel_rect(image, cell_x, cell_y, 7, 5, 2, 7, hair)
+				_paint_pixel_rect(image, cell_x, cell_y, 15, 5, 2, 7, hair)
+				_paint_pixel_rect(image, cell_x, cell_y, 9, 5, 6, 7, skin_lit)
+				_paint_pixel_rect(image, cell_x, cell_y, 10, 8, 1, 1, ember_bright)
+				_paint_pixel_rect(image, cell_x, cell_y, 13, 8, 1, 1, ember_bright)
+			elif direction == 3:
+				_paint_pixel_rect(image, cell_x, cell_y, 8, 3, 8, 9, hair)
+				_paint_pixel_rect(image, cell_x, cell_y, 7, 6, 2, 7, hair)
+				_paint_pixel_rect(image, cell_x, cell_y, 15, 6, 2, 7, hair)
+			else:
+				_paint_pixel_rect(image, cell_x, cell_y, 8, 3, 8, 3, hair)
+				_paint_pixel_rect(image, cell_x, cell_y, 7, 5, 3, 7, hair)
+				_paint_pixel_rect(image, cell_x, cell_y, 10, 5, 5, 7, skin_lit)
+				_paint_pixel_rect(image, cell_x, cell_y, 8 if direction == 1 else 15, 8, 1, 1, ember_bright)
+			# Elder has a visible ash beard; scouts have swept-back ember hair.
+			if variant == "ash_elder" and direction != 3:
+				_paint_pixel_rect(image, cell_x, cell_y, 9, 10, 6, 3, hair)
+			if variant == "ember_scout" and direction != 3:
+				_paint_pixel_rect(image, cell_x, cell_y, 7, 3, 3, 2, hair.lightened(0.12))
+			var arm_swing := int(stride / 2)
+			_paint_pixel_rect(image, cell_x, cell_y, 5, 13 + arm_swing, 3, 8, skin)
+			_paint_pixel_rect(image, cell_x, cell_y, 16, 13 - arm_swing, 3, 8, skin)
+			_paint_pixel_rect(image, cell_x, cell_y, 5, 15 + arm_swing, 3, 1, ember)
+			_paint_pixel_rect(image, cell_x, cell_y, 16, 18 - arm_swing, 3, 1, ember)
+			_paint_pixel_rect(image, cell_x, cell_y, 7, 12, 10, 11, cloth)
+			_paint_pixel_rect(image, cell_x, cell_y, 8, 13, 2, 7, skin_lit)
+			_paint_pixel_rect(image, cell_x, cell_y, 12, 15, 1, 5, ember)
+			_paint_pixel_rect(image, cell_x, cell_y, 7, 19, 10, 2, cloth_trim)
+			_paint_pixel_rect(image, cell_x, cell_y, 13, 20, 2, 2, accessory)
+			_paint_pixel_rect(image, cell_x, cell_y, 8 + stride, 23, 4, 5, skin)
+			_paint_pixel_rect(image, cell_x, cell_y, 12 - stride, 23, 4, 5, skin_lit)
+			_paint_pixel_rect(image, cell_x, cell_y, 7 + stride, 27, 5, 2, Color("251f1c"))
+			_paint_pixel_rect(image, cell_x, cell_y, 12 - stride, 27, 5, 2, Color("251f1c"))
+			if variant == "forge_guard":
+				_paint_pixel_rect(image, cell_x, cell_y, 5, 12, 4, 3, accessory)
+				_paint_pixel_rect(image, cell_x, cell_y, 15, 12, 4, 3, accessory)
+			elif variant == "ash_elder":
+				_paint_pixel_rect(image, cell_x, cell_y, 17, 12, 2, 16, Color("78634a"))
+	return ImageTexture.create_from_image(image)
+
+
 func _add_hotspot(id: String, label_text: String, point: Vector2) -> void:
 	var hotspot := _button(label_text, _on_hotspot_pressed.bind(id, point))
 	hotspot.anchor_left = point.x
@@ -820,6 +938,7 @@ func _add_hotspot(id: String, label_text: String, point: Vector2) -> void:
 	hotspot.z_index = 4
 	add_child(hotspot)
 	hotspot_buttons.append(hotspot)
+	hotspot_targets.append({"id": id, "point": point})
 
 
 func _refresh_residents() -> void:
@@ -827,57 +946,60 @@ func _refresh_residents() -> void:
 		if is_instance_valid(resident):
 			resident.queue_free()
 	npc_sprites.clear()
+	npc_textures.clear()
 	if region_id != "ashen_wastes":
 		return
 	var residents: Array[Dictionary] = []
 	match current_screen:
 		"plaza":
 			residents = [
-				{"talk": "steward", "point": Vector2(0.53, 0.55), "tint": Color("d3c3a0")},
-				{"point": Vector2(0.35, 0.63), "tint": Color("9bab83")},
-				{"point": Vector2(0.68, 0.61), "tint": Color("9a829b")}
+				{"talk": "steward", "point": Vector2(0.53, 0.55), "look": "ash_elder"},
+				{"point": Vector2(0.35, 0.63), "look": "ember_scout"},
+				{"point": Vector2(0.68, 0.61), "look": "forge_guard"}
 			]
 		"market":
 			residents = [
-				{"talk": "merchant", "point": Vector2(0.62, 0.54), "tint": Color("c99e7b")},
-				{"point": Vector2(0.34, 0.65), "tint": Color("94a6a0")},
-				{"point": Vector2(0.78, 0.62), "tint": Color("a19472")}
+				{"talk": "merchant", "point": Vector2(0.62, 0.54), "look": "ember_scout"},
+				{"point": Vector2(0.34, 0.65), "look": "ash_elder"},
+				{"point": Vector2(0.78, 0.62), "look": "forge_guard"}
 			]
 		"living":
 			residents = [
-				{"talk": "innkeeper", "point": Vector2(0.70, 0.60), "tint": Color("c99e7b")},
-				{"point": Vector2(0.35, 0.69), "tint": Color("94a6a0")},
-				{"point": Vector2(0.55, 0.73), "tint": Color("a19472")}
+				{"talk": "innkeeper", "point": Vector2(0.70, 0.60), "look": "ash_elder"},
+				{"point": Vector2(0.35, 0.69), "look": "forge_guard"},
+				{"point": Vector2(0.55, 0.73), "look": "ember_scout"}
 			]
 		"forge":
 			residents = [
-				{"talk": "smith", "point": Vector2(0.59, 0.57), "tint": Color("b78569")},
-				{"point": Vector2(0.33, 0.63), "tint": Color("889397")}
+				{"talk": "smith", "point": Vector2(0.59, 0.57), "look": "forge_guard"},
+				{"point": Vector2(0.33, 0.63), "look": "ash_elder"}
 			]
 		"inn":
 			residents = [
-				{"talk": "innkeeper", "point": Vector2(0.72, 0.54), "tint": Color("c99e7b")},
-				{"point": Vector2(0.34, 0.65), "tint": Color("98a783")},
-				{"point": Vector2(0.54, 0.64), "tint": Color("a98a70")}
+				{"talk": "innkeeper", "point": Vector2(0.72, 0.54), "look": "ember_scout"},
+				{"point": Vector2(0.34, 0.65), "look": "ash_elder"},
+				{"point": Vector2(0.54, 0.64), "look": "forge_guard"}
 			]
 		"keep":
 			residents = [
-				{"talk": "steward", "point": Vector2(0.52, 0.57), "tint": Color("c2bec0")},
-				{"point": Vector2(0.32, 0.64), "tint": Color("899ab2")},
-				{"point": Vector2(0.72, 0.64), "tint": Color("899ab2")}
+				{"talk": "steward", "point": Vector2(0.52, 0.57), "look": "ash_elder"},
+				{"point": Vector2(0.32, 0.64), "look": "forge_guard"},
+				{"point": Vector2(0.72, 0.64), "look": "ember_scout"}
 			]
 		"gate":
-			residents = [{"talk": "gate_guard", "point": Vector2(0.68, 0.58), "tint": Color("899ab2")}]
+			residents = [{"talk": "gate_guard", "point": Vector2(0.68, 0.58), "look": "forge_guard"}]
 	for resident in residents:
 		var point: Vector2 = resident.get("point", Vector2(0.5, 0.6))
+		var look := str(resident.get("look", "ember_scout"))
 		var sprite := Sprite2D.new()
-		sprite.texture = player_sprite.texture
+		if not npc_textures.has(look):
+			npc_textures[look] = _build_magma_sprite_sheet(look)
+		sprite.texture = npc_textures[look]
 		sprite.hframes = 4
 		sprite.vframes = 4
 		sprite.frame = 0
 		sprite.scale = Vector2(2.0, 2.0)
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		sprite.modulate = resident.get("tint", Color.WHITE)
 		sprite.position = Vector2(size.x * point.x, size.y * point.y)
 		character_stage.add_child(sprite)
 		npc_sprites.append(sprite)
@@ -1121,8 +1243,10 @@ func _configure_city_walkable_areas() -> void:
 		"forge":
 			walkable_polygons = [
 				PackedVector2Array([
-					Vector2(0.04, 0.36), Vector2(0.12, 0.27), Vector2(0.87, 0.27), Vector2(0.97, 0.38),
-					Vector2(0.98, 0.78), Vector2(0.03, 0.78)
+					Vector2(0.56, 0.27), Vector2(0.75, 0.27), Vector2(0.81, 0.36), Vector2(0.79, 0.47),
+					Vector2(0.75, 0.54), Vector2(0.84, 0.62), Vector2(0.91, 0.75), Vector2(0.94, 0.91),
+					Vector2(0.28, 0.91), Vector2(0.30, 0.81), Vector2(0.38, 0.70), Vector2(0.31, 0.61),
+					Vector2(0.37, 0.52), Vector2(0.48, 0.45), Vector2(0.55, 0.39)
 				])
 			]
 		"inn":
@@ -1304,6 +1428,7 @@ func _refresh_hotspots() -> void:
 		if is_instance_valid(hotspot):
 			hotspot.queue_free()
 	hotspot_buttons.clear()
+	hotspot_targets.clear()
 	for transition in _transitions_for_screen(current_screen):
 		_add_hotspot(str(transition.to), str(transition.label), transition.point)
 	for poi in CITY_POIS.get(current_screen, []):
