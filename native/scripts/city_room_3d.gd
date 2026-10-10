@@ -4,11 +4,13 @@ extends Node3D
 ## into NavigationMesh, while actors render as perspective-correct billboards.
 
 const FRAME_SIZE := Vector2i(24, 32)
+const CITY_DEPTH_PROPS = preload("res://scripts/city_depth_props_3d.gd")
 const FLOOR_Y := 0.0
 const ACTOR_PIXEL_SIZE := 0.045
 
 var camera: Camera3D
 var walk_region: NavigationRegion3D
+var depth_props
 var _view_size := Vector2(1280.0, 720.0)
 var _walkable_polygons: Array[PackedVector2Array] = []
 var _actors: Dictionary = {}
@@ -28,12 +30,20 @@ func _ready() -> void:
 	walk_region.name = "CityWalkmesh"
 	walk_region.navigation_layers = 1
 	add_child(walk_region)
+	depth_props = CITY_DEPTH_PROPS.new()
+	depth_props.name = "CityDepthProps"
+	add_child(depth_props)
 
 
 func set_view_size(control_size: Vector2) -> void:
 	_view_size = Vector2(maxf(1.0, control_size.x), maxf(1.0, control_size.y))
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
 	_rebuild_walkmesh()
+
+
+func configure_depth_props(region_id: String, screen_id: String) -> void:
+	if depth_props:
+		depth_props.configure_for_room(region_id, screen_id, _view_size, Callable(self, "_screen_to_floor"))
 
 
 func configure_walkmesh(polygons: Array[PackedVector2Array]) -> void:
