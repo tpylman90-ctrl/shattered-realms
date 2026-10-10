@@ -1560,6 +1560,7 @@ func _on_city_resized() -> void:
 	_update_minimap_markers()
 	if city_room_3d:
 		city_room_3d.set_view_size(size)
+		city_room_3d.configure_depth_props(region_id, current_screen)
 	if not player_sprite:
 		return
 	player_sprite.position = _nearest_walkable_position(player_sprite.position)
@@ -1859,6 +1860,8 @@ func _show_city_screen(screen_id: String, place_hero: bool = true, spawn_overrid
 		screen_id = "plaza"
 	current_screen = screen_id
 	_configure_city_walkable_areas()
+	if city_room_3d:
+		city_room_3d.configure_depth_props(region_id, current_screen)
 	var screen: Dictionary = CITY_SCREENS[screen_id]
 	if region_id == "ashen_wastes":
 		var art_path := str(screen.get("art", ASHENREACH_CITY_ART))
