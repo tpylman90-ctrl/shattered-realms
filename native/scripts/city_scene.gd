@@ -10,11 +10,36 @@ const CITY_SAVE_PATH := "user://city_checkpoint.cfg"
 const CITY_NAV_CELL_SIZE := 24.0
 const CITY_SCREENS := {
 	"plaza": {"art": "res://assets/cities/ashenreach/plaza_legacy.webp", "title": "ASHENREACH PLAZA", "spawn": Vector2(0.50, 0.70)},
-	"market": {"art": "res://assets/cities/ashenreach/market_legacy.webp", "title": "MARKET LANE", "spawn": Vector2(0.50, 0.75)},
-	"forge": {"art": "res://assets/cities/ashenreach/forge_interior.webp", "title": "THE FORGE", "spawn": Vector2(0.50, 0.77)},
-	"inn": {"art": "res://assets/cities/ashenreach/inn_interior.webp", "title": "THE WAYFARER'S INN", "spawn": Vector2(0.50, 0.78)},
-	"keep": {"art": "res://assets/cities/ashenreach/keep_interior.webp", "title": "ASHENREACH KEEP", "spawn": Vector2(0.50, 0.78)},
-	"gate": {"art": "res://assets/cities/ashenreach/gate.jpg", "title": "THE CITY GATE", "spawn": Vector2(0.50, 0.80)}
+	"market": {"art": "res://assets/cities/ashenreach/market_legacy.webp", "title": "MARKET LANE", "spawn": Vector2(0.50, 0.66)},
+	"forge": {"art": "res://assets/cities/ashenreach/forge_interior.webp", "title": "THE FORGE", "spawn": Vector2(0.72, 0.58)},
+	"inn": {"art": "res://assets/cities/ashenreach/inn_interior.webp", "title": "THE WAYFARER'S INN", "spawn": Vector2(0.75, 0.62)},
+	"keep": {"art": "res://assets/cities/ashenreach/keep_interior.webp", "title": "ASHENREACH KEEP", "spawn": Vector2(0.24, 0.50)},
+	"gate": {"art": "res://assets/cities/ashenreach/gate.jpg", "title": "THE CITY GATE", "spawn": Vector2(0.50, 0.68)}
+}
+const CITY_TRANSITIONS := {
+	"plaza": [
+		{"to": "market", "label": "MARKET LANE", "point": Vector2(0.41, 0.25), "radius": Vector2(0.035, 0.04), "spawn": Vector2(0.42, 0.40)},
+		{"to": "keep", "label": "THE KEEP", "point": Vector2(0.56, 0.40), "radius": Vector2(0.035, 0.04), "spawn": Vector2(0.24, 0.50)},
+		{"to": "gate", "label": "CITY GATE", "point": Vector2(0.50, 0.765), "radius": Vector2(0.07, 0.02), "spawn": Vector2(0.50, 0.69)}
+	],
+	"market": [
+		{"to": "plaza", "label": "PLAZA", "point": Vector2(0.41, 0.20), "radius": Vector2(0.04, 0.04), "spawn": Vector2(0.43, 0.49)},
+		{"to": "forge", "label": "THE FORGE", "point": Vector2(0.43, 0.42), "radius": Vector2(0.035, 0.045), "spawn": Vector2(0.72, 0.58)},
+		{"to": "inn", "label": "THE INN", "point": Vector2(0.80, 0.49), "radius": Vector2(0.05, 0.04), "spawn": Vector2(0.75, 0.62)}
+	],
+	"forge": [
+		{"to": "market", "label": "MARKET LANE", "point": Vector2(0.88, 0.48), "radius": Vector2(0.05, 0.05), "spawn": Vector2(0.49, 0.52)}
+	],
+	"inn": [
+		{"to": "market", "label": "MARKET LANE", "point": Vector2(0.88, 0.49), "radius": Vector2(0.05, 0.05), "spawn": Vector2(0.75, 0.53)}
+	],
+	"keep": [
+		{"to": "plaza", "label": "PLAZA", "point": Vector2(0.14, 0.26), "radius": Vector2(0.04, 0.055), "spawn": Vector2(0.56, 0.50)}
+	],
+	"gate": [
+		{"to": "plaza", "label": "CITY STREETS", "point": Vector2(0.50, 0.75), "radius": Vector2(0.08, 0.035), "spawn": Vector2(0.50, 0.68)},
+		{"to": "territory", "label": "FRONTIER ROAD", "point": Vector2(0.50, 0.44), "radius": Vector2(0.07, 0.045), "spawn": Vector2.ZERO}
+	]
 }
 
 var world_data: Dictionary = {}
@@ -58,6 +83,7 @@ var walkable_polygons: Array[PackedVector2Array] = []
 var walk_path: Array[Vector2] = []
 var walk_path_index := 0
 var walking_to_target := false
+var transition_cooldown := 0.0
 var walk_clock := 0.0
 var walking := false
 var player_direction := 0
@@ -78,6 +104,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not player_sprite:
 		return
+	transition_cooldown = maxf(0.0, transition_cooldown - delta)
 	var movement := Vector2.ZERO
 	if not (selection_layer and selection_layer.visible):
 		if walking_to_target:
@@ -109,6 +136,8 @@ func _process(delta: float) -> void:
 	elif walking and not walking_to_target:
 		walking = false
 		player_sprite.frame = player_direction * 4
+	if not (selection_layer and selection_layer.visible) and not (dialogue_layer and is_instance_valid(dialogue_layer)):
+		_check_city_transition()
 	_update_minimap_markers()
 	_update_joystick_knob()
 	if not walking:
@@ -247,7 +276,7 @@ func _build_city_view() -> void:
 	info_body = _label("", 14, Color("d5ddda"))
 	info_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	copy.add_child(info_body)
-	scene_back_button = _button("◀  CITY PLAZA", _return_to_plaza)
+	scene_back_button = _button("◀  EXIT AREA", _return_to_plaza)
 	scene_back_button.custom_minimum_size = Vector2(154, 52)
 	scene_back_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	scene_back_button.visible = false
@@ -383,18 +412,36 @@ func _close_selection() -> void:
 
 func _show_selection_map() -> void:
 	_clear_selection_content()
-	selection_status.text = "You are in %s. Select a room to travel there." % str(CITY_SCREENS.get(current_screen, {}).get("title", current_screen)).capitalize()
-	for screen_id in ["plaza", "market", "forge", "inn", "keep", "gate"]:
-		var item: Dictionary = CITY_SCREENS[screen_id]
-		var label_text := ("●  " if screen_id == current_screen else "○  ") + str(item.get("title", screen_id))
-		var route_button := _button(label_text, _travel_to_screen.bind(screen_id))
+	selection_status.text = "Nearby doors and streets from %s. Choose one to walk there." % str(CITY_SCREENS.get(current_screen, {}).get("title", current_screen)).capitalize()
+	var local_transitions := _transitions_for_screen(current_screen)
+	if local_transitions.is_empty():
+		selection_content.add_child(_label("There are no marked exits from this room.", 15, Color("d5ddda")))
+		return
+	for transition in local_transitions:
+		var destination := str(transition.get("to", ""))
+		var title := str(CITY_SCREENS.get(destination, {}).get("title", "THE FRONTIER" if destination == "territory" else destination.to_upper()))
+		var route_button := _button("WALK TO  •  %s" % title, _travel_to_screen.bind(destination))
 		route_button.custom_minimum_size.y = 48
 		selection_content.add_child(route_button)
 
 
 func _travel_to_screen(screen_id: String) -> void:
-	_select_location(screen_id)
+	var transition := _transition_for_destination(current_screen, screen_id)
+	if transition.is_empty():
+		return
 	_close_selection()
+	_walk_to_location(screen_id, Vector2(size.x * float(transition.point.x), size.y * float(transition.point.y)))
+
+
+func _transitions_for_screen(screen_id: String) -> Array:
+	return CITY_TRANSITIONS.get(screen_id, [])
+
+
+func _transition_for_destination(screen_id: String, destination: String) -> Dictionary:
+	for transition in _transitions_for_screen(screen_id):
+		if str(transition.get("to", "")) == destination:
+			return transition
+	return {}
 
 
 func _show_selection_equipment() -> void:
@@ -454,7 +501,7 @@ func _load_city_checkpoint() -> void:
 	var screen := str(cfg.get_value(region_id, "screen", "plaza"))
 	_show_city_screen(screen)
 	selected_location = str(cfg.get_value(region_id, "selected_location", screen))
-	player_sprite.position = Vector2(size.x * float(cfg.get_value(region_id, "player_x", 0.5)), size.y * float(cfg.get_value(region_id, "player_y", 0.7)))
+	player_sprite.position = _nearest_walkable_position(Vector2(size.x * float(cfg.get_value(region_id, "player_x", 0.5)), size.y * float(cfg.get_value(region_id, "player_y", 0.7))))
 	_select_location(selected_location)
 	selection_status.text = "City checkpoint loaded."
 	queue_redraw()
@@ -467,7 +514,7 @@ func _restore_city_checkpoint() -> void:
 	var screen := str(cfg.get_value(region_id, "screen", "plaza"))
 	_show_city_screen(screen)
 	selected_location = str(cfg.get_value(region_id, "selected_location", screen))
-	player_sprite.position = Vector2(size.x * float(cfg.get_value(region_id, "player_x", 0.5)), size.y * float(cfg.get_value(region_id, "player_y", 0.7)))
+	player_sprite.position = _nearest_walkable_position(Vector2(size.x * float(cfg.get_value(region_id, "player_x", 0.5)), size.y * float(cfg.get_value(region_id, "player_y", 0.7))))
 	_select_location(selected_location)
 
 
@@ -520,12 +567,10 @@ func _on_b_pressed() -> void:
 
 
 func _screen_routes(screen_id: String) -> Array:
-	match screen_id:
-		"plaza": return ["market", "keep", "forge", "inn", "gate"]
-		"market": return ["plaza", "keep", "forge", "inn", "gate"]
-		"forge", "inn": return ["market"]
-		"keep", "gate": return ["plaza"]
-	return []
+	var routes: Array = []
+	for transition in _transitions_for_screen(screen_id):
+		routes.append(str(transition.get("to", "")))
+	return routes
 
 
 func _create_minimap_pois() -> void:
@@ -864,7 +909,9 @@ func _on_hotspot_pressed(id: String, point: Vector2) -> void:
 
 
 func _walk_to_location(location_id: String, destination: Vector2) -> void:
-	pending_location = location_id
+	if not location_id.begins_with("npc:") and _transition_for_destination(current_screen, location_id).is_empty():
+		return
+	pending_location = location_id if location_id.begins_with("npc:") else ""
 	_walk_player_to(destination)
 
 
@@ -914,8 +961,6 @@ func _finish_walk() -> void:
 	pending_location = ""
 	if destination.begins_with("npc:"):
 		_show_city_dialogue(destination.trim_prefix("npc:"))
-	elif destination != "":
-		_select_location(destination)
 
 
 func _cancel_walk() -> void:
@@ -949,22 +994,61 @@ func _configure_city_walkable_areas() -> void:
 	match current_screen:
 		"plaza":
 			walkable_polygons = [
-				PackedVector2Array([Vector2(0.14, 0.63), Vector2(0.77, 0.61), Vector2(0.85, 0.90), Vector2(0.14, 0.90)]),
-				PackedVector2Array([Vector2(0.25, 0.46), Vector2(0.65, 0.43), Vector2(0.79, 0.67), Vector2(0.30, 0.71)]),
-				PackedVector2Array([Vector2(0.25, 0.29), Vector2(0.44, 0.29), Vector2(0.58, 0.52), Vector2(0.43, 0.60), Vector2(0.31, 0.51)])
+				PackedVector2Array([
+					Vector2(0.31, 0.40), Vector2(0.37, 0.35), Vector2(0.49, 0.34), Vector2(0.65, 0.38),
+					Vector2(0.80, 0.45), Vector2(0.88, 0.54), Vector2(0.96, 0.70), Vector2(0.99, 0.79),
+					Vector2(0.02, 0.79), Vector2(0.05, 0.70), Vector2(0.12, 0.62), Vector2(0.20, 0.55),
+					Vector2(0.29, 0.49), Vector2(0.34, 0.44)
+				]),
+				PackedVector2Array([
+					Vector2(0.32, 0.13), Vector2(0.42, 0.13), Vector2(0.46, 0.25), Vector2(0.52, 0.36),
+					Vector2(0.44, 0.43), Vector2(0.34, 0.39), Vector2(0.29, 0.30)
+				])
 			]
 		"market":
 			walkable_polygons = [
-				PackedVector2Array([Vector2(0.25, 0.29), Vector2(0.58, 0.29), Vector2(0.77, 0.52), Vector2(0.85, 0.89), Vector2(0.15, 0.89), Vector2(0.16, 0.61)])
+				PackedVector2Array([
+					Vector2(0.32, 0.12), Vector2(0.43, 0.12), Vector2(0.48, 0.27), Vector2(0.56, 0.36),
+					Vector2(0.72, 0.40), Vector2(0.84, 0.47), Vector2(0.92, 0.58), Vector2(0.99, 0.79),
+					Vector2(0.02, 0.79), Vector2(0.06, 0.71), Vector2(0.14, 0.62), Vector2(0.22, 0.54),
+					Vector2(0.29, 0.47), Vector2(0.34, 0.41), Vector2(0.30, 0.32)
+				])
 			]
-		"forge", "inn", "keep":
+		"forge":
 			walkable_polygons = [
-				PackedVector2Array([Vector2(0.14, 0.43), Vector2(0.86, 0.43), Vector2(0.92, 0.86), Vector2(0.10, 0.86)]),
-				PackedVector2Array([Vector2(0.42, 0.20), Vector2(0.58, 0.20), Vector2(0.63, 0.49), Vector2(0.37, 0.49)])
+				PackedVector2Array([
+					Vector2(0.78, 0.36), Vector2(0.89, 0.36), Vector2(0.95, 0.42), Vector2(0.95, 0.54),
+					Vector2(0.86, 0.60), Vector2(0.75, 0.58), Vector2(0.68, 0.63), Vector2(0.71, 0.72),
+					Vector2(0.64, 0.78), Vector2(0.32, 0.78), Vector2(0.23, 0.71), Vector2(0.21, 0.60),
+					Vector2(0.29, 0.53), Vector2(0.39, 0.49), Vector2(0.49, 0.51), Vector2(0.57, 0.46),
+					Vector2(0.68, 0.45)
+				])
+			]
+		"inn":
+			walkable_polygons = [
+				PackedVector2Array([
+					Vector2(0.79, 0.35), Vector2(0.89, 0.35), Vector2(0.95, 0.42), Vector2(0.95, 0.53),
+					Vector2(0.86, 0.60), Vector2(0.78, 0.62), Vector2(0.75, 0.70), Vector2(0.66, 0.78),
+					Vector2(0.39, 0.78), Vector2(0.29, 0.72), Vector2(0.29, 0.62), Vector2(0.36, 0.54),
+					Vector2(0.47, 0.51), Vector2(0.61, 0.53), Vector2(0.72, 0.55)
+				])
+			]
+		"keep":
+			walkable_polygons = [
+				PackedVector2Array([
+					Vector2(0.10, 0.18), Vector2(0.22, 0.18), Vector2(0.29, 0.32), Vector2(0.31, 0.45),
+					Vector2(0.39, 0.54), Vector2(0.42, 0.65), Vector2(0.52, 0.70), Vector2(0.79, 0.70),
+					Vector2(0.86, 0.76), Vector2(0.27, 0.78), Vector2(0.17, 0.71), Vector2(0.16, 0.58),
+					Vector2(0.12, 0.42)
+				])
 			]
 		"gate":
 			walkable_polygons = [
-				PackedVector2Array([Vector2(0.27, 0.34), Vector2(0.70, 0.34), Vector2(0.84, 0.66), Vector2(0.80, 0.89), Vector2(0.18, 0.89), Vector2(0.16, 0.60)])
+				PackedVector2Array([
+					Vector2(0.34, 0.39), Vector2(0.66, 0.39), Vector2(0.75, 0.50), Vector2(0.85, 0.60),
+					Vector2(0.96, 0.74), Vector2(0.99, 0.79), Vector2(0.02, 0.79), Vector2(0.05, 0.73),
+					Vector2(0.17, 0.62), Vector2(0.25, 0.53), Vector2(0.31, 0.45)
+				])
 			]
 		_:
 			walkable_polygons = [
@@ -975,6 +1059,17 @@ func _configure_city_walkable_areas() -> void:
 func _is_walkable_position(position: Vector2) -> bool:
 	if position.x < 28.0 or position.x > size.x - 28.0 or position.y < 104.0 or position.y > size.y - 160.0:
 		return false
+	if size.x <= 0.0 or size.y <= 0.0:
+		return false
+	# Keep the whole lower sprite footprint on the walk surface, not only its
+	# center point. This keeps boots and shoulders from clipping into facades.
+	for offset: Vector2 in [Vector2.ZERO, Vector2(-16.0, -8.0), Vector2(16.0, -8.0), Vector2(-16.0, 8.0), Vector2(16.0, 8.0)]:
+		if not _is_inside_walkable_polygon_union(position + offset):
+			return false
+	return true
+
+
+func _is_inside_walkable_polygon_union(position: Vector2) -> bool:
 	if size.x <= 0.0 or size.y <= 0.0:
 		return false
 	var normalized := Vector2(position.x / size.x, position.y / size.y)
@@ -1110,37 +1205,11 @@ func _refresh_hotspots() -> void:
 		if is_instance_valid(hotspot):
 			hotspot.queue_free()
 	hotspot_buttons.clear()
-	var routes: Array = []
-	match current_screen:
-		"plaza":
-			routes = [
-				["market", "MARKET LANE", Vector2(0.31, 0.45)],
-				["keep", "KEEP", Vector2(0.51, 0.35)],
-				["forge", "FORGE", Vector2(0.17, 0.54)],
-				["inn", "INN", Vector2(0.80, 0.50)],
-				["gate", "GATE", Vector2(0.70, 0.42)]
-			]
-		"market":
-			routes = [
-				["plaza", "PLAZA", Vector2(0.20, 0.46)],
-				["keep", "KEEP", Vector2(0.52, 0.35)],
-				["forge", "FORGE", Vector2(0.29, 0.54)],
-				["inn", "INN", Vector2(0.76, 0.52)],
-				["gate", "GATE", Vector2(0.83, 0.46)]
-			]
-		"forge":
-			routes = [["market", "BACK TO MARKET", Vector2(0.50, 0.20)]]
-		"inn":
-			routes = [["market", "BACK TO MARKET", Vector2(0.50, 0.20)]]
-		"keep":
-			routes = [["plaza", "BACK TO PLAZA", Vector2(0.50, 0.20)]]
-		"gate":
-			routes = [["plaza", "RETURN TO CITY", Vector2(0.50, 0.20)]]
-	for route in routes:
-		_add_hotspot(str(route[0]), str(route[1]), route[2])
+	for transition in _transitions_for_screen(current_screen):
+		_add_hotspot(str(transition.to), str(transition.label), transition.point)
 
 
-func _show_city_screen(screen_id: String, place_hero: bool = true) -> void:
+func _show_city_screen(screen_id: String, place_hero: bool = true, spawn_override: Vector2 = Vector2(-1.0, -1.0)) -> void:
 	if not CITY_SCREENS.has(screen_id):
 		screen_id = "plaza"
 	current_screen = screen_id
@@ -1158,7 +1227,7 @@ func _show_city_screen(screen_id: String, place_hero: bool = true) -> void:
 	city_subtitle.text = str(region_data.get("name", region_id.replace("_", " ").capitalize())).to_upper()
 	scene_back_button.visible = current_screen != "plaza"
 	if place_hero:
-		var spawn: Vector2 = screen.get("spawn", Vector2(0.5, 0.72))
+		var spawn: Vector2 = spawn_override if spawn_override.x >= 0.0 else screen.get("spawn", Vector2(0.5, 0.72))
 		player_sprite.position = _nearest_walkable_position(Vector2(size.x * spawn.x, size.y * spawn.y))
 		player_sprite.frame = 0
 	_refresh_hotspots()
@@ -1166,17 +1235,54 @@ func _show_city_screen(screen_id: String, place_hero: bool = true) -> void:
 	queue_redraw()
 
 
+func _check_city_transition() -> void:
+	if transition_cooldown > 0.0 or not player_sprite or not _is_walkable_position(player_sprite.position):
+		return
+	var normalized := Vector2(player_sprite.position.x / maxf(1.0, size.x), player_sprite.position.y / maxf(1.0, size.y))
+	for transition in _transitions_for_screen(current_screen):
+		var point: Vector2 = transition.get("point", Vector2.ZERO)
+		var radius: Vector2 = transition.get("radius", Vector2(0.04, 0.04))
+		if absf(normalized.x - point.x) > radius.x or absf(normalized.y - point.y) > radius.y:
+			continue
+		var destination := str(transition.get("to", ""))
+		transition_cooldown = 0.65
+		_cancel_walk()
+		joystick_vector = Vector2.ZERO
+		if destination == "territory":
+			if not _enter_territory():
+				player_sprite.position = _nearest_walkable_position(player_sprite.position + Vector2(0.0, 48.0))
+			return
+		if CITY_SCREENS.has(destination):
+			var spawn: Vector2 = transition.get("spawn", CITY_SCREENS[destination].get("spawn", Vector2(0.5, 0.7)))
+			_show_city_screen(destination, true, spawn)
+			_select_location(destination)
+		return
+
+
+func _walk_to_local_exit() -> void:
+	var transitions := _transitions_for_screen(current_screen)
+	if transitions.is_empty():
+		return
+	var transition: Dictionary = transitions[0]
+	for candidate in transitions:
+		if str(candidate.get("to", "")) == "plaza":
+			transition = candidate
+			break
+	var point: Vector2 = transition.get("point", Vector2.ZERO)
+	_walk_to_location(str(transition.get("to", "")), Vector2(size.x * point.x, size.y * point.y))
+
+
 func _select_location(id: String) -> void:
-	selected_location = id
 	if CITY_SCREENS.has(id) and id != current_screen:
-		_show_city_screen(id)
+		return
+	selected_location = id
 	var descriptions := {
-		"plaza": ["ASHENREACH PLAZA", "The roads meet beneath the keep. Tap or click the ground to walk; choose a marked place to explore it."],
-		"market": ["MARKET LANE", "Stalls, smiths, and travelers crowd the old stone road. The forge and inn are just ahead."],
-		"keep": ["THE KEEP", "The stronghold's beacon chamber overlooks the roads between territories."],
-		"forge": ["THE FORGE", "Review the equipment recovered from battles and regional expeditions."],
-		"inn": ["THE INN", "Rest your hero before returning to the roads beyond the city walls."],
-		"gate": ["THE CITY GATE", "Choose a route out of the city and return to the territory board."]
+		"plaza": ["ASHENREACH PLAZA", "Follow the paved lane to the market, enter the keep at its door, or walk south to the city gate."],
+		"market": ["MARKET LANE", "The upper lane returns to the plaza. The forge and inn doors open from this street."],
+		"keep": ["THE KEEP", "Walk back through the great door to return to the plaza."],
+		"forge": ["THE FORGE", "The workshop opens onto Market Lane. Walk to the arched door to leave."],
+		"inn": ["THE INN", "The Wayfarer's Inn opens onto Market Lane. Walk to the doorway to leave."],
+		"gate": ["THE CITY GATE", "Walk back down the road to the city or follow the arch through to the frontier."]
 	}
 	var data: Array = descriptions.get(id, descriptions["plaza"])
 	info_title.text = str(data[0])
@@ -1184,7 +1290,7 @@ func _select_location(id: String) -> void:
 	match id:
 		"market", "forge": action_button.text = "BROWSE REGIONAL GEAR"
 		"inn": action_button.text = "REST • 25 GOLD"
-		"gate": action_button.text = "ENTER TERRITORY"
+		"gate": action_button.text = "FOLLOW FRONTIER ROAD"
 		_: action_button.text = "VIEW OPEN ROUTES"
 	scene_back_button.visible = current_screen != "plaza"
 
@@ -1196,7 +1302,7 @@ func _activate_location() -> void:
 		"inn":
 			_rest_at_inn()
 		"gate":
-			_enter_territory()
+			_travel_to_screen("territory")
 		_:
 			var open := CAMPAIGN_SERVICE.open_routes()
 			var names: PackedStringArray = []
@@ -1206,7 +1312,7 @@ func _activate_location() -> void:
 
 
 func _return_to_plaza() -> void:
-	_walk_to_location("plaza", Vector2(size.x * 0.5, size.y * 0.68))
+	_walk_to_local_exit()
 
 
 func _show_armory() -> void:
@@ -1240,10 +1346,10 @@ func _rest_at_inn() -> void:
 	info_body.text = "Your hero is rested and ready for the road. 25 gold paid."
 
 
-func _enter_territory() -> void:
+func _enter_territory() -> bool:
 	if not CAMPAIGN_SERVICE.is_route_open(region_id) and not (CAMPAIGN_SERVICE.state().get("secured_territories", []) as Array).has(region_id):
 		info_body.text = "This city's road is sealed. Reconnect a neighboring territory first."
-		return
+		return false
 	get_tree().set_meta("preview_territory", region_id)
 	var scene_path := "res://scenes/TerritoryBoardPreview.tscn"
 	if region_id == "ashen_wastes":
@@ -1255,6 +1361,7 @@ func _enter_territory() -> void:
 	elif region_id == "golden_expanse":
 		scene_path = "res://scenes/GoldenExpansePreview.tscn"
 	get_tree().change_scene_to_file(scene_path)
+	return true
 
 
 func _return_to_atlas() -> void:
