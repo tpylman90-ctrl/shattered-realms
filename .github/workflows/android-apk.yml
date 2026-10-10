@@ -170,6 +170,19 @@ jobs:
               exit "$SCENE_EXIT"
             fi
           done
+          echo "Smoke testing the six-room Sundered Vault 2.5D layout"
+          set +e
+          timeout 90 "$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE/native" --script "res://tests/sundered_vault_2p5d_smoke.gd" 2>&1 | tee "$RUNNER_TEMP/sundered-vault-smoke.log"
+          VAULT_EXIT=${PIPESTATUS[0]}
+          set -e
+          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script|Assertion failed" "$RUNNER_TEMP/sundered-vault-smoke.log"; then
+            echo "Sundered Vault smoke test reported a script error."
+            exit 1
+          fi
+          if [ "$VAULT_EXIT" -ne 0 ]; then
+            echo "Sundered Vault smoke test exited with code $VAULT_EXIT."
+            exit "$VAULT_EXIT"
+          fi
 
       - name: Set monotonic Android version
         shell: bash

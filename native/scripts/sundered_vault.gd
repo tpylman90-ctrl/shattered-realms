@@ -8,7 +8,7 @@ var hero_model: Node3D
 var selected_hero_id := "ignis"
 var hero_health := 100
 var hero_xp := 0
-var current_node := 0
+var current_room := "entrance"
 var sentinel_defeated := false
 var relic_claimed := false
 var ember_seal_effect_applied := false
@@ -26,26 +26,50 @@ var action_body: Label
 var action_primary: Button
 var action_secondary: Button
 var sentinel_piece: Node3D
-var relic_glow: MeshInstance3D
 var shrine_glow: MeshInstance3D
 var trap_glow: MeshInstance3D
+var relic_sprite: Sprite3D
+var walkmesh_body: StaticBody3D
+var background_mesh: MeshInstance3D
+var background_material: StandardMaterial3D
+var room_name_label: Label
+var screen_walk_paths: Array[PackedVector2Array] = []
+var foreground_cards: Array[Sprite3D] = []
+var room_transitioning := false
 
-const NODES: Array[Vector3] = [
-    Vector3(0.0, 0.03, 7.0),
-    Vector3(0.0, 0.03, 2.8),
-    Vector3(-2.4, 0.03, -0.8),
-    Vector3(2.4, 0.03, -0.8),
-    Vector3(0.0, 0.03, -3.3),
-    Vector3(0.0, 0.03, -5.3)
-]
+const ROOM_CONFIGS := {
+    "entrance": {"title": "BROKEN SEAL HALL", "art": "res://assets/dungeons/sundered_vault/vault_entrance.webp"},
+    "crossing": {"title": "THE LOWER CROSSING", "art": "res://assets/dungeons/sundered_vault/lower_crossing.webp"},
+    "gallery": {"title": "SENTINEL GALLERY", "art": "res://assets/dungeons/sundered_vault/sentinel_gallery.webp"},
+    "shrine": {"title": "THE RUNE SHRINE", "art": "res://assets/dungeons/sundered_vault/rune_shrine.webp"},
+    "bridge": {"title": "EMBER BRIDGE", "art": "res://assets/dungeons/sundered_vault/ember_bridge.webp"},
+    "seal": {"title": "EMBER SEAL SANCTUM", "art": "res://assets/dungeons/sundered_vault/ember_seal_chamber.webp"}
+}
 
-const DUNGEON_GRAPH := {
-    0: [1],
-    1: [0, 2, 3],
-    2: [1, 4],
-    3: [1, 4],
-    4: [2, 3, 5],
-    5: [4]
+const ROOM_EXITS := {
+    "entrance": [{"to": "crossing", "point": Vector2(0.50, 0.48), "spawn": Vector2(0.50, 0.83), "label": "Lower Crossing"}],
+    "crossing": [
+        {"to": "entrance", "point": Vector2(0.50, 0.91), "spawn": Vector2(0.50, 0.82), "label": "Entry Hall"},
+        {"to": "gallery", "point": Vector2(0.50, 0.44), "spawn": Vector2(0.50, 0.83), "label": "Sentinel Gallery"},
+        {"to": "shrine", "point": Vector2(0.16, 0.53), "spawn": Vector2(0.22, 0.55), "label": "Rune Shrine"}
+    ],
+    "gallery": [
+        {"to": "crossing", "point": Vector2(0.50, 0.90), "spawn": Vector2(0.50, 0.82), "label": "Lower Crossing"},
+        {"to": "bridge", "point": Vector2(0.50, 0.46), "spawn": Vector2(0.50, 0.84), "label": "Ember Bridge"}
+    ],
+    "shrine": [{"to": "crossing", "point": Vector2(0.18, 0.49), "spawn": Vector2(0.18, 0.58), "label": "Lower Crossing"}],
+    "bridge": [
+        {"to": "gallery", "point": Vector2(0.50, 0.90), "spawn": Vector2(0.50, 0.82), "label": "Sentinel Gallery"},
+        {"to": "seal", "point": Vector2(0.50, 0.46), "spawn": Vector2(0.50, 0.84), "label": "Ember Seal Sanctum"}
+    ],
+    "seal": [{"to": "bridge", "point": Vector2(0.50, 0.91), "spawn": Vector2(0.50, 0.82), "label": "Ember Bridge"}]
+}
+
+const ROOM_INTERACTIONS := {
+    "gallery": [{"id": "guardian", "point": Vector2(0.50, 0.50), "radius": 0.075}],
+    "shrine": [{"id": "shrine", "point": Vector2(0.76, 0.55), "radius": 0.085}],
+    "bridge": [{"id": "trap", "point": Vector2(0.50, 0.65), "radius": 0.075}],
+    "seal": [{"id": "relic", "point": Vector2(0.50, 0.56), "radius": 0.075}]
 }
 
 func _ready() -> void:
@@ -54,9 +78,10 @@ func _ready() -> void:
     _build_dungeon_geometry()
     _build_hero()
     _build_sentinel_visual()
+    _build_poi_markers()
     _build_ui()
     _refresh_objective()
-    _refresh_node_markers()
+    _refresh_room_label()
 
 func _build_environment() -> void:
     var world_env := WorldEnvironment.new()
@@ -71,22 +96,19 @@ func _build_environment() -> void:
     world_env.environment = env
     add_child(world_env)
 
-    var rig := Node3D.new()
-    rig.position = Vector3(0.0, 5.0, 4.0)
-    rig.rotation_degrees = Vector3(-38.0, 0.0, 0.0)
-    add_child(rig)
-
     camera = Camera3D.new()
-    camera.position = Vector3(0.0, 0.0, 13.0)
+    camera.position = Vector3(0.0, 9.0, 14.0)
+    camera.fov = 40.0
+    add_child(camera)
+    camera.look_at(Vector3(0.0, 0.0, -3.0), Vector3.UP)
     camera.current = true
-    rig.add_child(camera)
-
-    var moon := DirectionalLight3D.new()
-    moon.rotation_degrees = Vector3(-55.0, -30.0, 0.0)
-    moon.light_color = Color(0.42, 0.52, 0.62)
-    moon.light_energy = 1.3
-    moon.shadow_enabled = true
-    add_child(moon)
+    var fill_light := DirectionalLight3D.new()
+    fill_light.rotation_degrees = Vector3(-38.0, -26.0, 0.0)
+    fill_light.light_color = Color(0.64, 0.70, 0.78)
+    fill_light.light_energy = 0.8
+    fill_light.shadow_enabled = false
+    add_child(fill_light)
+    get_viewport().size_changed.connect(_fit_background_card)
 
 func _make_material(color: Color, emission: Color = Color(0,0,0,1), energy: float = 0.0) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -110,58 +132,228 @@ func _add_box(name_value: String, position_value: Vector3, size_value: Vector3, 
     return mesh_instance
 
 func _build_dungeon_geometry() -> void:
-    var stone := _make_material(Color(0.055, 0.065, 0.075))
-    var floor_mat := _make_material(Color(0.075, 0.075, 0.07))
-    var teal := _make_material(Color(0.03, 0.16, 0.17), Color(0.02, 0.85, 0.82), 2.4)
-    var ember := _make_material(Color(0.19, 0.065, 0.025), Color(1.0, 0.22, 0.04), 2.0)
+    background_mesh = MeshInstance3D.new()
+    background_mesh.name = "PaintedRoomPlate"
+    var quad := QuadMesh.new()
+    quad.size = Vector2(1.0, 1.0)
+    background_mesh.mesh = quad
+    background_mesh.position = Vector3(0.0, 0.0, -80.0)
+    background_material = StandardMaterial3D.new()
+    background_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    background_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    background_mesh.material_override = background_material
+    camera.add_child(background_mesh)
+    _fit_background_card()
 
-    _add_box("Floor", Vector3(0,-0.22,1.0), Vector3(9.5,0.4,16.5), floor_mat)
-    _add_box("LeftWall", Vector3(-4.7,2.1,1.0), Vector3(0.55,4.6,16.5), stone)
-    _add_box("RightWall", Vector3(4.7,2.1,1.0), Vector3(0.55,4.6,16.5), stone)
-    _add_box("BackWall", Vector3(0,2.1,-7.1), Vector3(9.5,4.6,0.55), stone)
-    _add_box("EntryArchTop", Vector3(0,3.25,8.0), Vector3(4.5,1.0,0.75), stone)
-    _add_box("EntryArchL", Vector3(-2.0,1.4,8.0), Vector3(0.75,2.8,0.75), stone)
-    _add_box("EntryArchR", Vector3(2.0,1.4,8.0), Vector3(0.75,2.8,0.75), stone)
+    walkmesh_body = StaticBody3D.new()
+    walkmesh_body.name = "WalkmeshCollision"
+    walkmesh_body.collision_layer = 0
+    walkmesh_body.collision_mask = 0
+    add_child(walkmesh_body)
+    _build_depth_cards()
+    _load_room(current_room, _initial_spawn_for_room(current_room), false)
+    _build_relic_sprite()
 
-    for z in [5.5, 1.2, -3.1]:
-        _add_box("PillarL_%s" % str(z), Vector3(-3.3,1.45,z), Vector3(0.8,2.9,0.8), stone)
-        _add_box("PillarR_%s" % str(z), Vector3(3.3,1.45,z), Vector3(0.8,2.9,0.8), stone)
+func _fit_background_card() -> void:
+    if not camera or not background_mesh:
+        return
+    var view_size := get_viewport().get_visible_rect().size
+    if view_size.y <= 0.0:
+        return
+    var distance := 80.0
+    var height := 2.0 * distance * tan(deg_to_rad(camera.fov * 0.5))
+    var width := height * view_size.x / view_size.y
+    var quad := background_mesh.mesh as QuadMesh
+    if quad:
+        quad.size = Vector2(width, height)
 
-    for z in [4.3, -0.2, -4.7]:
-        var glow_l := _add_box("RuneL_%s" % str(z), Vector3(-4.34,1.45,z), Vector3(0.08,0.7,0.7), teal)
-        var glow_r := _add_box("RuneR_%s" % str(z), Vector3(4.34,1.45,z), Vector3(0.08,0.7,0.7), teal)
-        glow_l.rotation_degrees.z = 45.0
-        glow_r.rotation_degrees.z = 45.0
+func _room_walk_paths(room_id: String) -> Array[PackedVector2Array]:
+    match room_id:
+        "entrance":
+            return [PackedVector2Array([Vector2(0.40,0.94), Vector2(0.60,0.94), Vector2(0.57,0.70), Vector2(0.54,0.56), Vector2(0.53,0.45), Vector2(0.47,0.45), Vector2(0.46,0.56), Vector2(0.43,0.70)])]
+        "crossing":
+            return [
+                PackedVector2Array([Vector2(0.43,0.95), Vector2(0.57,0.95), Vector2(0.57,0.60), Vector2(0.43,0.60)]),
+                PackedVector2Array([Vector2(0.12,0.47), Vector2(0.88,0.47), Vector2(0.82,0.67), Vector2(0.18,0.67)]),
+                PackedVector2Array([Vector2(0.44,0.50), Vector2(0.56,0.50), Vector2(0.56,0.40), Vector2(0.44,0.40)])
+            ]
+        "gallery":
+            return [PackedVector2Array([Vector2(0.37,0.94), Vector2(0.63,0.94), Vector2(0.59,0.72), Vector2(0.57,0.55), Vector2(0.56,0.45), Vector2(0.44,0.45), Vector2(0.43,0.55), Vector2(0.41,0.72)])]
+        "shrine":
+            return [
+                PackedVector2Array([Vector2(0.25,0.95), Vector2(0.75,0.95), Vector2(0.75,0.65), Vector2(0.25,0.65)]),
+                PackedVector2Array([Vector2(0.12,0.46), Vector2(0.46,0.46), Vector2(0.46,0.68), Vector2(0.12,0.68)]),
+                PackedVector2Array([Vector2(0.42,0.46), Vector2(0.82,0.46), Vector2(0.82,0.66), Vector2(0.42,0.66)])
+            ]
+        "bridge":
+            return [PackedVector2Array([Vector2(0.37,0.95), Vector2(0.63,0.95), Vector2(0.59,0.74), Vector2(0.57,0.55), Vector2(0.56,0.43), Vector2(0.44,0.43), Vector2(0.43,0.55), Vector2(0.41,0.74)])]
+        "seal":
+            return [PackedVector2Array([Vector2(0.34,0.95), Vector2(0.66,0.95), Vector2(0.64,0.73), Vector2(0.60,0.59), Vector2(0.57,0.49), Vector2(0.43,0.49), Vector2(0.40,0.59), Vector2(0.36,0.73)])]
+    return [PackedVector2Array([Vector2(0.40,0.94), Vector2(0.60,0.94), Vector2(0.57,0.70), Vector2(0.54,0.56), Vector2(0.53,0.45), Vector2(0.47,0.45), Vector2(0.46,0.56), Vector2(0.43,0.70)])]
 
-    var chamber := _add_box("RelicDais", Vector3(0.0,0.2,-5.3), Vector3(3.0,0.4,2.2), stone)
-    chamber.rotation_degrees.y = 0.0
-    relic_glow = _add_box("RelicGlow", Vector3(0.0,0.85,-5.3), Vector3(0.75,1.0,0.75), ember)
-    relic_glow.visible = not relic_claimed
+func _room_ids() -> Array:
+    return ROOM_CONFIGS.keys()
 
-    shrine_glow = _add_box("ShrineRune", Vector3(2.4,0.08,-0.8), Vector3(1.25,0.08,1.25), teal)
-    shrine_glow.visible = not shrine_used
+func _initial_spawn_for_room(room_id: String) -> Vector2:
+    if room_id == "shrine":
+        return Vector2(0.22, 0.55)
+    return Vector2(0.50, 0.84)
 
-    trap_glow = _add_box("TrapRune", Vector3(0.0,0.07,-3.3), Vector3(1.6,0.06,1.2), ember)
-    trap_glow.visible = not trap_triggered
+func _exits_for_room(room_id: String) -> Array:
+    return ROOM_EXITS.get(room_id, [])
 
-    var teal_light := OmniLight3D.new()
-    teal_light.position = Vector3(0.0,2.2,-1.0)
-    teal_light.light_color = Color(0.05,0.85,0.78)
-    teal_light.light_energy = 4.0
-    teal_light.omni_range = 9.0
-    add_child(teal_light)
+func _interactions_for_room(room_id: String) -> Array:
+    return ROOM_INTERACTIONS.get(room_id, [])
 
-    var ember_light := OmniLight3D.new()
-    ember_light.position = Vector3(0.0,1.6,-5.3)
-    ember_light.light_color = Color(1.0,0.18,0.035)
-    ember_light.light_energy = 5.0
-    ember_light.omni_range = 5.5
-    add_child(ember_light)
+func _screen_to_floor(screen_uv: Vector2) -> Vector3:
+    var view_size := get_viewport().get_visible_rect().size
+    var ray_origin := camera.project_ray_origin(screen_uv * view_size)
+    var ray_direction := camera.project_ray_normal(screen_uv * view_size)
+    if absf(ray_direction.y) < 0.0001:
+        return Vector3.ZERO
+    var distance := -ray_origin.y / ray_direction.y
+    return ray_origin + ray_direction * distance
+
+func _load_room(room_id: String, spawn_uv: Vector2, animate: bool = true) -> void:
+    if not ROOM_CONFIGS.has(room_id):
+        room_id = "entrance"
+    current_room = room_id
+    var room: Dictionary = ROOM_CONFIGS[current_room]
+    var texture := load(str(room.get("art", ""))) as Texture2D
+    if texture and background_material:
+        background_material.albedo_texture = texture
+    screen_walk_paths = _room_walk_paths(current_room)
+    _rebuild_walkmesh()
+    _refresh_room_label()
+    if hero:
+        hero.position = _screen_to_floor(spawn_uv)
+        hero.position.y = 0.03
+    if sentinel_piece:
+        sentinel_piece.position = _screen_to_floor(Vector2(0.50, 0.50))
+        sentinel_piece.visible = current_room == "gallery" and not sentinel_defeated
+    if relic_sprite:
+        relic_sprite.position = _screen_to_floor(Vector2(0.50, 0.54))
+        relic_sprite.position.y += 0.82
+        relic_sprite.visible = current_room == "seal" and not relic_claimed
+    if shrine_glow:
+        shrine_glow.visible = current_room == "shrine" and not shrine_used
+    if trap_glow:
+        trap_glow.visible = current_room == "bridge" and not trap_triggered
+    for card in foreground_cards:
+        card.visible = current_room in ["entrance", "crossing"]
+    _build_room_markers()
+    if animate:
+        var fade := ColorRect.new()
+        fade.color = Color(0.015, 0.01, 0.008, 1.0)
+        fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+        var canvas := get_node_or_null("DungeonUI") as CanvasLayer
+        if canvas:
+            canvas.add_child(fade)
+            var tween := create_tween()
+            tween.tween_property(fade, "color:a", 0.0, 0.22)
+            tween.tween_callback(fade.queue_free)
+
+func _rebuild_walkmesh() -> void:
+    for child in walkmesh_body.get_children():
+        child.queue_free()
+    var faces := PackedVector3Array()
+    for path in screen_walk_paths:
+        var world_polygon := PackedVector2Array()
+        for uv in path:
+            var world_point := _screen_to_floor(uv)
+            world_polygon.append(Vector2(world_point.x, world_point.z))
+        var indices := Geometry2D.triangulate_polygon(world_polygon)
+        for index in indices:
+            var point := world_polygon[index]
+            faces.append(Vector3(point.x, 0.03, point.y))
+    if faces.is_empty():
+        return
+    var shape := ConcavePolygonShape3D.new()
+    shape.set_faces(faces)
+    var collider := CollisionShape3D.new()
+    collider.name = "WalkSurface"
+    collider.shape = shape
+    walkmesh_body.add_child(collider)
+
+func _build_room_markers() -> void:
+    for child in get_children():
+        if child.is_in_group("room_marker"):
+            child.queue_free()
+    var teal := _make_material(Color(0.02,0.35,0.36,0.55), Color(0.02,0.86,0.88), 1.3)
+    for exit_data in ROOM_EXITS.get(current_room, []):
+        var marker := MeshInstance3D.new()
+        marker.name = "Doorway_%s" % str(exit_data.get("to", ""))
+        marker.add_to_group("room_marker")
+        var ring := TorusMesh.new()
+        ring.inner_radius = 0.29
+        ring.outer_radius = 0.36
+        marker.mesh = ring
+        marker.material_override = teal
+        marker.position = _screen_to_floor(exit_data.get("point", Vector2(0.5,0.5)))
+        marker.position.y = 0.045
+        add_child(marker)
+
+func _refresh_room_label() -> void:
+    if room_name_label and ROOM_CONFIGS.has(current_room):
+        room_name_label.text = str(ROOM_CONFIGS[current_room].get("title", "SUNDERED VAULT"))
+
+func _build_relic_sprite() -> void:
+    relic_sprite = Sprite3D.new()
+    relic_sprite.name = "EmberSealDepthSprite"
+    relic_sprite.texture = load("res://assets/items/rewards/ember_seal.webp") as Texture2D
+    relic_sprite.pixel_size = 0.0032
+    relic_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    relic_sprite.no_depth_test = false
+    relic_sprite.position = _screen_to_floor(Vector2(0.50, 0.54))
+    relic_sprite.position.y += 0.82
+    relic_sprite.visible = current_room == "seal" and not relic_claimed
+    add_child(relic_sprite)
+
+func _build_depth_cards() -> void:
+    var texture := load("res://assets/dungeons/sundered_vault/vault_banner_column.webp") as Texture2D
+    if not texture:
+        return
+    for layer_index in range(2):
+        for side in [-1.0, 1.0]:
+            var card := Sprite3D.new()
+            card.name = "DepthPropCard_%d" % layer_index
+            card.texture = texture
+            card.pixel_size = 0.0024
+            card.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+            card.no_depth_test = false
+            var uv_y := 0.60 if layer_index == 0 else 0.78
+            var uv_x := 0.06 if side < 0.0 else 0.94
+            card.position = _screen_to_floor(Vector2(uv_x, uv_y))
+            card.position.y += 1.85
+            card.flip_h = side > 0.0
+            card.visible = false
+            add_child(card)
+            foreground_cards.append(card)
+
+func _build_poi_markers() -> void:
+    shrine_glow = _create_floor_marker("RuneShrineFloorSigil", Vector2(0.76, 0.55), Color(0.02,0.62,0.65), Color(0.02,0.88,0.90))
+    trap_glow = _create_floor_marker("EmberWardFloorSigil", Vector2(0.50, 0.65), Color(0.68,0.12,0.025), Color(1.0,0.19,0.025))
+    shrine_glow.visible = current_room == "shrine" and not shrine_used
+    trap_glow.visible = current_room == "bridge" and not trap_triggered
+
+func _create_floor_marker(marker_name: String, point_uv: Vector2, tint: Color, glow: Color) -> MeshInstance3D:
+    var marker := MeshInstance3D.new()
+    marker.name = marker_name
+    var ring := TorusMesh.new()
+    ring.inner_radius = 0.33
+    ring.outer_radius = 0.39
+    marker.mesh = ring
+    marker.material_override = _make_material(tint, glow, 1.8)
+    marker.position = _screen_to_floor(point_uv)
+    marker.position.y = 0.055
+    add_child(marker)
+    return marker
 
 func _build_hero() -> void:
     hero = Area3D.new()
     hero.name = "DungeonHero"
-    hero.position = NODES[0]
+    hero.position = _screen_to_floor(_initial_spawn_for_room(current_room))
+    hero.position.y = 0.03
     add_child(hero)
 
     var hit := CollisionShape3D.new()
@@ -201,40 +393,11 @@ func _build_hero() -> void:
         placeholder.material_override = _make_material(Color(0.20,0.62,0.70), Color(0.10,0.75,0.85), 1.4)
         hero.add_child(placeholder)
 
-    _build_move_markers()
-
-func _build_move_markers() -> void:
-    for i in range(NODES.size()):
-        var marker := Area3D.new()
-        marker.name = "DungeonNode_%d" % i
-        marker.position = NODES[i]
-        marker.set_meta("node_index", i)
-        marker.add_to_group("dungeon_move_node")
-
-        var collision := CollisionShape3D.new()
-        var shape := CylinderShape3D.new()
-        shape.radius = 0.75
-        shape.height = 0.25
-        collision.shape = shape
-        collision.position.y = 0.1
-        marker.add_child(collision)
-
-        var visual := MeshInstance3D.new()
-        visual.name = "Marker"
-        var torus := TorusMesh.new()
-        torus.inner_radius = 0.48
-        torus.outer_radius = 0.58
-        visual.mesh = torus
-        visual.position.y = 0.04
-        visual.material_override = _make_material(Color(0.02,0.55,0.55,0.72), Color(0.02,0.9,0.82), 1.6)
-        marker.add_child(visual)
-        add_child(marker)
-
 func _build_sentinel_visual() -> void:
     sentinel_piece = Node3D.new()
     sentinel_piece.name = "VaultSentinel"
-    sentinel_piece.position = NODES[2]
-    sentinel_piece.visible = not sentinel_defeated
+    sentinel_piece.position = _screen_to_floor(Vector2(0.50, 0.50))
+    sentinel_piece.visible = current_room == "gallery" and not sentinel_defeated
     add_child(sentinel_piece)
 
     var body := MeshInstance3D.new()
@@ -276,6 +439,7 @@ func _build_sentinel_visual() -> void:
 
 func _build_ui() -> void:
     var canvas := CanvasLayer.new()
+    canvas.name = "DungeonUI"
     add_child(canvas)
 
     var top := PanelContainer.new()
@@ -296,12 +460,16 @@ func _build_ui() -> void:
     margin.add_child(box)
 
     var title := Label.new()
-    title.text = "SUNDERED VAULT  •  LOWER HALLS"
+    title.text = "SUNDERED VAULT"
     title.add_theme_font_size_override("font_size", 24)
     box.add_child(title)
 
+    room_name_label = Label.new()
+    room_name_label.add_theme_font_size_override("font_size", 16)
+    box.add_child(room_name_label)
+
     status_label = Label.new()
-    status_label.text = "The seal closes behind you."
+    status_label.text = "Tap the flagstone path to move. Teal arches mark connected rooms."
     box.add_child(status_label)
 
     objective_label = Label.new()
@@ -355,68 +523,167 @@ func _build_ui() -> void:
     ab.add_child(action_secondary)
 
 func _unhandled_input(event: InputEvent) -> void:
-    if moving or action_panel.visible:
+    if moving or room_transitioning or (action_panel and action_panel.visible):
         return
     if event is InputEventScreenTouch and not event.pressed:
-        _try_select_node(event.position)
+        _walk_to_screen_point(event.position)
     elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-        _try_select_node(event.position)
+        _walk_to_screen_point(event.position)
 
-func _try_select_node(screen_pos: Vector2) -> void:
-    var origin := camera.project_ray_origin(screen_pos)
-    var end := origin + camera.project_ray_normal(screen_pos) * 100.0
-    var query := PhysicsRayQueryParameters3D.create(origin,end)
-    query.collide_with_areas = true
-    query.collide_with_bodies = false
-    var hit := get_world_3d().direct_space_state.intersect_ray(query)
-    if hit.is_empty():
+func _is_walkable_uv(point: Vector2) -> bool:
+    for path in screen_walk_paths:
+        if Geometry2D.is_point_in_polygon(point, path):
+            return true
+    return false
+
+func _screen_uv_from_world(point: Vector3) -> Vector2:
+    var view_size := get_viewport().get_visible_rect().size
+    if view_size.x <= 0.0 or view_size.y <= 0.0:
+        return Vector2.ZERO
+    return camera.unproject_position(point) / view_size
+
+func _find_walk_path(start_uv: Vector2, target_uv: Vector2) -> PackedVector2Array:
+    const GRID_X := 44
+    const GRID_Y := 28
+    var start := Vector2i(clampi(roundi(start_uv.x * GRID_X), 0, GRID_X), clampi(roundi(start_uv.y * GRID_Y), 0, GRID_Y))
+    var goal := Vector2i(clampi(roundi(target_uv.x * GRID_X), 0, GRID_X), clampi(roundi(target_uv.y * GRID_Y), 0, GRID_Y))
+    if start == goal:
+        return PackedVector2Array([target_uv])
+    var queue: Array[Vector2i] = [start]
+    var came_from: Dictionary = {start: start}
+    var cursor := 0
+    var directions: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
+    while cursor < queue.size() and not came_from.has(goal):
+        var cell := queue[cursor]
+        cursor += 1
+        for direction in directions:
+            var next := cell + direction
+            if next.x < 0 or next.x > GRID_X or next.y < 0 or next.y > GRID_Y or came_from.has(next):
+                continue
+            var next_uv := Vector2(float(next.x) / GRID_X, float(next.y) / GRID_Y)
+            if not _is_walkable_uv(next_uv):
+                continue
+            came_from[next] = cell
+            queue.append(next)
+    if not came_from.has(goal):
+        return PackedVector2Array()
+    var reversed_cells: Array[Vector2i] = []
+    var cursor_cell := goal
+    while cursor_cell != start:
+        reversed_cells.append(cursor_cell)
+        cursor_cell = came_from[cursor_cell]
+    reversed_cells.reverse()
+    var raw_points := PackedVector2Array([start_uv])
+    for cell in reversed_cells:
+        raw_points.append(Vector2(float(cell.x) / GRID_X, float(cell.y) / GRID_Y))
+    raw_points.append(target_uv)
+    var result := PackedVector2Array()
+    var anchor := 0
+    while anchor < raw_points.size() - 1:
+        var furthest := anchor + 1
+        for candidate in range(anchor + 2, raw_points.size()):
+            if _walk_segment_is_clear(raw_points[anchor], raw_points[candidate]):
+                furthest = candidate
+        result.append(raw_points[furthest])
+        anchor = furthest
+    return result
+
+func _walk_segment_is_clear(start_uv: Vector2, end_uv: Vector2) -> bool:
+    var steps := maxi(2, ceili(start_uv.distance_to(end_uv) * 120.0))
+    for index in range(1, steps):
+        var point := start_uv.lerp(end_uv, float(index) / steps)
+        if not _is_walkable_uv(point):
+            return false
+    return true
+
+func _walk_to_screen_point(screen_pos: Vector2) -> void:
+    var view_size := get_viewport().get_visible_rect().size
+    if view_size.x <= 0.0 or view_size.y <= 0.0:
         return
-    var collider = hit.get("collider")
-    if collider and collider.is_in_group("dungeon_move_node"):
-        var target_index: int = int(collider.get_meta("node_index"))
-        _try_move_to(target_index)
-
-func _try_move_to(target_index: int) -> void:
-    var neighbors: Array = DUNGEON_GRAPH.get(current_node, [])
-    if target_index not in neighbors:
-        status_label.text = "That chamber is not connected from here."
+    var target_uv := screen_pos / view_size
+    if not _is_walkable_uv(target_uv):
+        status_label.text = "Stay on the lit flagstone paths."
         return
-    if target_index == 2 and not sentinel_defeated:
-        _open_sentinel_encounter()
+    var exit_data := _exit_near(target_uv)
+    if not exit_data.is_empty() and str(exit_data.get("to", "")) == "bridge" and not sentinel_defeated:
+        status_label.text = "The Vault Sentinel still bars the Ember Bridge."
         return
-
-    await _move_to(target_index)
-
-    if current_node == 3 and not shrine_used:
-        _open_shrine()
-    elif current_node == 4 and not trap_triggered:
-        _trigger_trap()
-    elif current_node == 5 and not relic_claimed:
-        _open_relic_chamber()
-
-func _move_to(target_index: int) -> void:
+    var start_uv := _screen_uv_from_world(hero.global_position)
+    var path := _find_walk_path(start_uv, target_uv)
+    if path.is_empty():
+        status_label.text = "The broken floor blocks that route."
+        return
     moving = true
-    _refresh_node_markers()
-    var target := NODES[target_index]
     var tween := create_tween()
     tween.set_trans(Tween.TRANS_SINE)
     tween.set_ease(Tween.EASE_IN_OUT)
-    tween.tween_property(hero,"position",target,0.75)
+    for point_uv in path:
+        var target_world := _screen_to_floor(point_uv)
+        target_world.y = 0.03
+        var travel_time := maxf(0.08, hero.global_position.distance_to(target_world) / 4.2)
+        tween.tween_property(hero, "global_position", target_world, travel_time)
     await tween.finished
-    current_node = target_index
     moving = false
-    status_label.text = "Advanced deeper into the Sundered Vault."
-    _refresh_node_markers()
-    _refresh_objective()
+    var final_uv := _screen_uv_from_world(hero.global_position)
+    if _activate_room_interaction(final_uv):
+        return
+    var reached_exit := _exit_near(final_uv)
+    if not reached_exit.is_empty():
+        await _transition_room(reached_exit)
+        return
+    status_label.text = "You move along the worn stone path."
 
-func _refresh_node_markers() -> void:
-    for child in get_children():
-        if child is Area3D and child.is_in_group("dungeon_move_node"):
-            var idx: int = int(child.get_meta("node_index"))
-            var marker := child.get_node_or_null("Marker") as MeshInstance3D
-            if marker:
-                var neighbors: Array = DUNGEON_GRAPH.get(current_node, [])
-                marker.visible = not moving and idx in neighbors
+func _exit_near(point_uv: Vector2) -> Dictionary:
+    for exit_data in ROOM_EXITS.get(current_room, []):
+        if point_uv.distance_to(exit_data.get("point", Vector2.ZERO)) <= 0.055:
+            return exit_data
+    return {}
+
+func _activate_room_interaction(point_uv: Vector2) -> bool:
+    for interaction in ROOM_INTERACTIONS.get(current_room, []):
+        if point_uv.distance_to(interaction.get("point", Vector2.ZERO)) > float(interaction.get("radius", 0.07)):
+            continue
+        match str(interaction.get("id", "")):
+            "guardian":
+                if not sentinel_defeated:
+                    _open_sentinel_encounter()
+                    return true
+            "shrine":
+                if not shrine_used:
+                    _open_shrine()
+                    return true
+            "trap":
+                if not trap_triggered:
+                    _trigger_trap()
+                    return true
+            "relic":
+                if not relic_claimed:
+                    _open_relic_chamber()
+                    return true
+    return false
+
+func _transition_room(exit_data: Dictionary) -> void:
+    var destination := str(exit_data.get("to", "entrance"))
+    var overlay := ColorRect.new()
+    overlay.color = Color(0.01, 0.008, 0.006, 0.0)
+    overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    var canvas := get_node_or_null("DungeonUI") as CanvasLayer
+    if canvas:
+        canvas.add_child(overlay)
+    room_transitioning = true
+    var fade_out := create_tween()
+    fade_out.tween_property(overlay, "color:a", 1.0, 0.16)
+    await fade_out.finished
+    var spawn: Vector2 = exit_data.get("spawn", Vector2(0.50,0.84))
+    _load_room(destination, spawn, false)
+    status_label.text = "Entered %s." % str(ROOM_CONFIGS[destination].get("title", "the vault"))
+    _save_dungeon_state()
+    var fade_in := create_tween()
+    fade_in.tween_property(overlay, "color:a", 0.0, 0.20)
+    await fade_in.finished
+    overlay.queue_free()
+    room_transitioning = false
+    _refresh_objective()
 
 func _open_sentinel_encounter() -> void:
     action_title.text = "Vault Sentinel"
@@ -434,9 +701,10 @@ func _fight_sentinel() -> void:
     if sentinel_piece:
         sentinel_piece.visible = false
     action_panel.visible = false
-    status_label.text = "The Vault Sentinel falls. The inner chamber is open."
+    status_label.text = "The Vault Sentinel falls. The teal arch to Ember Bridge is open."
     _save_campaign_state()
-    await _move_to(2)
+    _save_dungeon_state()
+    _refresh_objective()
 
 func _open_shrine() -> void:
     action_title.text = "Rune Shrine"
@@ -481,8 +749,8 @@ func _open_relic_chamber() -> void:
 func _claim_relic() -> void:
     relic_claimed = true
     hero_xp += 75
-    if relic_glow:
-        relic_glow.visible = false
+    if relic_sprite:
+        relic_sprite.visible = false
     action_panel.visible = false
     status_label.text = "Ember Seal claimed. The first chamber is cleared."
     var loot_id := HeroEquipmentService.claim_reward("dungeon", "sundered_vault")
@@ -502,9 +770,9 @@ func _refresh_objective() -> void:
     if relic_claimed:
         objective_label.text = "OBJECTIVE COMPLETE • Ember Seal recovered • Return to Ashenreach"
     elif sentinel_defeated:
-        objective_label.text = "OBJECTIVE • Navigate the lower halls and reach the Ember Seal"
+        objective_label.text = "OBJECTIVE • Cross the Ember Bridge and recover the Ember Seal"
     else:
-        objective_label.text = "OBJECTIVE • Find a route past the Vault Sentinel"
+        objective_label.text = "OBJECTIVE • Find the Sentinel Gallery; the Ember Bridge is sealed"
 
 func _load_campaign_state() -> void:
     var cfg := ConfigFile.new()
@@ -516,6 +784,9 @@ func _load_campaign_state() -> void:
     var dungeon := ConfigFile.new()
     if dungeon.load("user://sundered_vault_save.cfg") == OK:
         raid_id = int(dungeon.get_value("vault", "raid_id", 0))
+        current_room = str(dungeon.get_value("vault", "current_room", "entrance"))
+        if not ROOM_CONFIGS.has(current_room):
+            current_room = "entrance"
         sentinel_defeated = bool(dungeon.get_value("vault","sentinel_defeated",false))
         relic_claimed = bool(dungeon.get_value("vault","relic_claimed",false))
         ember_seal_effect_applied = bool(dungeon.get_value("vault","ember_seal_effect_applied",false))
@@ -537,6 +808,7 @@ func _save_campaign_state() -> void:
 func _save_dungeon_state() -> void:
     var cfg := ConfigFile.new()
     cfg.set_value("vault", "raid_id", raid_id)
+    cfg.set_value("vault", "current_room", current_room)
     cfg.set_value("vault","sentinel_defeated",sentinel_defeated)
     cfg.set_value("vault","relic_claimed",relic_claimed)
     cfg.set_value("vault","ember_seal_effect_applied",ember_seal_effect_applied)
