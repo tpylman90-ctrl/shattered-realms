@@ -1,6 +1,9 @@
 extends Node3D
 
 const HeroEquipmentService = preload("res://scripts/hero_equipment.gd")
+const VAULT_BACKGROUND: Texture2D = preload("res://assets/dungeons/sundered_vault/sundered_vault_background.png")
+const VAULT_DEPTH_ATLAS: Texture2D = preload("res://assets/dungeons/sundered_vault/sundered_vault_depth_cards.png")
+const DEPTH_CARD_CELL := Vector2i(384, 512)
 
 var camera: Camera3D
 var hero: Area3D
@@ -26,9 +29,9 @@ var action_body: Label
 var action_primary: Button
 var action_secondary: Button
 var sentinel_piece: Node3D
-var relic_glow: MeshInstance3D
-var shrine_glow: MeshInstance3D
-var trap_glow: MeshInstance3D
+var relic_glow: Sprite3D
+var shrine_glow: Sprite3D
+var trap_glow: Sprite3D
 
 const NODES: Array[Vector3] = [
     Vector3(0.0, 0.03, 7.0),
@@ -78,8 +81,29 @@ func _build_environment() -> void:
 
     camera = Camera3D.new()
     camera.position = Vector3(0.0, 0.0, 13.0)
+    camera.fov = 75.0
+    camera.far = 180.0
     camera.current = true
     rig.add_child(camera)
+
+    var background := Sprite3D.new()
+    background.name = "PaintedVaultBackground"
+    background.texture = VAULT_BACKGROUND
+    background.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+    background.shaded = false
+    background.position = Vector3(0.0, 0.0, -60.0)
+    var texture_size := Vector2(VAULT_BACKGROUND.get_size())
+    var visible_size := get_viewport().get_visible_rect().size
+    var aspect := visible_size.x / maxf(visible_size.y, 1.0)
+    var image_aspect := texture_size.x / maxf(texture_size.y, 1.0)
+    if absf(image_aspect - aspect) > 0.01:
+        background.region_enabled = true
+        var crop_height := texture_size.x / aspect
+        background.region_rect = Rect2(0.0, (texture_size.y - crop_height) * 0.5, texture_size.x, crop_height)
+    var distance := 60.0
+    var view_width := 2.0 * distance * tan(deg_to_rad(camera.fov * 0.5)) * aspect
+    background.pixel_size = view_width / texture_size.x
+    camera.add_child(background)
 
     var moon := DirectionalLight3D.new()
     moon.rotation_degrees = Vector3(-55.0, -30.0, 0.0)
@@ -110,53 +134,62 @@ func _add_box(name_value: String, position_value: Vector3, size_value: Vector3, 
     return mesh_instance
 
 func _build_dungeon_geometry() -> void:
-    var stone := _make_material(Color(0.055, 0.065, 0.075))
-    var floor_mat := _make_material(Color(0.075, 0.075, 0.07))
-    var teal := _make_material(Color(0.03, 0.16, 0.17), Color(0.02, 0.85, 0.82), 2.4)
-    var ember := _make_material(Color(0.19, 0.065, 0.025), Color(1.0, 0.22, 0.04), 2.0)
+    var card_stage := Node3D.new()
+    card_stage.name = "PaintedDepthLayers"
+    add_child(card_stage)
 
-    _add_box("Floor", Vector3(0,-0.22,1.0), Vector3(9.5,0.4,16.5), floor_mat)
-    _add_box("LeftWall", Vector3(-4.7,2.1,1.0), Vector3(0.55,4.6,16.5), stone)
-    _add_box("RightWall", Vector3(4.7,2.1,1.0), Vector3(0.55,4.6,16.5), stone)
-    _add_box("BackWall", Vector3(0,2.1,-7.1), Vector3(9.5,4.6,0.55), stone)
-    _add_box("EntryArchTop", Vector3(0,3.25,8.0), Vector3(4.5,1.0,0.75), stone)
-    _add_box("EntryArchL", Vector3(-2.0,1.4,8.0), Vector3(0.75,2.8,0.75), stone)
-    _add_box("EntryArchR", Vector3(2.0,1.4,8.0), Vector3(0.75,2.8,0.75), stone)
+    # Each scenery element is a transparent illustrated card, not generated
+    # block geometry. The fixed camera and real floor depth handle scale/occlusion.
+    for z in [5.8, 1.7, -3.3]:
+        _make_depth_card(card_stage, "BasaltPillarL", 0, Vector3(-3.65, 0.0, z), 4.4)
+        _make_depth_card(card_stage, "BasaltPillarR", 0, Vector3(3.65, 0.0, z), 4.4)
 
-    for z in [5.5, 1.2, -3.1]:
-        _add_box("PillarL_%s" % str(z), Vector3(-3.3,1.45,z), Vector3(0.8,2.9,0.8), stone)
-        _add_box("PillarR_%s" % str(z), Vector3(3.3,1.45,z), Vector3(0.8,2.9,0.8), stone)
+    _make_depth_card(card_stage, "VaultArch", 2, Vector3(0.0, 0.0, -6.7), 5.0)
+    for z in [4.1, -0.5]:
+        _make_depth_card(card_stage, "RuneSconceL", 1, Vector3(-3.75, 0.0, z), 1.9)
+        _make_depth_card(card_stage, "RuneSconceR", 1, Vector3(3.75, 0.0, z), 1.9)
 
-    for z in [4.3, -0.2, -4.7]:
-        var glow_l := _add_box("RuneL_%s" % str(z), Vector3(-4.34,1.45,z), Vector3(0.08,0.7,0.7), teal)
-        var glow_r := _add_box("RuneR_%s" % str(z), Vector3(4.34,1.45,z), Vector3(0.08,0.7,0.7), teal)
-        glow_l.rotation_degrees.z = 45.0
-        glow_r.rotation_degrees.z = 45.0
+    for z in [0.7, -4.3]:
+        _make_depth_card(card_stage, "EmberBrazierL", 3, Vector3(-3.35, 0.0, z), 2.1)
+        _make_depth_card(card_stage, "EmberBrazierR", 3, Vector3(3.35, 0.0, z), 2.1)
 
-    var chamber := _add_box("RelicDais", Vector3(0.0,0.2,-5.3), Vector3(3.0,0.4,2.2), stone)
-    chamber.rotation_degrees.y = 0.0
-    relic_glow = _add_box("RelicGlow", Vector3(0.0,0.85,-5.3), Vector3(0.75,1.0,0.75), ember)
+    _make_depth_card(card_stage, "ObsidianCrystalL", 4, Vector3(-3.35, 0.0, -1.5), 2.3)
+    _make_depth_card(card_stage, "ObsidianCrystalR", 4, Vector3(3.35, 0.0, -1.5), 2.3)
+    _make_depth_card(card_stage, "BrokenBridgeL", 6, Vector3(-2.45, 0.0, 3.6), 2.2)
+    _make_depth_card(card_stage, "BrokenBridgeR", 6, Vector3(2.45, 0.0, 3.6), 2.2)
+    _make_depth_card(card_stage, "ForegroundRubbleL", 5, Vector3(-3.55, 0.0, 7.5), 1.8)
+    _make_depth_card(card_stage, "ForegroundRubbleR", 5, Vector3(3.55, 0.0, 7.5), 1.8)
+
+    shrine_glow = _make_depth_card(card_stage, "ShrineRuneCard", 1, NODES[3], 1.9)
+    shrine_glow.visible = not shrine_used
+    trap_glow = _make_depth_card(card_stage, "TrapEmberCard", 3, NODES[4], 1.6)
+    trap_glow.visible = not trap_triggered
+    relic_glow = _make_depth_card(card_stage, "RelicCrystalCard", 4, NODES[5], 2.5)
     relic_glow.visible = not relic_claimed
 
-    shrine_glow = _add_box("ShrineRune", Vector3(2.4,0.08,-0.8), Vector3(1.25,0.08,1.25), teal)
-    shrine_glow.visible = not shrine_used
 
-    trap_glow = _add_box("TrapRune", Vector3(0.0,0.07,-3.3), Vector3(1.6,0.06,1.2), ember)
-    trap_glow.visible = not trap_triggered
-
-    var teal_light := OmniLight3D.new()
-    teal_light.position = Vector3(0.0,2.2,-1.0)
-    teal_light.light_color = Color(0.05,0.85,0.78)
-    teal_light.light_energy = 4.0
-    teal_light.omni_range = 9.0
-    add_child(teal_light)
-
-    var ember_light := OmniLight3D.new()
-    ember_light.position = Vector3(0.0,1.6,-5.3)
-    ember_light.light_color = Color(1.0,0.18,0.035)
-    ember_light.light_energy = 5.0
-    ember_light.omni_range = 5.5
-    add_child(ember_light)
+func _make_depth_card(parent: Node3D, node_name: String, cell: int, floor_position: Vector3, world_height: float) -> Sprite3D:
+    var card := Sprite3D.new()
+    card.name = node_name
+    card.texture = VAULT_DEPTH_ATLAS
+    card.region_enabled = true
+    var column := cell % 4
+    var row := floori(float(cell) / 4.0)
+    card.region_rect = Rect2(
+        float(column * DEPTH_CARD_CELL.x),
+        float(row * DEPTH_CARD_CELL.y),
+        float(DEPTH_CARD_CELL.x),
+        float(DEPTH_CARD_CELL.y)
+    )
+    card.centered = true
+    card.position = floor_position + Vector3.UP * world_height * 0.5
+    card.pixel_size = world_height / float(DEPTH_CARD_CELL.y)
+    card.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+    card.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR
+    card.shaded = false
+    card.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    parent.add_child(card)
+    return card
 
 func _build_hero() -> void:
     hero = Area3D.new()
@@ -237,39 +270,13 @@ func _build_sentinel_visual() -> void:
     sentinel_piece.visible = not sentinel_defeated
     add_child(sentinel_piece)
 
-    var body := MeshInstance3D.new()
-    var mesh := CapsuleMesh.new()
-    mesh.radius = 0.48
-    mesh.height = 1.75
-    mesh.radial_segments = 14
-    mesh.rings = 7
-    body.mesh = mesh
-    body.position.y = 0.88
-    body.material_override = _make_material(
-        Color(0.18,0.07,0.035),
-        Color(1.0,0.12,0.025),
-        1.8
-    )
-    sentinel_piece.add_child(body)
-
-    var ring := MeshInstance3D.new()
-    var torus := TorusMesh.new()
-    torus.inner_radius = 0.55
-    torus.outer_radius = 0.66
-    ring.mesh = torus
-    ring.position.y = 0.035
-    ring.material_override = _make_material(
-        Color(0.42,0.06,0.025),
-        Color(1.0,0.10,0.02),
-        2.1
-    )
-    sentinel_piece.add_child(ring)
+    _make_depth_card(sentinel_piece, "SentinelIllustration", 7, Vector3.ZERO, 2.8)
 
     var label := Label3D.new()
     label.text = "VAULT SENTINEL"
     label.font_size = 16
     label.pixel_size = 0.012
-    label.position = Vector3(0.0,1.85,0.0)
+    label.position = Vector3(0.0, 3.0, 0.0)
     label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
     label.no_depth_test = true
     sentinel_piece.add_child(label)
