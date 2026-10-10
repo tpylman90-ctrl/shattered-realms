@@ -20,9 +20,9 @@ func _ready() -> void:
 	camera.fov = 44.0
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
 	camera.position = Vector3(0.0, 4.0, 8.0)
+	add_child(camera)
 	camera.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
 	camera.current = true
-	add_child(camera)
 
 	walk_region = NavigationRegion3D.new()
 	walk_region.name = "CityWalkmesh"
@@ -32,9 +32,6 @@ func _ready() -> void:
 
 func set_view_size(control_size: Vector2) -> void:
 	_view_size = Vector2(maxf(1.0, control_size.x), maxf(1.0, control_size.y))
-	var viewport := get_viewport() as SubViewport
-	if viewport:
-		viewport.size = Vector2i(maxi(1, roundi(_view_size.x)), maxi(1, roundi(_view_size.y)))
 	camera.keep_aspect = Camera3D.KEEP_HEIGHT
 	_rebuild_walkmesh()
 
@@ -131,7 +128,6 @@ func _rebuild_walkmesh() -> void:
 	var mesh := NavigationMesh.new()
 	mesh.agent_radius = 0.0
 	mesh.agent_height = 1.7
-	mesh.edge_connection_margin = 0.20
 	var vertices := PackedVector3Array()
 	var navigation_polygons: Array[PackedInt32Array] = []
 	for normalized_polygon in _walkable_polygons:
