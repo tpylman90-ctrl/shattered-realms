@@ -20,6 +20,66 @@ const CITY_SCREENS := {
 	"keep": {"art": "res://assets/cities/ashenreach/keep_hall.webp", "title": "ASHENREACH KEEP", "district": "THE CITADEL", "spawn": Vector2(0.52, 0.76)},
 	"gate": {"art": "res://assets/cities/ashenreach/outer_gate.webp", "title": "THE OUTER GATE", "district": "THE FRONTIER WARD", "spawn": Vector2(0.50, 0.76)}
 }
+const STORMCROWN_SCREENS := {
+	"plaza": {"art": "res://assets/cities/stormcrown_mountains/stormcrown_plaza.webp", "title": "STORMCROWN CROSSROADS", "district": "THE HIGH WARD", "spawn": Vector2(0.50, 0.75)},
+	"market": {"art": "res://assets/cities/stormcrown_mountains/stormcrown_market.webp", "title": "THUNDERMARKET", "district": "THE COMMERCE TERRACE", "spawn": Vector2(0.50, 0.75)},
+	"forge": {"art": "res://assets/cities/stormcrown_mountains/thunder_forge.webp", "title": "THE THUNDER FORGE", "district": "THE FOUNDRY WARD", "spawn": Vector2(0.50, 0.75)},
+	"weapons": {"art": "res://assets/cities/stormcrown_mountains/weapon_shop.webp", "title": "SKYHAMMER WEAPONS", "district": "THE COMMERCE TERRACE", "spawn": Vector2(0.50, 0.75)},
+	"armor": {"art": "res://assets/cities/stormcrown_mountains/armor_shop.webp", "title": "THE IRON MANTLE", "district": "THE COMMERCE TERRACE", "spawn": Vector2(0.50, 0.75)},
+	"relics": {"art": "res://assets/cities/stormcrown_mountains/rune_shop.webp", "title": "THE RUNEKEEPER'S VAULT", "district": "THE ARCANE TERRACE", "spawn": Vector2(0.50, 0.75)},
+	"apothecary": {"art": "res://assets/cities/stormcrown_mountains/potion_shop.webp", "title": "THE BLUE VIAL", "district": "THE ARCANE TERRACE", "spawn": Vector2(0.50, 0.75)},
+	"inn": {"art": "res://assets/cities/stormcrown_mountains/cloudrest_inn.webp", "title": "THE CLOUDREST INN & BAR", "district": "THE LOWER KEEP", "spawn": Vector2(0.50, 0.75)},
+	"barracks": {"art": "res://assets/cities/stormcrown_mountains/barracks.webp", "title": "THE STORMGUARD HALL", "district": "THE GARRISON", "spawn": Vector2(0.50, 0.75)},
+	"keep": {"art": "res://assets/boards/concept/stormcrown_keep.webp", "title": "STORMCROWN KEEP", "district": "THE CROWN CITADEL", "spawn": Vector2(0.50, 0.75)},
+	"beacon": {"art": "res://assets/cities/stormcrown_mountains/peak_beacon.webp", "title": "THE PEAK BEACON", "district": "THE SUMMIT SHRINE", "spawn": Vector2(0.50, 0.75)}
+}
+const STORMCROWN_TRANSITIONS := {
+	"plaza": [
+		{"to": "market", "label": "THUNDERMARKET", "point": Vector2(0.22, 0.58), "radius": Vector2(0.055, 0.06), "spawn": Vector2(0.50, 0.75)},
+		{"to": "inn", "label": "CLOUDREST INN & BAR", "point": Vector2(0.79, 0.55), "radius": Vector2(0.055, 0.06), "spawn": Vector2(0.50, 0.75)},
+		{"to": "barracks", "label": "STORMGUARD HALL", "point": Vector2(0.51, 0.22), "radius": Vector2(0.075, 0.045), "spawn": Vector2(0.50, 0.75)},
+		{"to": "keep", "label": "STORMCROWN KEEP", "point": Vector2(0.81, 0.28), "radius": Vector2(0.06, 0.05), "spawn": Vector2(0.50, 0.70)},
+		{"to": "territory", "label": "MOUNTAIN ROAD", "point": Vector2(0.50, 0.75), "radius": Vector2(0.11, 0.035), "spawn": Vector2.ZERO}
+	],
+	"market": [
+		{"to": "plaza", "label": "HIGH WARD", "point": Vector2(0.50, 0.17), "radius": Vector2(0.07, 0.05), "spawn": Vector2(0.22, 0.58)},
+		{"to": "forge", "label": "THUNDER FORGE", "point": Vector2(0.15, 0.70), "radius": Vector2(0.055, 0.045), "spawn": Vector2(0.50, 0.75)},
+		{"to": "weapons", "label": "SKYHAMMER WEAPONS", "point": Vector2(0.32, 0.65), "radius": Vector2(0.045, 0.05), "spawn": Vector2(0.50, 0.75)},
+		{"to": "armor", "label": "THE IRON MANTLE", "point": Vector2(0.68, 0.65), "radius": Vector2(0.045, 0.05), "spawn": Vector2(0.50, 0.75)},
+		{"to": "apothecary", "label": "THE BLUE VIAL", "point": Vector2(0.84, 0.70), "radius": Vector2(0.05, 0.045), "spawn": Vector2(0.50, 0.75)},
+		{"to": "relics", "label": "RUNEKEEPER'S VAULT", "point": Vector2(0.50, 0.34), "radius": Vector2(0.06, 0.05), "spawn": Vector2(0.50, 0.75)}
+	],
+	"forge": [{"to": "market", "label": "BACK TO THUNDERMARKET", "point": Vector2(0.50, 0.23), "radius": Vector2(0.10, 0.055), "spawn": Vector2(0.15, 0.70)}],
+	"weapons": [{"to": "market", "label": "BACK TO THUNDERMARKET", "point": Vector2(0.50, 0.20), "radius": Vector2(0.10, 0.055), "spawn": Vector2(0.32, 0.65)}],
+	"armor": [{"to": "market", "label": "BACK TO THUNDERMARKET", "point": Vector2(0.50, 0.20), "radius": Vector2(0.10, 0.055), "spawn": Vector2(0.68, 0.65)}],
+	"relics": [
+		{"to": "market", "label": "BACK TO THUNDERMARKET", "point": Vector2(0.50, 0.20), "radius": Vector2(0.10, 0.055), "spawn": Vector2(0.50, 0.34)},
+		{"to": "apothecary", "label": "THE BLUE VIAL", "point": Vector2(0.68, 0.55), "radius": Vector2(0.06, 0.06), "spawn": Vector2(0.84, 0.70)}
+	],
+	"apothecary": [{"to": "market", "label": "BACK TO THUNDERMARKET", "point": Vector2(0.50, 0.20), "radius": Vector2(0.10, 0.055), "spawn": Vector2(0.84, 0.70)}],
+	"inn": [{"to": "plaza", "label": "HIGH WARD", "point": Vector2(0.40, 0.35), "radius": Vector2(0.07, 0.06), "spawn": Vector2(0.79, 0.55)}],
+	"barracks": [
+		{"to": "plaza", "label": "HIGH WARD", "point": Vector2(0.50, 0.22), "radius": Vector2(0.09, 0.055), "spawn": Vector2(0.51, 0.22)},
+		{"to": "keep", "label": "CROWN CITADEL", "point": Vector2(0.63, 0.50), "radius": Vector2(0.06, 0.06), "spawn": Vector2(0.50, 0.68)}
+	],
+	"keep": [
+		{"to": "plaza", "label": "HIGH WARD", "point": Vector2(0.40, 0.42), "radius": Vector2(0.05, 0.06), "spawn": Vector2(0.81, 0.28)},
+		{"to": "barracks", "label": "STORMGUARD HALL", "point": Vector2(0.50, 0.73), "radius": Vector2(0.10, 0.03), "spawn": Vector2(0.63, 0.50)},
+		{"to": "beacon", "label": "ASCEND TO THE PEAK BEACON", "point": Vector2(0.63, 0.50), "radius": Vector2(0.05, 0.06), "spawn": Vector2(0.50, 0.75)}
+	],
+	"beacon": [
+		{"to": "keep", "label": "RETURN TO THE KEEP", "point": Vector2(0.50, 0.22), "radius": Vector2(0.10, 0.035), "spawn": Vector2(0.63, 0.50)},
+		{"to": "territory", "label": "DESCEND TO THE MOUNTAIN ROAD", "point": Vector2(0.50, 0.75), "radius": Vector2(0.11, 0.035), "spawn": Vector2.ZERO}
+	]
+}
+const STORMCROWN_POIS := {
+	"plaza": [{"id": "storm_registry", "label": "READ THE PASS REGISTRY", "kind": "lore", "point": Vector2(0.40, 0.68), "text": "The bronze registry lists three passes now cut off by the unnatural storm. The oldest entry names a beacon signal that has not been seen in weeks."}],
+	"market": [{"id": "grounding_chain", "label": "INSPECT THE GROUNDING CHAIN", "kind": "lore", "point": Vector2(0.59, 0.67), "text": "A thick copper chain carries stray lightning down into the granite. Its links bear the same rune as the summit beacon."}],
+	"forge": [{"id": "storm_hammer", "label": "EXAMINE THE STORM HAMMER", "kind": "interaction", "point": Vector2(0.51, 0.60), "text": "The giant hammer is held at rest by a cracked iron pin. One more clean strike could reshape a weapon—or split the anvil."}],
+	"relics": [{"id": "unlit_rune", "label": "STUDY THE UNLIT RUNE", "kind": "lore", "point": Vector2(0.65, 0.55), "text": "The rune remains cold even as lightning coils around its copper ring. The beacon's broken pattern is missing one stroke."}],
+	"barracks": [{"id": "ridge_map", "label": "STUDY THE RIDGE MAP", "kind": "lore", "point": Vector2(0.55, 0.54), "text": "A fresh mark appears on the eastern ridge every night. The guards say the storm is moving uphill against the wind."}],
+	"beacon": [{"id": "beacon_socket", "label": "INSPECT THE BEACON SOCKET", "kind": "interaction", "point": Vector2(0.50, 0.60), "text": "A shaped socket sits beneath the bronze crown. Something forged from stormglass could restore the beacon's missing rune."}]
+}
 const CITY_TRANSITIONS := {
 	"plaza": [
 		{"to": "market", "label": "CINDER MARKET", "point": Vector2(0.25, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.37, 0.78)},
@@ -521,16 +581,16 @@ func _close_selection() -> void:
 
 func _show_selection_map() -> void:
 	_clear_selection_content()
-	selection_status.text = "Nearby doors and streets from %s. Choose one to walk there." % str(CITY_SCREENS.get(current_screen, {}).get("title", current_screen)).capitalize()
+	selection_status.text = "Nearby doors and streets from %s. Choose one to walk there." % str(_city_screens().get(current_screen, {}).get("title", current_screen)).capitalize()
 	var local_transitions := _transitions_for_screen(current_screen)
 	selection_content.add_child(_label("DISTRICT ROUTES", 15, Color("e6bd78")))
 	for transition in local_transitions:
 		var destination := str(transition.get("to", ""))
-		var title := str(CITY_SCREENS.get(destination, {}).get("title", "THE FRONTIER" if destination == "territory" else destination.to_upper()))
+		var title := str(_city_screens().get(destination, {}).get("title", "THE FRONTIER" if destination == "territory" else destination.to_upper()))
 		var route_button := _button("WALK TO  •  %s" % title, _travel_to_screen.bind(destination))
 		route_button.custom_minimum_size.y = 48
 		selection_content.add_child(route_button)
-	var local_pois: Array = CITY_POIS.get(current_screen, [])
+	var local_pois: Array = _pois_for_screen(current_screen)
 	if not local_pois.is_empty():
 		selection_content.add_child(_label("STREET INTERACTIONS", 15, Color("e6bd78")))
 		for poi in local_pois:
@@ -561,7 +621,7 @@ func _travel_to_screen(screen_id: String) -> void:
 
 
 func _travel_to_poi(poi_id: String) -> void:
-	for poi in CITY_POIS.get(current_screen, []):
+	for poi in _pois_for_screen(current_screen):
 		if str(poi.get("id", "")) != poi_id:
 			continue
 		_close_selection()
@@ -571,7 +631,19 @@ func _travel_to_poi(poi_id: String) -> void:
 
 
 func _transitions_for_screen(screen_id: String) -> Array:
-	return CITY_TRANSITIONS.get(screen_id, [])
+	return _city_transitions().get(screen_id, [])
+
+
+func _city_screens() -> Dictionary:
+	return STORMCROWN_SCREENS if region_id == "stormcrown_mountains" else CITY_SCREENS
+
+
+func _city_transitions() -> Dictionary:
+	return STORMCROWN_TRANSITIONS if region_id == "stormcrown_mountains" else CITY_TRANSITIONS
+
+
+func _pois_for_screen(screen_id: String) -> Array:
+	return STORMCROWN_POIS.get(screen_id, []) if region_id == "stormcrown_mountains" else CITY_POIS.get(screen_id, [])
 
 
 func _transition_for_destination(screen_id: String, destination: String) -> Dictionary:
@@ -940,7 +1012,7 @@ func _update_minimap_markers() -> void:
 		hero_point = Vector2(player_sprite.position.x / maxf(1.0, size.x), player_sprite.position.y / maxf(1.0, size.y))
 	for transition in _transitions_for_screen(current_screen):
 		markers.append({"point": transition.get("point", Vector2(0.5, 0.5)), "color": Color("d0aa69")})
-	for poi in CITY_POIS.get(current_screen, []):
+	for poi in _pois_for_screen(current_screen):
 		markers.append({"point": poi.get("point", Vector2(0.5, 0.5)), "color": Color("f08155")})
 	for index in range(mini_map_pois.size()):
 		var poi := mini_map_pois[index]
@@ -981,9 +1053,12 @@ func _circle_style(fill: Color, border: Color, radius: int) -> StyleBoxFlat:
 
 
 func _city_background() -> Texture2D:
-	var screen_art := "res://assets/cities/%s/%s.jpg" % [region_id, current_screen]
-	if ResourceLoader.exists(screen_art):
+	var screen_art := str(_city_screens().get(current_screen, {}).get("art", ""))
+	if not screen_art.is_empty() and ResourceLoader.exists(screen_art):
 		return load(screen_art)
+	var legacy_screen_art := "res://assets/cities/%s/%s.jpg" % [region_id, current_screen]
+	if ResourceLoader.exists(legacy_screen_art):
+		return load(legacy_screen_art)
 	var direct_path := "res://assets/cities/%s.png" % region_id
 	if ResourceLoader.exists(direct_path):
 		return load(direct_path)
@@ -1033,21 +1108,22 @@ func _build_city_hero() -> void:
 
 func _build_city_embers() -> void:
 	city_embers = CPUParticles2D.new()
-	city_embers.name = "VolcanicEmbers"
+	city_embers.name = "CityWeather"
 	city_embers.z_index = 1
-	city_embers.amount = 20
+	city_embers.amount = 30 if region_id == "stormcrown_mountains" else 20
 	city_embers.lifetime = 4.5
 	city_embers.preprocess = 2.0
 	city_embers.emitting = true
-	city_embers.direction = Vector2(-0.18, -1.0)
-	city_embers.spread = 24.0
-	city_embers.gravity = Vector2(-5.0, -28.0)
-	city_embers.initial_velocity_min = 8.0
-	city_embers.initial_velocity_max = 26.0
-	city_embers.scale_amount_min = 0.7
-	city_embers.scale_amount_max = 1.4
-	city_embers.color = Color(1.0, 0.39, 0.10, 0.64)
-	city_embers.texture = _build_ember_texture()
+	city_embers.direction = Vector2(0.16, 1.0) if region_id == "stormcrown_mountains" else Vector2(-0.18, -1.0)
+	city_embers.spread = 32.0 if region_id == "stormcrown_mountains" else 24.0
+	city_embers.gravity = Vector2(14.0, 18.0) if region_id == "stormcrown_mountains" else Vector2(-5.0, -28.0)
+	city_embers.initial_velocity_min = 9.0 if region_id == "stormcrown_mountains" else 8.0
+	city_embers.initial_velocity_max = 22.0 if region_id == "stormcrown_mountains" else 26.0
+	city_embers.scale_amount_min = 0.5 if region_id == "stormcrown_mountains" else 0.7
+	city_embers.scale_amount_max = 1.0 if region_id == "stormcrown_mountains" else 1.4
+	city_embers.color = Color(0.66, 0.86, 1.0, 0.46) if region_id == "stormcrown_mountains" else Color(1.0, 0.39, 0.10, 0.64)
+	var weather_color := Color(0.80, 0.94, 1.0) if region_id == "stormcrown_mountains" else Color(1.0, 0.67, 0.26)
+	city_embers.texture = _build_ember_texture(weather_color)
 	city_embers.z_as_relative = false
 	city_embers.position = Vector2(size.x * 0.5, size.y * 0.82)
 	city_embers.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
@@ -1077,14 +1153,14 @@ func _build_city_walkspace() -> void:
 	city_room_3d.set_view_size(size)
 
 
-func _build_ember_texture() -> Texture2D:
+func _build_ember_texture(color: Color = Color(1.0, 0.67, 0.26)) -> Texture2D:
 	var image := Image.create(5, 5, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0.0, 0.0, 0.0, 0.0))
 	for y in range(5):
 		for x in range(5):
 			var distance := Vector2(x - 2, y - 2).length()
 			if distance <= 1.8:
-				image.set_pixel(x, y, Color(1.0, 0.67, 0.26, clampf(1.0 - distance * 0.25, 0.0, 1.0)))
+				image.set_pixel(x, y, Color(color.r, color.g, color.b, clampf(1.0 - distance * 0.25, 0.0, 1.0)))
 	return ImageTexture.create_from_image(image)
 
 
@@ -1103,7 +1179,7 @@ func _update_city_perspective() -> void:
 	if city_embers:
 		city_embers.position = Vector2(size.x * 0.5, size.y * 0.82)
 		city_embers.emission_rect_extents = Vector2(size.x * 0.58, size.y * 0.42)
-		city_embers.emitting = region_id == "ashen_wastes"
+		city_embers.emitting = region_id in ["ashen_wastes", "stormcrown_mountains"]
 	if city_room_3d:
 		city_room_3d.sync_actor(player_sprite, player_sprite.texture, player_sprite.frame, player_sprite.position)
 		for resident in npc_sprites:
@@ -1225,6 +1301,51 @@ func _build_magma_sprite_sheet(variant: String) -> Texture2D:
 	var cloth_trim := Color("9a5535")
 	var accessory := Color("a98250")
 	match variant:
+		"storm_warden":
+			skin = Color("756c64")
+			skin_lit = Color("b3a998")
+			ember = Color("86d9e8")
+			ember_bright = Color("e1fbff")
+			hair = Color("d5d4ce")
+			cloth = Color("263645")
+			cloth_trim = Color("aa8952")
+			accessory = Color("91d2df")
+		"storm_guard":
+			skin = Color("ad8770")
+			skin_lit = Color("d2ab8e")
+			ember = Color("77c5d8")
+			ember_bright = Color("d5f5ff")
+			hair = Color("443831")
+			cloth = Color("34414b")
+			cloth_trim = Color("b49358")
+			accessory = Color("829da4")
+		"storm_smith":
+			skin = Color("b48b70")
+			skin_lit = Color("d8b498")
+			ember = Color("e3a854")
+			ember_bright = Color("ffe2a0")
+			hair = Color("42342c")
+			cloth = Color("514139")
+			cloth_trim = Color("bd9661")
+			accessory = Color("81c7d5")
+		"storm_scholar":
+			skin = Color("ba9278")
+			skin_lit = Color("dec1a6")
+			ember = Color("7dcde0")
+			ember_bright = Color("e5fbff")
+			hair = Color("4a3b3b")
+			cloth = Color("343e51")
+			cloth_trim = Color("927cb8")
+			accessory = Color("b7d4dc")
+		"mountain_guide":
+			skin = Color("bb9276")
+			skin_lit = Color("e0bca0")
+			ember = Color("9bc4d1")
+			ember_bright = Color("f0fbff")
+			hair = Color("655143")
+			cloth = Color("465248")
+			cloth_trim = Color("c49b5d")
+			accessory = Color("8ab7c2")
 		"ash_elder":
 			hair = Color("9b8a79")
 			cloth = Color("48443f")
@@ -1309,50 +1430,72 @@ func _add_hotspot(id: String, label_text: String, point: Vector2) -> void:
 func _refresh_residents() -> void:
 	for resident in npc_sprites:
 		if is_instance_valid(resident):
+			if city_room_3d:
+				city_room_3d.remove_actor(resident)
 			resident.queue_free()
 	npc_sprites.clear()
 	npc_textures.clear()
-	if region_id != "ashen_wastes":
+	if region_id != "ashen_wastes" and region_id != "stormcrown_mountains":
 		return
 	var residents: Array[Dictionary] = []
-	match current_screen:
-		"plaza":
-			residents = [
-				{"talk": "steward", "point": Vector2(0.53, 0.55), "look": "ash_elder"},
-				{"point": Vector2(0.35, 0.63), "look": "ember_scout"},
-				{"point": Vector2(0.68, 0.61), "look": "forge_guard"}
+	if region_id == "stormcrown_mountains":
+		match current_screen:
+			"plaza":
+				residents = [
+					{"talk": "storm_steward", "point": Vector2(0.53, 0.57), "look": "storm_guard"},
+					{"talk": "pass_guide", "point": Vector2(0.31, 0.68), "look": "mountain_guide"}
+				]
+			"market": residents = [{"talk": "storm_merchant", "point": Vector2(0.55, 0.59), "look": "mountain_guide"}]
+			"forge": residents = [{"talk": "storm_smith", "point": Vector2(0.53, 0.59), "look": "storm_smith"}]
+			"weapons": residents = [{"talk": "weaponwright", "point": Vector2(0.56, 0.60), "look": "storm_smith"}]
+			"armor": residents = [{"talk": "armorer", "point": Vector2(0.54, 0.60), "look": "storm_guard"}]
+			"relics": residents = [{"talk": "runekeeper", "point": Vector2(0.55, 0.59), "look": "storm_scholar"}]
+			"apothecary": residents = [{"talk": "apothecary", "point": Vector2(0.54, 0.60), "look": "storm_scholar"}]
+			"inn": residents = [
+				{"talk": "storm_innkeeper", "point": Vector2(0.70, 0.58), "look": "mountain_guide"},
+				{"point": Vector2(0.35, 0.65), "look": "storm_guard"}
 			]
-		"market":
-			residents = [
-				{"talk": "merchant", "point": Vector2(0.62, 0.54), "look": "ember_scout"},
-				{"point": Vector2(0.34, 0.65), "look": "ash_elder"},
-				{"point": Vector2(0.78, 0.62), "look": "forge_guard"}
-			]
-		"living":
-			residents = [
-				{"talk": "innkeeper", "point": Vector2(0.70, 0.60), "look": "ash_elder"},
-				{"point": Vector2(0.35, 0.69), "look": "forge_guard"},
-				{"point": Vector2(0.55, 0.73), "look": "ember_scout"}
-			]
-		"forge":
-			residents = [
-				{"talk": "smith", "point": Vector2(0.59, 0.57), "look": "forge_guard"},
-				{"point": Vector2(0.33, 0.63), "look": "ash_elder"}
-			]
-		"inn":
-			residents = [
-				{"talk": "innkeeper", "point": Vector2(0.72, 0.54), "look": "ember_scout"},
-				{"point": Vector2(0.34, 0.65), "look": "ash_elder"},
-				{"point": Vector2(0.54, 0.64), "look": "forge_guard"}
-			]
-		"keep":
-			residents = [
-				{"talk": "steward", "point": Vector2(0.52, 0.57), "look": "ash_elder"},
-				{"point": Vector2(0.32, 0.64), "look": "forge_guard"},
-				{"point": Vector2(0.72, 0.64), "look": "ember_scout"}
-			]
-		"gate":
-			residents = [{"talk": "gate_guard", "point": Vector2(0.68, 0.58), "look": "forge_guard"}]
+			"barracks": residents = [{"talk": "captain_elska", "point": Vector2(0.52, 0.59), "look": "storm_guard"}]
+			"keep", "beacon": residents = [{"talk": "thorvald", "point": Vector2(0.55, 0.59), "look": "storm_warden"}]
+	else:
+		match current_screen:
+			"plaza":
+				residents = [
+					{"talk": "steward", "point": Vector2(0.53, 0.55), "look": "ash_elder"},
+					{"point": Vector2(0.35, 0.63), "look": "ember_scout"},
+					{"point": Vector2(0.68, 0.61), "look": "forge_guard"}
+				]
+			"market":
+				residents = [
+					{"talk": "merchant", "point": Vector2(0.62, 0.54), "look": "ember_scout"},
+					{"point": Vector2(0.34, 0.65), "look": "ash_elder"},
+					{"point": Vector2(0.78, 0.62), "look": "forge_guard"}
+				]
+			"living":
+				residents = [
+					{"talk": "innkeeper", "point": Vector2(0.70, 0.60), "look": "ash_elder"},
+					{"point": Vector2(0.35, 0.69), "look": "forge_guard"},
+					{"point": Vector2(0.55, 0.73), "look": "ember_scout"}
+				]
+			"forge":
+				residents = [
+					{"talk": "smith", "point": Vector2(0.59, 0.57), "look": "forge_guard"},
+					{"point": Vector2(0.33, 0.63), "look": "ash_elder"}
+				]
+			"inn":
+				residents = [
+					{"talk": "innkeeper", "point": Vector2(0.72, 0.54), "look": "ember_scout"},
+					{"point": Vector2(0.34, 0.65), "look": "ash_elder"},
+					{"point": Vector2(0.54, 0.64), "look": "forge_guard"}
+				]
+			"keep":
+				residents = [
+					{"talk": "steward", "point": Vector2(0.52, 0.57), "look": "ash_elder"},
+					{"point": Vector2(0.32, 0.64), "look": "forge_guard"},
+					{"point": Vector2(0.72, 0.64), "look": "ember_scout"}
+				]
+			"gate":
+				residents = [{"talk": "gate_guard", "point": Vector2(0.68, 0.58), "look": "forge_guard"}]
 	for resident in residents:
 		var point: Vector2 = resident.get("point", Vector2(0.5, 0.6))
 		var look := str(resident.get("look", "ember_scout"))
@@ -1376,6 +1519,56 @@ func _refresh_residents() -> void:
 
 func _show_city_dialogue(npc_id: String) -> void:
 	var conversations := {
+		"thorvald": {
+			"name": "THORVALD • THE PEAK SENTINEL",
+			"portrait": "steward",
+			"text": "The beacon's rhythm is broken. I can feel the storm pulling against the mountain's old wards. Help me restore the signal, and the passes will answer again."
+		},
+		"storm_steward": {
+			"name": "STEWARD HALLEN • HIGH WARD",
+			"portrait": "steward",
+			"text": "Stormcrown was built to outlast the weather. The roads are still open, but the passes need a working beacon before the caravans risk the climb."
+		},
+		"pass_guide": {
+			"name": "MIRA • PASS GUIDE",
+			"portrait": "steward",
+			"text": "The wind has turned uphill for three nights. If you're heading toward the peak, follow the brass markers and keep to the stone path."
+		},
+		"storm_smith": {
+			"name": "ORIN • THUNDER FORGEMASTER",
+			"portrait": "smith",
+			"text": "We quench steel in meltwater and ground the hammer through copper. Anything bearing the old beacon rune will take a charge—if the metal is sound."
+		},
+		"weaponwright": {
+			"name": "TESSA • WEAPONWRIGHT",
+			"portrait": "smith",
+			"text": "A hammer must carry its weight through the whole swing. Take the practice one if you like. The weapon racks are open to anyone keeping the passes safe."
+		},
+		"armorer": {
+			"name": "BROHM • ARMORER",
+			"portrait": "smith",
+			"text": "Storm plates need flexible joints. A rigid harness makes a brave guard into a statue the first time the ridge wind catches him."
+		},
+		"runekeeper": {
+			"name": "ISEL • RUNEKEEPER",
+			"portrait": "steward",
+			"text": "The vault's oldest rings were made to listen for the beacon. One tone is missing. Find its matching mark and the storm may release the summit."
+		},
+		"apothecary": {
+			"name": "NARA • APOTHECARY",
+			"portrait": "innkeeper",
+			"text": "Warming tonic for the climb, blue salve for lightning burns, and a clear draught for fog. The storm has made all three popular."
+		},
+		"storm_innkeeper": {
+			"name": "YARA • CLOUDREST INNKEEPER",
+			"portrait": "innkeeper",
+			"text": "Set your wet cloak by the hearth. The bar has stew, hot cider, and a quiet corner. Rest is 25 gold; no one climbs well on an empty stomach."
+		},
+		"captain_elska": {
+			"name": "CAPTAIN ELSKA • STORMGUARD",
+			"portrait": "steward",
+			"text": "My guards can hold the lower pass, but the ridge signal must be restored before we can patrol beyond the crown. The map marks the safest ascent."
+		},
 		"innkeeper": {
 			"name": "MARA • INNKEEPER",
 			"portrait": "innkeeper",
@@ -1474,7 +1667,7 @@ func _walk_to_location(location_id: String, destination: Vector2) -> void:
 		pending_location = location_id
 	elif location_id.begins_with("poi:"):
 		var found_local_poi := false
-		for poi in CITY_POIS.get(current_screen, []):
+		for poi in _pois_for_screen(current_screen):
 			if str(poi.get("id", "")) == location_id.trim_prefix("poi:"):
 				found_local_poi = true
 				break
@@ -1569,6 +1762,35 @@ func _on_city_resized() -> void:
 
 func _configure_city_walkable_areas() -> void:
 	walkable_polygons.clear()
+	if region_id == "stormcrown_mountains":
+		var storm_paths := {
+			"plaza": [
+				PackedVector2Array([Vector2(0.43, 0.30), Vector2(0.57, 0.30), Vector2(0.63, 0.52), Vector2(0.62, 0.73), Vector2(0.38, 0.73), Vector2(0.37, 0.52)]),
+				PackedVector2Array([Vector2(0.10, 0.52), Vector2(0.43, 0.52), Vector2(0.43, 0.64), Vector2(0.10, 0.64)]),
+				PackedVector2Array([Vector2(0.57, 0.50), Vector2(0.91, 0.49), Vector2(0.91, 0.62), Vector2(0.57, 0.64)]),
+				PackedVector2Array([Vector2(0.42, 0.14), Vector2(0.58, 0.14), Vector2(0.57, 0.35), Vector2(0.43, 0.35)]),
+				PackedVector2Array([Vector2(0.55, 0.28), Vector2(0.85, 0.22), Vector2(0.89, 0.34), Vector2(0.60, 0.43)]),
+				PackedVector2Array([Vector2(0.43, 0.66), Vector2(0.57, 0.66), Vector2(0.60, 0.78), Vector2(0.40, 0.78)])
+			],
+			"market": [PackedVector2Array([Vector2(0.43, 0.15), Vector2(0.58, 0.15), Vector2(0.62, 0.35), Vector2(0.74, 0.51), Vector2(0.88, 0.70), Vector2(0.97, 0.78), Vector2(0.04, 0.78), Vector2(0.12, 0.70), Vector2(0.28, 0.52), Vector2(0.39, 0.34)])],
+			"forge": [PackedVector2Array([Vector2(0.42, 0.19), Vector2(0.58, 0.19), Vector2(0.63, 0.38), Vector2(0.73, 0.49), Vector2(0.74, 0.77), Vector2(0.26, 0.77), Vector2(0.27, 0.49), Vector2(0.37, 0.38)])],
+			"weapons": [PackedVector2Array([Vector2(0.42, 0.16), Vector2(0.58, 0.16), Vector2(0.62, 0.36), Vector2(0.70, 0.50), Vector2(0.71, 0.77), Vector2(0.29, 0.77), Vector2(0.30, 0.50), Vector2(0.38, 0.36)])],
+			"armor": [PackedVector2Array([Vector2(0.41, 0.16), Vector2(0.59, 0.16), Vector2(0.63, 0.37), Vector2(0.71, 0.51), Vector2(0.72, 0.77), Vector2(0.28, 0.77), Vector2(0.29, 0.51), Vector2(0.37, 0.37)])],
+			"relics": [PackedVector2Array([Vector2(0.41, 0.15), Vector2(0.59, 0.15), Vector2(0.64, 0.35), Vector2(0.73, 0.50), Vector2(0.73, 0.77), Vector2(0.27, 0.77), Vector2(0.27, 0.50), Vector2(0.36, 0.35)])],
+			"apothecary": [PackedVector2Array([Vector2(0.42, 0.16), Vector2(0.58, 0.16), Vector2(0.62, 0.37), Vector2(0.70, 0.50), Vector2(0.71, 0.77), Vector2(0.29, 0.77), Vector2(0.30, 0.50), Vector2(0.38, 0.37)])],
+			"inn": [PackedVector2Array([Vector2(0.37, 0.18), Vector2(0.63, 0.18), Vector2(0.70, 0.36), Vector2(0.76, 0.51), Vector2(0.78, 0.76), Vector2(0.22, 0.76), Vector2(0.24, 0.51), Vector2(0.30, 0.36)])],
+			"barracks": [PackedVector2Array([Vector2(0.39, 0.18), Vector2(0.61, 0.18), Vector2(0.65, 0.36), Vector2(0.80, 0.49), Vector2(0.82, 0.76), Vector2(0.18, 0.76), Vector2(0.20, 0.49), Vector2(0.35, 0.36)])],
+			"keep": [
+				PackedVector2Array([Vector2(0.40, 0.20), Vector2(0.60, 0.20), Vector2(0.63, 0.43), Vector2(0.63, 0.76), Vector2(0.37, 0.76), Vector2(0.37, 0.43)]),
+				PackedVector2Array([Vector2(0.12, 0.34), Vector2(0.41, 0.34), Vector2(0.41, 0.46), Vector2(0.12, 0.46)]),
+				PackedVector2Array([Vector2(0.57, 0.44), Vector2(0.74, 0.44), Vector2(0.76, 0.56), Vector2(0.57, 0.56)])
+			],
+			"beacon": [PackedVector2Array([Vector2(0.42, 0.16), Vector2(0.58, 0.16), Vector2(0.63, 0.35), Vector2(0.75, 0.50), Vector2(0.77, 0.77), Vector2(0.23, 0.77), Vector2(0.25, 0.50), Vector2(0.37, 0.35)])]
+		}
+		walkable_polygons = storm_paths.get(current_screen, storm_paths["plaza"])
+		if city_room_3d:
+			city_room_3d.configure_walkmesh(walkable_polygons)
+		return
 	match current_screen:
 		"plaza":
 			walkable_polygons = [
@@ -1816,12 +2038,12 @@ func _refresh_hotspots() -> void:
 	hotspot_targets.clear()
 	for transition in _transitions_for_screen(current_screen):
 		_add_hotspot(str(transition.to), str(transition.label), transition.point)
-	for poi in CITY_POIS.get(current_screen, []):
+	for poi in _pois_for_screen(current_screen):
 		_add_hotspot("poi:" + str(poi.get("id", "")), "✦ INSPECT", poi.get("point", Vector2(0.5, 0.6)))
 
 
 func _show_city_poi_dialogue(poi_id: String) -> void:
-	for poi in CITY_POIS.get(current_screen, []):
+	for poi in _pois_for_screen(current_screen):
 		if str(poi.get("id", "")) != poi_id:
 			continue
 		if dialogue_layer and is_instance_valid(dialogue_layer):
@@ -1856,13 +2078,13 @@ func _show_city_poi_dialogue(poi_id: String) -> void:
 
 
 func _show_city_screen(screen_id: String, place_hero: bool = true, spawn_override: Vector2 = Vector2(-1.0, -1.0)) -> void:
-	if not CITY_SCREENS.has(screen_id):
+	if not _city_screens().has(screen_id):
 		screen_id = "plaza"
 	current_screen = screen_id
 	_configure_city_walkable_areas()
 	if city_room_3d:
 		city_room_3d.configure_depth_props(region_id, current_screen)
-	var screen: Dictionary = CITY_SCREENS[screen_id]
+	var screen: Dictionary = _city_screens()[screen_id]
 	if region_id == "ashen_wastes":
 		var art_path := str(screen.get("art", ASHENREACH_CITY_ART))
 		if ResourceLoader.exists(art_path):
@@ -1871,7 +2093,9 @@ func _show_city_screen(screen_id: String, place_hero: bool = true, spawn_overrid
 			background.texture = _city_background()
 	else:
 		background.texture = _city_background()
-	city_title.text = str(screen.get("title", city_names[0].to_upper())) if region_id == "ashen_wastes" else city_names[0].to_upper()
+	if city_room_3d:
+		city_room_3d.configure_depth_layers(background.texture, current_screen)
+	city_title.text = str(screen.get("title", city_names[0].to_upper()))
 	city_subtitle.text = "%s  •  %s" % [str(screen.get("district", "CITY DISTRICT")), str(region_data.get("name", region_id.replace("_", " ").capitalize())).to_upper()]
 	scene_back_button.visible = current_screen != "plaza"
 	if place_hero:
@@ -1901,14 +2125,14 @@ func _check_city_transition() -> void:
 			if not _enter_territory():
 				player_sprite.position = _nearest_walkable_position(player_sprite.position + Vector2(0.0, 48.0))
 			return
-		if CITY_SCREENS.has(destination):
-			var spawn: Vector2 = transition.get("spawn", CITY_SCREENS[destination].get("spawn", Vector2(0.5, 0.7)))
+		if _city_screens().has(destination):
+			var spawn: Vector2 = transition.get("spawn", _city_screens()[destination].get("spawn", Vector2(0.5, 0.7)))
 			_transition_city_screen(destination, spawn)
 		return
 
 
 func _transition_city_screen(destination: String, spawn: Vector2) -> void:
-	if changing_city_screen or not CITY_SCREENS.has(destination):
+	if changing_city_screen or not _city_screens().has(destination):
 		return
 	changing_city_screen = true
 	_cancel_walk()
@@ -1941,9 +2165,34 @@ func _walk_to_local_exit() -> void:
 
 
 func _select_location(id: String) -> void:
-	if CITY_SCREENS.has(id) and id != current_screen:
+	if _city_screens().has(id) and id != current_screen:
 		return
 	selected_location = id
+	if region_id == "stormcrown_mountains":
+		var storm_descriptions := {
+			"plaza": ["STORMCROWN CROSSROADS", "A switchback road meets the high ward beneath the Crown's storm beacon. The inn, keep, garrison, and commerce terrace branch from this square."],
+			"market": ["THUNDERMARKET", "A sheltered stone terrace links the city's smiths and arcane traders. Each marked door opens into its own shop."],
+			"forge": ["THE THUNDER FORGE", "Thorvald's foundry harnesses lightning through copper conductors and a mountain-fed hammer. The forge door returns to Thundermarket."],
+			"weapons": ["SKYHAMMER WEAPONS", "Hammers, polearms, axes, and storm-tempered blades hang along the walls. The street door leads back to Thundermarket."],
+			"armor": ["THE IRON MANTLE", "Plate, mail, winter cloaks, and fitted shields are displayed around the central aisle. The shop opens back onto Thundermarket."],
+			"relics": ["THE RUNEKEEPER'S VAULT", "Runes and mountain relics are kept under copper rings that ground the storm. A side passage reaches the Blue Vial."],
+			"apothecary": ["THE BLUE VIAL", "A mountain apothecary stocks healing draughts, warming tonics, and storm-resistant salves. Return through the street door to Thundermarket."],
+			"inn": ["THE CLOUDREST INN & BAR", "Travelers warm themselves beside the great hearth while the storm crosses the high windows. Rest here before the climb."],
+			"barracks": ["THE STORMGUARD HALL", "The keep's mountain guard train and gather around a relief map of the ridgelines. The upper arch enters the Crown Citadel."],
+			"keep": ["STORMCROWN KEEP", "The old keep stands above the cloud line. Its upper stair reaches the peak beacon, where Thorvald maintains the signal that once linked the mountain passes."],
+			"beacon": ["THE PEAK BEACON", "The summit's bronze beacon pulls lightning into a grounded crown of runes. A clear descent returns to the keep."]
+		}
+		var storm_data: Array = storm_descriptions.get(id, storm_descriptions["plaza"])
+		info_title.text = str(storm_data[0])
+		info_body.text = "%s\n\nTap or click the floor to walk." % str(storm_data[1])
+		match id:
+			"forge", "weapons", "armor", "relics", "apothecary": action_button.text = "BROWSE STORMCROWN GOODS"
+			"inn": action_button.text = "REST • 25 GOLD"
+			"market": action_button.text = "VIEW SHOP DOORS"
+			"barracks", "keep", "beacon": action_button.text = "VIEW CITY ROUTES"
+			_: action_button.text = "VIEW OPEN ROUTES"
+		scene_back_button.visible = current_screen != "plaza"
+		return
 	var descriptions := {
 		"plaza": ["CITADEL CROSSROADS", "Four roads split from the central ward. Walk west for the cinder market, east for the living quarter, north to the keep, or south to the outer gate."],
 		"market": ["CINDER MARKET", "Stalls and the foundry line the ash-dark street. The alley loops back toward the lower ward; walk to each doorway to enter."],
@@ -1967,13 +2216,13 @@ func _select_location(id: String) -> void:
 
 func _activate_location() -> void:
 	match selected_location:
-		"market", "forge":
+		"market", "forge", "weapons", "armor", "relics", "apothecary":
 			_show_armory()
 		"inn":
 			_rest_at_inn()
 		"gate":
 			_travel_to_screen("territory")
-		"living":
+		"living", "plaza", "barracks", "keep", "beacon":
 			_open_selection_map()
 		_:
 			var open := CAMPAIGN_SERVICE.open_routes()

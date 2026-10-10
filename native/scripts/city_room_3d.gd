@@ -14,6 +14,7 @@ var depth_props
 var _view_size := Vector2(1280.0, 720.0)
 var _walkable_polygons: Array[PackedVector2Array] = []
 var _actors: Dictionary = {}
+var _depth_cards: Array[Sprite3D] = []
 
 
 func _ready() -> void:
@@ -49,6 +50,66 @@ func configure_depth_props(region_id: String, screen_id: String) -> void:
 func configure_walkmesh(polygons: Array[PackedVector2Array]) -> void:
 	_walkable_polygons = polygons.duplicate()
 	_rebuild_walkmesh()
+
+
+func configure_depth_layers(texture: Texture2D, room_id: String) -> void:
+	for card in _depth_cards:
+		if is_instance_valid(card):
+			card.queue_free()
+	_depth_cards.clear()
+	if not texture:
+		return
+	var image_size := Vector2(texture.get_size())
+	if image_size.x <= 0.0 or image_size.y <= 0.0:
+		return
+	var cover_scale := maxf(_view_size.x / image_size.x, _view_size.y / image_size.y)
+	var visible_source_size := _view_size / cover_scale
+	var source_origin := (image_size - visible_source_size) * 0.5
+	# The authored full-frame painting stays behind the walkspace. These cropped
+	# cards reuse the room's high-resolution stone, timber, rails, and fixtures
+	# as true 3D Sprite3D planes. They sit at progressively nearer view depth:
+	# side architecture and the upper lintel can overlap actors naturally while
+	# the authored walk polygons keep the path in the clear central lane.
+	var regions: Array[Dictionary] = [
+		{"rect": Rect2(0.0, 0.29, 0.19, 0.67), "depth": 0.65},
+		{"rect": Rect2(0.81, 0.29, 0.19, 0.67), "depth": 0.65},
+		{"rect": Rect2(0.27, 0.0, 0.46, 0.18), "depth": 0.28}
+	]
+	if room_id == "plaza" or room_id == "market":
+		regions.append({"rect": Rect2(0.0, 0.52, 0.25, 0.48), "depth": 1.15})
+		regions.append({"rect": Rect2(0.75, 0.52, 0.25, 0.48), "depth": 1.15})
+	else:
+		regions.append({"rect": Rect2(0.0, 0.62, 0.27, 0.38), "depth": 1.0})
+		regions.append({"rect": Rect2(0.73, 0.62, 0.27, 0.38), "depth": 1.0})
+	for region in regions:
+		_add_depth_card(texture, image_size, source_origin, visible_source_size, cover_scale, region)
+
+
+func _add_depth_card(texture: Texture2D, image_size: Vector2, source_origin: Vector2, visible_source_size: Vector2, cover_scale: float, region: Dictionary) -> void:
+	var uv: Rect2 = region.get("rect", Rect2())
+	var crop := Rect2(source_origin + uv.position * visible_source_size, uv.size * visible_source_size)
+	var sprite := Sprite3D.new()
+	sprite.name = "DepthCard_%02d" % _depth_cards.size()
+	sprite.texture = texture
+	sprite.region_enabled = true
+	sprite.region_rect = crop
+	sprite.centered = true
+	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	sprite.no_depth_test = false
+	add_child(sprite)
+	_depth_cards.append(sprite)
+	var screen_center := (uv.position + uv.size * 0.5) * _view_size
+	var viewport_point := screen_center * Vector2(get_viewport().size) / _view_size
+	var ray_origin := camera.project_ray_origin(viewport_point)
+	var ray_direction := camera.project_ray_normal(viewport_point)
+	var distance := 8.5 - float(region.get("depth", 0.5))
+	sprite.position = ray_origin + ray_direction * distance
+	sprite.pixel_size = 2.0 * distance * tan(deg_to_rad(camera.fov * 0.5)) * cover_scale / _view_size.y
+
+
+func depth_layer_count() -> int:
+	return _depth_cards.size()
 
 
 func sync_actor(proxy: Object, texture: Texture2D, frame: int, screen_point: Vector2) -> void:

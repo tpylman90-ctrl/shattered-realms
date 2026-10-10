@@ -89,6 +89,49 @@ func _layout_for(screen_id: String, region_id: String) -> Array[Dictionary]:
 				{"kind": "table", "point": Vector2(0.67, 0.69), "scale": 0.92},
 				{"kind": "barrel", "point": Vector2(0.86, 0.75), "scale": 0.86}
 			]
+		"weapons":
+			return [
+				{"kind": "tool_rack", "point": Vector2(0.18, 0.52), "scale": 1.0},
+				{"kind": "anvil", "point": Vector2(0.78, 0.68), "scale": 0.9},
+				{"kind": "banner", "point": Vector2(0.84, 0.44), "scale": 0.72},
+				{"kind": "lantern", "point": Vector2(0.12, 0.72), "scale": 0.75}
+			]
+		"armor":
+			return [
+				{"kind": "tool_rack", "point": Vector2(0.18, 0.50), "scale": 0.94},
+				{"kind": "shield_rack", "point": Vector2(0.82, 0.53), "scale": 0.94},
+				{"kind": "bench", "point": Vector2(0.70, 0.74), "scale": 0.85},
+				{"kind": "banner", "point": Vector2(0.14, 0.40), "scale": 0.72}
+			]
+		"relics":
+			return [
+				{"kind": "pillar", "point": Vector2(0.15, 0.58), "scale": 0.82},
+				{"kind": "pillar", "point": Vector2(0.85, 0.58), "scale": 0.82},
+				{"kind": "lantern", "point": Vector2(0.24, 0.40), "scale": 0.72},
+				{"kind": "sign", "point": Vector2(0.78, 0.43), "scale": 0.8}
+			]
+		"apothecary":
+			return [
+				{"kind": "table", "point": Vector2(0.22, 0.68), "scale": 0.88},
+				{"kind": "barrel", "point": Vector2(0.80, 0.69), "scale": 0.82},
+				{"kind": "shelf", "point": Vector2(0.16, 0.48), "scale": 0.9},
+				{"kind": "lantern", "point": Vector2(0.85, 0.40), "scale": 0.72}
+			]
+		"barracks":
+			return [
+				{"kind": "table", "point": Vector2(0.51, 0.56), "scale": 0.78},
+				{"kind": "tool_rack", "point": Vector2(0.15, 0.52), "scale": 0.82},
+				{"kind": "shield_rack", "point": Vector2(0.85, 0.52), "scale": 0.86},
+				{"kind": "banner", "point": Vector2(0.78, 0.37), "scale": 0.76}
+			]
+		"beacon":
+			return [
+				{"kind": "pillar", "point": Vector2(0.16, 0.57), "scale": 1.0},
+				{"kind": "pillar", "point": Vector2(0.84, 0.57), "scale": 1.0},
+				{"kind": "banner", "point": Vector2(0.30, 0.43), "scale": 0.78},
+				{"kind": "banner", "point": Vector2(0.70, 0.43), "scale": 0.78},
+				{"kind": "snowbank", "point": Vector2(0.08, 0.82), "scale": 0.9}
+			]
 		"keep":
 			return [
 				{"kind": "pillar", "point": Vector2(0.19, 0.55), "scale": 1.0},
@@ -134,6 +177,8 @@ func _spawn_prop(prop: Dictionary) -> void:
 		"forge": _forge(root)
 		"anvil": _anvil(root)
 		"tool_rack": _tool_rack(root)
+		"shield_rack": _shield_rack(root)
+		"shelf": _shelf(root)
 		"hearth": _hearth(root)
 		"table": _table(root)
 		"pillar": _pillar(root)
@@ -269,6 +314,23 @@ func _tool_rack(root: Node3D) -> void:
 	_box(root, Vector3(0, 1.20, 0), Vector3(0.90, 0.10, 0.10), "timber_light")
 	for x in [-0.30, 0.0, 0.30]:
 		_box(root, Vector3(x, 0.79, 0.06), Vector3(0.06, 0.70, 0.06), "metal")
+
+
+func _shield_rack(root: Node3D) -> void:
+	_box(root, Vector3(0, 0.65, -0.10), Vector3(1.0, 1.25, 0.12), "timber")
+	for x in [-0.30, 0.0, 0.30]:
+		_box(root, Vector3(x, 0.95, 0.02), Vector3(0.24, 0.38, 0.08), "metal_dark")
+		_box(root, Vector3(x, 0.96, 0.07), Vector3(0.06, 0.28, 0.03), "metal")
+		_box(root, Vector3(x, 1.28, 0.02), Vector3(0.27, 0.06, 0.08), "metal")
+
+
+func _shelf(root: Node3D) -> void:
+	for x in [-0.40, 0.40]:
+		_box(root, Vector3(x, 0.85, 0), Vector3(0.08, 1.65, 0.12), "timber")
+	for y in [0.35, 0.86, 1.37]:
+		_box(root, Vector3(0, y, 0), Vector3(0.92, 0.10, 0.30), "timber_light")
+		for x in [-0.28, 0.0, 0.28]:
+			_cylinder(root, Vector3(x, y + 0.18, 0.02), Vector3(0.12, 0.32, 0.12), "glow", 8)
 
 
 func _hearth(root: Node3D) -> void:

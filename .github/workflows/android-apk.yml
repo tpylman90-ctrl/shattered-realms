@@ -170,6 +170,19 @@ jobs:
               exit "$SCENE_EXIT"
             fi
           done
+          echo "Smoke testing Stormcrown's multi-room city profile"
+          set +e
+          timeout 90 "$GODOT_BIN" --headless --path "$GITHUB_WORKSPACE/native" --script "res://tests/stormcrown_city_smoke.gd" 2>&1 | tee "$RUNNER_TEMP/stormcrown-city-smoke.log"
+          STORMCROWN_EXIT=${PIPESTATUS[0]}
+          set -e
+          if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script|Assertion failed" "$RUNNER_TEMP/stormcrown-city-smoke.log"; then
+            echo "Stormcrown city smoke test reported a script error."
+            exit 1
+          fi
+          if [ "$STORMCROWN_EXIT" -ne 0 ]; then
+            echo "Stormcrown city smoke test exited with code $STORMCROWN_EXIT."
+            exit "$STORMCROWN_EXIT"
+          fi
 
       - name: Set monotonic Android version
         shell: bash
