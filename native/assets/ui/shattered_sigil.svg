@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
- <defs><radialGradient id="glow"><stop stop-color="#cf9a55" stop-opacity=".35"/><stop offset="1" stop-color="#cf9a55" stop-opacity="0"/></radialGradient></defs>
- <circle cx="128" cy="128" r="122" fill="url(#glow)"/>
- <circle cx="128" cy="128" r="92" fill="none" stroke="#b88750" stroke-width="3" stroke-dasharray="77 9 12 9"/>
- <path d="M55 78L87 96L101 52L127 88L155 49L169 97L201 76L187 157L128 179L69 157Z" fill="#26333a" stroke="#e0ae65" stroke-width="6" stroke-linejoin="round"/>
- <path d="M70 157L124 132L140 179M104 56L127 88L152 53M87 97L128 112L169 97" fill="none" stroke="#e0ae65" stroke-width="4"/>
- <path d="M105 119L123 123L116 149L142 130L155 132" fill="none" stroke="#f6ce8a" stroke-width="5" stroke-linecap="round"/>
- <path d="M64 191L128 213L192 191" fill="none" stroke="#b88750" stroke-width="3"/>
-</svg>

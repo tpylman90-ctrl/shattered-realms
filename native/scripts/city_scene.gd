@@ -1787,7 +1787,9 @@ func _configure_city_walkable_areas() -> void:
 			],
 			"beacon": [PackedVector2Array([Vector2(0.42, 0.16), Vector2(0.58, 0.16), Vector2(0.63, 0.35), Vector2(0.75, 0.50), Vector2(0.77, 0.77), Vector2(0.23, 0.77), Vector2(0.25, 0.50), Vector2(0.37, 0.35)])]
 		}
-		walkable_polygons = storm_paths.get(current_screen, storm_paths["plaza"])
+		var room_paths: Array = storm_paths.get(current_screen, storm_paths["plaza"])
+		for path in room_paths:
+			walkable_polygons.append(path)
 		if city_room_3d:
 			city_room_3d.configure_walkmesh(walkable_polygons)
 		return
@@ -2311,3 +2313,4 @@ func _set_margins(container: MarginContainer, left: int, top: int, right: int, b
 	container.add_theme_constant_override("margin_top", top)
 	container.add_theme_constant_override("margin_right", right)
 	container.add_theme_constant_override("margin_bottom", bottom)
+72f4aac24be09079513e74eb7bb8a5f49e5fb7ad
