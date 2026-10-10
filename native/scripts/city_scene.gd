@@ -146,6 +146,10 @@ var walk_clock := 0.0
 var walking := false
 var player_direction := 0
 var pending_location := ""
+var interaction_prompt: Label
+var city_fade_overlay: ColorRect
+var changing_city_screen := false
+var city_embers: CPUParticles2D
 
 
 func _ready() -> void:
@@ -161,6 +165,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if not player_sprite:
+		return
+	if changing_city_screen:
 		return
 	transition_cooldown = maxf(0.0, transition_cooldown - delta)
 	var movement := Vector2.ZERO
@@ -198,15 +204,20 @@ func _process(delta: float) -> void:
 		_check_city_transition()
 	_update_minimap_markers()
 	_update_joystick_knob()
+	_update_city_perspective()
+	_update_interaction_prompt()
 	if not walking:
 		return
 	walk_clock += delta
 	var walk_phase := 1 if int(walk_clock / 0.14) % 2 == 0 else 3
 	player_sprite.frame = player_direction * 4 + walk_phase
+	_update_city_perspective()
 	_update_minimap_markers()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if changing_city_screen:
+		return
 	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_ESCAPE or event.keycode == KEY_BACKSPACE):
 		_on_b_pressed()
 		get_viewport().set_input_as_handled()
@@ -265,6 +276,7 @@ func _build_city_view() -> void:
 	background.texture = _city_background()
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
+	_build_city_embers()
 
 	var top_bar := PanelContainer.new()
 	top_bar.anchor_right = 1.0
@@ -356,6 +368,21 @@ func _build_city_view() -> void:
 	add_child(gear_dialog)
 	_build_selection_layer()
 	_build_touch_controls()
+	city_fade_overlay = ColorRect.new()
+	city_fade_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	city_fade_overlay.color = Color(0.008, 0.012, 0.016, 1.0)
+	city_fade_overlay.modulate.a = 0.0
+	city_fade_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	city_fade_overlay.z_index = 45
+	add_child(city_fade_overlay)
+	interaction_prompt = _label("?", 24, Color("f2d38e"))
+	interaction_prompt.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.95))
+	interaction_prompt.add_theme_constant_override("shadow_offset_x", 2)
+	interaction_prompt.add_theme_constant_override("shadow_offset_y", 2)
+	interaction_prompt.z_index = 6
+	interaction_prompt.visible = false
+	interaction_prompt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(interaction_prompt)
 
 	if city_names.size() > 1:
 		_build_city_selector(top_row)
@@ -995,6 +1022,87 @@ func _build_city_hero() -> void:
 	player_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	player_sprite.z_index = 0
 	character_stage.add_child(player_sprite)
+	_update_city_perspective()
+
+
+func _build_city_embers() -> void:
+	city_embers = CPUParticles2D.new()
+	city_embers.name = "VolcanicEmbers"
+	city_embers.z_index = 1
+	city_embers.amount = 20
+	city_embers.lifetime = 4.5
+	city_embers.preprocess = 2.0
+	city_embers.emitting = true
+	city_embers.direction = Vector2(-0.18, -1.0)
+	city_embers.spread = 24.0
+	city_embers.gravity = Vector2(-5.0, -28.0)
+	city_embers.initial_velocity_min = 8.0
+	city_embers.initial_velocity_max = 26.0
+	city_embers.scale_amount_min = 0.7
+	city_embers.scale_amount_max = 1.4
+	city_embers.color = Color(1.0, 0.39, 0.10, 0.64)
+	city_embers.texture = _build_ember_texture()
+	city_embers.z_as_relative = false
+	city_embers.position = Vector2(size.x * 0.5, size.y * 0.82)
+	city_embers.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	city_embers.emission_rect_extents = Vector2(size.x * 0.58, size.y * 0.42)
+	city_embers.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(city_embers)
+
+
+func _build_ember_texture() -> Texture2D:
+	var image := Image.create(5, 5, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0.0, 0.0, 0.0, 0.0))
+	for y in range(5):
+		for x in range(5):
+			var distance := Vector2(x - 2, y - 2).length()
+			if distance <= 1.8:
+				image.set_pixel(x, y, Color(1.0, 0.67, 0.26, clampf(1.0 - distance * 0.25, 0.0, 1.0)))
+	return ImageTexture.create_from_image(image)
+
+
+func _update_city_perspective() -> void:
+	if not player_sprite:
+		return
+	# Screen Y is the depth axis of these fixed-camera, painted rooms. This is
+	# the sprite projection for the room's walk plane: farther points shrink.
+	var player_depth := clampf(player_sprite.position.y / maxf(1.0, size.y), 0.12, 0.94)
+	player_sprite.scale = Vector2.ONE * (2.35 * (0.50 + player_depth * 0.72))
+	for resident in npc_sprites:
+		if not is_instance_valid(resident):
+			continue
+		var resident_depth := clampf(resident.position.y / maxf(1.0, size.y), 0.12, 0.94)
+		resident.scale = Vector2.ONE * (2.0 * (0.50 + resident_depth * 0.72))
+	if city_embers:
+		city_embers.position = Vector2(size.x * 0.5, size.y * 0.82)
+		city_embers.emission_rect_extents = Vector2(size.x * 0.58, size.y * 0.42)
+		city_embers.emitting = region_id == "ashen_wastes"
+
+
+func _update_interaction_prompt() -> void:
+	if not interaction_prompt or not is_instance_valid(interaction_prompt) or not player_sprite:
+		return
+	if changing_city_screen or (selection_layer and selection_layer.visible) or (dialogue_layer and is_instance_valid(dialogue_layer)):
+		interaction_prompt.visible = false
+		return
+	var nearest: Dictionary = {}
+	var nearest_distance := INF
+	for target in hotspot_targets:
+		var point: Vector2 = target.get("point", Vector2.ZERO)
+		var target_position := Vector2(size.x * point.x, size.y * point.y)
+		var distance := player_sprite.position.distance_to(target_position)
+		if distance < nearest_distance:
+			nearest = target
+			nearest_distance = distance
+	if nearest.is_empty() or nearest_distance > 94.0:
+		interaction_prompt.visible = false
+		return
+	var target_id := str(nearest.get("id", ""))
+	interaction_prompt.text = "!" if not target_id.begins_with("poi:") else "?"
+	if target_id.begins_with("npc:"):
+		interaction_prompt.text = "?"
+	interaction_prompt.position = player_sprite.position + Vector2(-8.0, -48.0 * player_sprite.scale.y)
+	interaction_prompt.visible = true
 
 
 func _build_pixel_sprite_sheet() -> Texture2D:
@@ -1727,6 +1835,7 @@ func _show_city_screen(screen_id: String, place_hero: bool = true, spawn_overrid
 		player_sprite.frame = 0
 	_refresh_hotspots()
 	_refresh_residents()
+	_update_city_perspective()
 	queue_redraw()
 
 
@@ -1749,9 +1858,28 @@ func _check_city_transition() -> void:
 			return
 		if CITY_SCREENS.has(destination):
 			var spawn: Vector2 = transition.get("spawn", CITY_SCREENS[destination].get("spawn", Vector2(0.5, 0.7)))
-			_show_city_screen(destination, true, spawn)
-			_select_location(destination)
+			_transition_city_screen(destination, spawn)
 		return
+
+
+func _transition_city_screen(destination: String, spawn: Vector2) -> void:
+	if changing_city_screen or not CITY_SCREENS.has(destination):
+		return
+	changing_city_screen = true
+	_cancel_walk()
+	joystick_vector = Vector2.ZERO
+	city_fade_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	var fade_out := create_tween()
+	fade_out.tween_property(city_fade_overlay, "modulate:a", 1.0, 0.16)
+	await fade_out.finished
+	_show_city_screen(destination, true, spawn)
+	_select_location(destination)
+	var fade_in := create_tween()
+	fade_in.tween_property(city_fade_overlay, "modulate:a", 0.0, 0.22)
+	await fade_in.finished
+	city_fade_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	changing_city_screen = false
+	transition_cooldown = 0.35
 
 
 func _walk_to_local_exit() -> void:
