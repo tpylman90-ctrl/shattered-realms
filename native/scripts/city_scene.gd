@@ -3,6 +3,7 @@ extends Control
 const WORLD_DATA_PATH := "res://data/world_catalog.json"
 const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach/ashenreach_crossroads.webp"
 const CAMPAIGN_SERVICE = preload("res://scripts/campaign_director.gd")
+const CITY_ROOM_3D = preload("res://scripts/city_room_3d.gd")
 const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
 const HERO_PROGRESSION_SERVICE = preload("res://scripts/hero_progression.gd")
 const SPRITE_FRAME_SIZE := Vector2i(24, 32)
@@ -150,6 +151,9 @@ var interaction_prompt: Label
 var city_fade_overlay: ColorRect
 var changing_city_screen := false
 var city_embers: CPUParticles2D
+var city_3d_container: SubViewportContainer
+var city_3d_subviewport: SubViewport
+var city_room_3d
 
 
 func _ready() -> void:
@@ -276,6 +280,7 @@ func _build_city_view() -> void:
 	background.texture = _city_background()
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
+	_build_city_walkspace()
 	_build_city_embers()
 
 	var top_bar := PanelContainer.new()
@@ -1020,6 +1025,7 @@ func _build_city_hero() -> void:
 	player_sprite.frame = 0
 	player_sprite.scale = Vector2(2.35, 2.35)
 	player_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	player_sprite.visible = false
 	player_sprite.z_index = 0
 	character_stage.add_child(player_sprite)
 	_update_city_perspective()
@@ -1050,6 +1056,27 @@ func _build_city_embers() -> void:
 	add_child(city_embers)
 
 
+func _build_city_walkspace() -> void:
+	city_3d_container = SubViewportContainer.new()
+	city_3d_container.name = "City3DLayer"
+	city_3d_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	city_3d_container.stretch = true
+	city_3d_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	city_3d_container.z_index = 0
+	city_3d_subviewport = SubViewport.new()
+	city_3d_subviewport.name = "City3DViewport"
+	city_3d_subviewport.size = Vector2i(maxi(1, roundi(size.x)), maxi(1, roundi(size.y)))
+	city_3d_subviewport.transparent_bg = true
+	city_3d_subviewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	city_3d_subviewport.render_target_clear_mode = SubViewport.CLEAR_MODE_ALWAYS
+	city_3d_container.add_child(city_3d_subviewport)
+	add_child(city_3d_container)
+	city_room_3d = CITY_ROOM_3D.new()
+	city_room_3d.name = "CityRoom3D"
+	city_3d_subviewport.add_child(city_room_3d)
+	city_room_3d.set_view_size(size)
+
+
 func _build_ember_texture() -> Texture2D:
 	var image := Image.create(5, 5, false, Image.FORMAT_RGBA8)
 	image.fill(Color(0.0, 0.0, 0.0, 0.0))
@@ -1077,6 +1104,11 @@ func _update_city_perspective() -> void:
 		city_embers.position = Vector2(size.x * 0.5, size.y * 0.82)
 		city_embers.emission_rect_extents = Vector2(size.x * 0.58, size.y * 0.42)
 		city_embers.emitting = region_id == "ashen_wastes"
+	if city_room_3d:
+		city_room_3d.sync_actor(player_sprite, player_sprite.texture, player_sprite.frame, player_sprite.position)
+		for resident in npc_sprites:
+			if is_instance_valid(resident):
+				city_room_3d.sync_actor(resident, resident.texture, resident.frame, resident.position)
 
 
 func _update_interaction_prompt() -> void:
@@ -1333,6 +1365,7 @@ func _refresh_residents() -> void:
 		sprite.frame = 0
 		sprite.scale = Vector2(2.0, 2.0)
 		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		sprite.visible = false
 		sprite.position = Vector2(size.x * point.x, size.y * point.y)
 		character_stage.add_child(sprite)
 		npc_sprites.append(sprite)
@@ -1525,6 +1558,8 @@ func _cancel_walk() -> void:
 func _on_city_resized() -> void:
 	_update_joystick_knob()
 	_update_minimap_markers()
+	if city_room_3d:
+		city_room_3d.set_view_size(size)
 	if not player_sprite:
 		return
 	player_sprite.position = _nearest_walkable_position(player_sprite.position)
@@ -1620,6 +1655,9 @@ func _configure_city_walkable_areas() -> void:
 				PackedVector2Array([Vector2(0.25, 0.40), Vector2(0.75, 0.40), Vector2(0.86, 0.88), Vector2(0.14, 0.88)])
 			]
 
+	if city_room_3d:
+		city_room_3d.configure_walkmesh(walkable_polygons)
+
 
 func _is_walkable_position(position: Vector2) -> bool:
 	if position.x < 28.0 or position.x > size.x - 28.0 or position.y < 104.0 or position.y > size.y - 160.0:
@@ -1701,6 +1739,10 @@ func _nearest_walkable_nav_cell(seed: Vector2i) -> Vector2i:
 
 
 func _find_walk_path(start: Vector2, destination: Vector2) -> Array[Vector2]:
+	if city_room_3d:
+		var perspective_path: Array[Vector2] = city_room_3d.find_path(start, destination)
+		if not perspective_path.is_empty():
+			return perspective_path
 	var path: Array[Vector2] = []
 	if start.distance_to(destination) < 4.0:
 		path.append(destination)
