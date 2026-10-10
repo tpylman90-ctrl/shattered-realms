@@ -1,7 +1,7 @@
 extends Control
 
 const WORLD_DATA_PATH := "res://data/world_catalog.json"
-const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach/plaza_legacy.webp"
+const ASHENREACH_CITY_ART := "res://assets/cities/ashenreach/ashenreach_crossroads.webp"
 const CAMPAIGN_SERVICE = preload("res://scripts/campaign_director.gd")
 const HERO_EQUIPMENT_SERVICE = preload("res://scripts/hero_equipment.gd")
 const HERO_PROGRESSION_SERVICE = preload("res://scripts/hero_progression.gd")
@@ -9,36 +9,59 @@ const SPRITE_FRAME_SIZE := Vector2i(24, 32)
 const CITY_SAVE_PATH := "user://city_checkpoint.cfg"
 const CITY_NAV_CELL_SIZE := 24.0
 const CITY_SCREENS := {
-	"plaza": {"art": "res://assets/cities/ashenreach/plaza_legacy.webp", "title": "ASHENREACH PLAZA", "spawn": Vector2(0.50, 0.70)},
-	"market": {"art": "res://assets/cities/ashenreach/market_legacy.webp", "title": "MARKET LANE", "spawn": Vector2(0.50, 0.66)},
-	"forge": {"art": "res://assets/cities/ashenreach/forge_interior.webp", "title": "THE FORGE", "spawn": Vector2(0.72, 0.58)},
-	"inn": {"art": "res://assets/cities/ashenreach/inn_interior.webp", "title": "THE WAYFARER'S INN", "spawn": Vector2(0.75, 0.62)},
-	"keep": {"art": "res://assets/cities/ashenreach/keep_interior.webp", "title": "ASHENREACH KEEP", "spawn": Vector2(0.24, 0.50)},
-	"gate": {"art": "res://assets/cities/ashenreach/gate.jpg", "title": "THE CITY GATE", "spawn": Vector2(0.50, 0.68)}
+	"plaza": {"art": "res://assets/cities/ashenreach/ashenreach_crossroads.webp", "title": "CITADEL CROSSROADS", "district": "THE CENTRAL WARD", "spawn": Vector2(0.50, 0.70)},
+	"market": {"art": "res://assets/cities/ashenreach/cinder_market.webp", "title": "CINDER MARKET", "district": "THE COMMERCE WARD", "spawn": Vector2(0.50, 0.72)},
+	"living": {"art": "res://assets/cities/ashenreach/living_quarter.webp", "title": "LIVING QUARTER", "district": "THE LOWER WARD", "spawn": Vector2(0.50, 0.74)},
+	"forge": {"art": "res://assets/cities/ashenreach/cinder_foundry.webp", "title": "THE CINDER FOUNDRY", "district": "THE COMMERCE WARD", "spawn": Vector2(0.52, 0.72)},
+	"inn": {"art": "res://assets/cities/ashenreach/wayfarer_inn.webp", "title": "THE WAYFARER'S INN", "district": "THE LOWER WARD", "spawn": Vector2(0.50, 0.76)},
+	"keep": {"art": "res://assets/cities/ashenreach/keep_hall.webp", "title": "ASHENREACH KEEP", "district": "THE CITADEL", "spawn": Vector2(0.52, 0.76)},
+	"gate": {"art": "res://assets/cities/ashenreach/outer_gate.webp", "title": "THE OUTER GATE", "district": "THE FRONTIER WARD", "spawn": Vector2(0.50, 0.76)}
 }
 const CITY_TRANSITIONS := {
 	"plaza": [
-		{"to": "market", "label": "MARKET LANE", "point": Vector2(0.41, 0.25), "radius": Vector2(0.035, 0.04), "spawn": Vector2(0.42, 0.40)},
-		{"to": "keep", "label": "THE KEEP", "point": Vector2(0.56, 0.40), "radius": Vector2(0.035, 0.04), "spawn": Vector2(0.24, 0.50)},
-		{"to": "gate", "label": "CITY GATE", "point": Vector2(0.50, 0.765), "radius": Vector2(0.07, 0.02), "spawn": Vector2(0.50, 0.69)}
+		{"to": "market", "label": "CINDER MARKET", "point": Vector2(0.25, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.37, 0.78)},
+		{"to": "living", "label": "LIVING QUARTER", "point": Vector2(0.75, 0.53), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.65, 0.78)},
+		{"to": "keep", "label": "THE KEEP", "point": Vector2(0.50, 0.23), "radius": Vector2(0.08, 0.05), "spawn": Vector2(0.50, 0.72)},
+		{"to": "gate", "label": "OUTER GATE", "point": Vector2(0.50, 0.80), "radius": Vector2(0.08, 0.035), "spawn": Vector2(0.50, 0.38)}
 	],
 	"market": [
-		{"to": "plaza", "label": "PLAZA", "point": Vector2(0.41, 0.20), "radius": Vector2(0.04, 0.04), "spawn": Vector2(0.43, 0.49)},
-		{"to": "forge", "label": "THE FORGE", "point": Vector2(0.43, 0.42), "radius": Vector2(0.035, 0.045), "spawn": Vector2(0.72, 0.58)},
-		{"to": "inn", "label": "THE INN", "point": Vector2(0.80, 0.49), "radius": Vector2(0.05, 0.04), "spawn": Vector2(0.75, 0.62)}
+		{"to": "plaza", "label": "CENTRAL WARD", "point": Vector2(0.50, 0.17), "radius": Vector2(0.07, 0.05), "spawn": Vector2(0.50, 0.66)},
+		{"to": "forge", "label": "CINDER FOUNDRY", "point": Vector2(0.24, 0.48), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.78, 0.60)},
+		{"to": "living", "label": "LOWER WARD ALLEY", "point": Vector2(0.25, 0.68), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.38, 0.77)}
+	],
+	"living": [
+		{"to": "plaza", "label": "CENTRAL WARD", "point": Vector2(0.50, 0.17), "radius": Vector2(0.07, 0.05), "spawn": Vector2(0.50, 0.66)},
+		{"to": "market", "label": "CINDER MARKET", "point": Vector2(0.16, 0.68), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.38, 0.77)},
+		{"to": "inn", "label": "WAYFARER'S INN", "point": Vector2(0.76, 0.51), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.82, 0.66)}
 	],
 	"forge": [
-		{"to": "market", "label": "MARKET LANE", "point": Vector2(0.88, 0.48), "radius": Vector2(0.05, 0.05), "spawn": Vector2(0.49, 0.52)}
+		{"to": "market", "label": "CINDER MARKET", "point": Vector2(0.12, 0.34), "radius": Vector2(0.06, 0.06), "spawn": Vector2(0.72, 0.55)}
 	],
 	"inn": [
-		{"to": "market", "label": "MARKET LANE", "point": Vector2(0.88, 0.49), "radius": Vector2(0.05, 0.05), "spawn": Vector2(0.75, 0.53)}
+		{"to": "living", "label": "LIVING QUARTER", "point": Vector2(0.14, 0.28), "radius": Vector2(0.06, 0.06), "spawn": Vector2(0.38, 0.77)}
 	],
 	"keep": [
-		{"to": "plaza", "label": "PLAZA", "point": Vector2(0.14, 0.26), "radius": Vector2(0.04, 0.055), "spawn": Vector2(0.56, 0.50)}
+		{"to": "plaza", "label": "CENTRAL WARD", "point": Vector2(0.12, 0.25), "radius": Vector2(0.06, 0.07), "spawn": Vector2(0.50, 0.42)}
 	],
 	"gate": [
-		{"to": "plaza", "label": "CITY STREETS", "point": Vector2(0.50, 0.75), "radius": Vector2(0.08, 0.035), "spawn": Vector2(0.50, 0.68)},
-		{"to": "territory", "label": "FRONTIER ROAD", "point": Vector2(0.50, 0.44), "radius": Vector2(0.07, 0.045), "spawn": Vector2.ZERO}
+		{"to": "plaza", "label": "CITADEL CROSSROADS", "point": Vector2(0.50, 0.19), "radius": Vector2(0.08, 0.05), "spawn": Vector2(0.50, 0.64)},
+		{"to": "territory", "label": "FRONTIER ROAD", "point": Vector2(0.50, 0.79), "radius": Vector2(0.08, 0.035), "spawn": Vector2.ZERO}
+	]
+}
+const CITY_POIS := {
+	"plaza": [
+		{"id": "fallen_standard", "label": "INSPECT FALLEN STANDARD", "kind": "lore", "point": Vector2(0.68, 0.61), "text": "A scorched banner is pinned beneath a block of black stone. Its colors have almost vanished under ash."}
+	],
+	"market": [
+		{"id": "sealed_storehouse", "label": "SEALED STOREHOUSE", "kind": "chest_anchor", "point": Vector2(0.70, 0.58), "text": "The delivery hatch is buried under cinders. A box-shaped lump presses against the warped timber."},
+		{"id": "market_notice", "label": "READ IRON NOTICE", "kind": "lore", "point": Vector2(0.42, 0.61), "text": "The notice lists ration prices, closed streets, and a warning about the unstable lower tunnels."},
+		{"id": "apothecary_stall", "label": "ASH APOTHECARY", "kind": "shop_anchor", "point": Vector2(0.58, 0.65), "text": "Bottles rattle behind the chained shutters. Their labels have all been blackened by smoke."},
+		{"id": "ration_stall", "label": "CINDER RATIONS", "kind": "shop_anchor", "point": Vector2(0.82, 0.69), "text": "A ration stall sits beneath a patched awning. Its owner has gone to help reinforce the lower gate."}
+	],
+	"living": [
+		{"id": "vacant_house", "label": "CHECK VACANT HOUSE", "kind": "chest_anchor", "point": Vector2(0.32, 0.63), "text": "Cold ash coats the empty hearth. A loose floorboard clicks underfoot."},
+		{"id": "old_cistern", "label": "INSPECT OLD CISTERN", "kind": "interaction", "point": Vector2(0.65, 0.67), "text": "A chain descends into the cistern. Something metallic taps far below whenever the ground shakes."},
+		{"id": "blacksmith_family_home", "label": "KNOCK ON THE IRONWORKER'S HOME", "kind": "house_anchor", "point": Vector2(0.25, 0.76), "text": "A dim light still burns upstairs. The ironworker's family has not answered the door."}
 	]
 }
 
@@ -414,15 +437,22 @@ func _show_selection_map() -> void:
 	_clear_selection_content()
 	selection_status.text = "Nearby doors and streets from %s. Choose one to walk there." % str(CITY_SCREENS.get(current_screen, {}).get("title", current_screen)).capitalize()
 	var local_transitions := _transitions_for_screen(current_screen)
-	if local_transitions.is_empty():
-		selection_content.add_child(_label("There are no marked exits from this room.", 15, Color("d5ddda")))
-		return
+	selection_content.add_child(_label("DISTRICT ROUTES", 15, Color("e6bd78")))
 	for transition in local_transitions:
 		var destination := str(transition.get("to", ""))
 		var title := str(CITY_SCREENS.get(destination, {}).get("title", "THE FRONTIER" if destination == "territory" else destination.to_upper()))
 		var route_button := _button("WALK TO  •  %s" % title, _travel_to_screen.bind(destination))
 		route_button.custom_minimum_size.y = 48
 		selection_content.add_child(route_button)
+	var local_pois: Array = CITY_POIS.get(current_screen, [])
+	if not local_pois.is_empty():
+		selection_content.add_child(_label("STREET INTERACTIONS", 15, Color("e6bd78")))
+		for poi in local_pois:
+			var poi_button := _button("INSPECT  •  %s" % str(poi.get("label", "LOCAL POINT")), _travel_to_poi.bind(str(poi.get("id", ""))))
+			poi_button.custom_minimum_size.y = 48
+			selection_content.add_child(poi_button)
+	if local_transitions.is_empty() and local_pois.is_empty():
+		selection_content.add_child(_label("There are no marked exits or points in this room.", 15, Color("d5ddda")))
 
 
 func _travel_to_screen(screen_id: String) -> void:
@@ -431,6 +461,16 @@ func _travel_to_screen(screen_id: String) -> void:
 		return
 	_close_selection()
 	_walk_to_location(screen_id, Vector2(size.x * float(transition.point.x), size.y * float(transition.point.y)))
+
+
+func _travel_to_poi(poi_id: String) -> void:
+	for poi in CITY_POIS.get(current_screen, []):
+		if str(poi.get("id", "")) != poi_id:
+			continue
+		_close_selection()
+		var point: Vector2 = poi.get("point", Vector2(0.5, 0.6))
+		_walk_to_location("poi:" + poi_id, Vector2(size.x * point.x, size.y * point.y))
+		return
 
 
 func _transitions_for_screen(screen_id: String) -> Array:
@@ -578,8 +618,9 @@ func _create_minimap_pois() -> void:
 		if is_instance_valid(poi):
 			poi.queue_free()
 	mini_map_pois.clear()
-	for index in range(5):
+	for index in range(8):
 		var dot := _map_dot(Color("d0aa69"), Vector2(7.0, 7.0))
+		dot.set_meta("marker_color", Color("d0aa69"))
 		dot.z_index = 4
 		mini_map_pois.append(dot)
 		add_child(dot)
@@ -594,13 +635,25 @@ func _update_minimap_markers() -> void:
 	if player_sprite:
 		var offset := Vector2((player_sprite.position.x / maxf(1.0, size.x) - 0.5) * 30.0, (player_sprite.position.y / maxf(1.0, size.y) - 0.65) * 24.0)
 		mini_map_hero.position = map_center + offset - mini_map_hero.size * 0.5
-	var exits := _screen_routes(current_screen)
+	var markers: Array[Dictionary] = []
+	var hero_point := Vector2(0.5, 0.5)
+	if player_sprite:
+		hero_point = Vector2(player_sprite.position.x / maxf(1.0, size.x), player_sprite.position.y / maxf(1.0, size.y))
+	for transition in _transitions_for_screen(current_screen):
+		markers.append({"point": transition.get("point", Vector2(0.5, 0.5)), "color": Color("d0aa69")})
+	for poi in CITY_POIS.get(current_screen, []):
+		markers.append({"point": poi.get("point", Vector2(0.5, 0.5)), "color": Color("f08155")})
 	for index in range(mini_map_pois.size()):
 		var poi := mini_map_pois[index]
-		poi.visible = index < exits.size()
-		if index < exits.size():
-			var angle := -PI * 0.5 + TAU * float(index) / float(maxi(1, exits.size()))
-			poi.position = map_center + Vector2(cos(angle), sin(angle)) * 43.0 - poi.size * 0.5
+		poi.visible = index < markers.size()
+		if index < markers.size():
+			var field_point: Vector2 = markers[index].get("point", Vector2(0.5, 0.5))
+			var relative := Vector2((field_point.x - hero_point.x) * 116.0, (field_point.y - hero_point.y) * 92.0).limit_length(50.0)
+			poi.position = map_center + relative - poi.size * 0.5
+			var marker_color: Color = markers[index].get("color", Color("d0aa69"))
+			if poi.get_meta("marker_color", Color("d0aa69")) != marker_color:
+				poi.add_theme_stylebox_override("panel", _circle_style(marker_color, marker_color, 3))
+				poi.set_meta("marker_color", marker_color)
 
 
 func _update_joystick_knob() -> void:
@@ -786,9 +839,15 @@ func _refresh_residents() -> void:
 			]
 		"market":
 			residents = [
-				{"talk": "innkeeper", "point": Vector2(0.62, 0.54), "tint": Color("c99e7b")},
+				{"talk": "merchant", "point": Vector2(0.62, 0.54), "tint": Color("c99e7b")},
 				{"point": Vector2(0.34, 0.65), "tint": Color("94a6a0")},
 				{"point": Vector2(0.78, 0.62), "tint": Color("a19472")}
+			]
+		"living":
+			residents = [
+				{"talk": "innkeeper", "point": Vector2(0.70, 0.60), "tint": Color("c99e7b")},
+				{"point": Vector2(0.35, 0.69), "tint": Color("94a6a0")},
+				{"point": Vector2(0.55, 0.73), "tint": Color("a19472")}
 			]
 		"forge":
 			residents = [
@@ -838,6 +897,11 @@ func _show_city_dialogue(npc_id: String) -> void:
 			"name": "BROM • MASTER SMITH",
 			"portrait": "smith",
 			"text": "Bring me the gear you recover out there. I can tell you what it is worth and which pieces were made for fighting the Ashen Wastes."
+		},
+		"merchant": {
+			"name": "SERA • CINDER MARKET",
+			"portrait": "innkeeper",
+			"text": "The stalls are open when the ashfall lets up. If you need a blade, start at the foundry; if you need a bed, take the alley into the lower ward."
 		},
 		"steward": {
 			"name": "ELRIC • KEEP STEWARD",
@@ -909,9 +973,21 @@ func _on_hotspot_pressed(id: String, point: Vector2) -> void:
 
 
 func _walk_to_location(location_id: String, destination: Vector2) -> void:
-	if not location_id.begins_with("npc:") and _transition_for_destination(current_screen, location_id).is_empty():
-		return
-	pending_location = location_id if location_id.begins_with("npc:") else ""
+	if location_id.begins_with("npc:"):
+		pending_location = location_id
+	elif location_id.begins_with("poi:"):
+		var found_local_poi := false
+		for poi in CITY_POIS.get(current_screen, []):
+			if str(poi.get("id", "")) == location_id.trim_prefix("poi:"):
+				found_local_poi = true
+				break
+		if not found_local_poi:
+			return
+		pending_location = location_id
+	else:
+		if _transition_for_destination(current_screen, location_id).is_empty():
+			return
+		pending_location = ""
 	_walk_player_to(destination)
 
 
@@ -961,6 +1037,8 @@ func _finish_walk() -> void:
 	pending_location = ""
 	if destination.begins_with("npc:"):
 		_show_city_dialogue(destination.trim_prefix("npc:"))
+	elif destination.begins_with("poi:"):
+		_show_city_poi_dialogue(destination.trim_prefix("poi:"))
 
 
 func _cancel_walk() -> void:
@@ -995,42 +1073,63 @@ func _configure_city_walkable_areas() -> void:
 		"plaza":
 			walkable_polygons = [
 				PackedVector2Array([
-					Vector2(0.31, 0.40), Vector2(0.37, 0.35), Vector2(0.49, 0.34), Vector2(0.65, 0.38),
-					Vector2(0.80, 0.45), Vector2(0.88, 0.54), Vector2(0.96, 0.70), Vector2(0.99, 0.79),
-					Vector2(0.02, 0.79), Vector2(0.05, 0.70), Vector2(0.12, 0.62), Vector2(0.20, 0.55),
-					Vector2(0.29, 0.49), Vector2(0.34, 0.44)
+					Vector2(0.43, 0.10), Vector2(0.57, 0.10), Vector2(0.58, 0.39), Vector2(0.66, 0.47),
+					Vector2(0.62, 0.62), Vector2(0.58, 0.69), Vector2(0.57, 0.91), Vector2(0.43, 0.91),
+					Vector2(0.42, 0.68), Vector2(0.37, 0.62), Vector2(0.34, 0.49), Vector2(0.42, 0.40)
 				]),
 				PackedVector2Array([
-					Vector2(0.32, 0.13), Vector2(0.42, 0.13), Vector2(0.46, 0.25), Vector2(0.52, 0.36),
-					Vector2(0.44, 0.43), Vector2(0.34, 0.39), Vector2(0.29, 0.30)
+					Vector2(0.26, 0.38), Vector2(0.73, 0.38), Vector2(0.82, 0.48), Vector2(0.80, 0.63),
+					Vector2(0.70, 0.70), Vector2(0.30, 0.70), Vector2(0.20, 0.62), Vector2(0.18, 0.49)
+				]),
+				PackedVector2Array([
+					Vector2(0.01, 0.46), Vector2(0.34, 0.45), Vector2(0.39, 0.50), Vector2(0.36, 0.59),
+					Vector2(0.01, 0.63)
+				]),
+				PackedVector2Array([
+					Vector2(0.64, 0.45), Vector2(0.99, 0.43), Vector2(0.99, 0.62), Vector2(0.65, 0.59),
+					Vector2(0.61, 0.52)
 				])
 			]
 		"market":
 			walkable_polygons = [
 				PackedVector2Array([
-					Vector2(0.32, 0.12), Vector2(0.43, 0.12), Vector2(0.48, 0.27), Vector2(0.56, 0.36),
-					Vector2(0.72, 0.40), Vector2(0.84, 0.47), Vector2(0.92, 0.58), Vector2(0.99, 0.79),
-					Vector2(0.02, 0.79), Vector2(0.06, 0.71), Vector2(0.14, 0.62), Vector2(0.22, 0.54),
-					Vector2(0.29, 0.47), Vector2(0.34, 0.41), Vector2(0.30, 0.32)
+					Vector2(0.40, 0.12), Vector2(0.57, 0.12), Vector2(0.61, 0.32), Vector2(0.74, 0.45),
+					Vector2(0.82, 0.58), Vector2(0.94, 0.73), Vector2(0.98, 0.88), Vector2(0.05, 0.88),
+					Vector2(0.10, 0.76), Vector2(0.20, 0.63), Vector2(0.30, 0.53), Vector2(0.38, 0.40)
+				]),
+				PackedVector2Array([
+					Vector2(0.08, 0.37), Vector2(0.25, 0.35), Vector2(0.40, 0.42), Vector2(0.39, 0.54),
+					Vector2(0.22, 0.58), Vector2(0.08, 0.51)
+				])
+			]
+		"living":
+			walkable_polygons = [
+				PackedVector2Array([
+					Vector2(0.43, 0.12), Vector2(0.56, 0.12), Vector2(0.58, 0.39), Vector2(0.67, 0.52),
+					Vector2(0.78, 0.64), Vector2(0.90, 0.77), Vector2(0.98, 0.90), Vector2(0.12, 0.90),
+					Vector2(0.17, 0.77), Vector2(0.30, 0.68), Vector2(0.38, 0.58), Vector2(0.41, 0.40)
+				]),
+				PackedVector2Array([
+					Vector2(0.56, 0.48), Vector2(0.80, 0.48), Vector2(0.87, 0.58), Vector2(0.80, 0.69),
+					Vector2(0.62, 0.62)
+				]),
+				PackedVector2Array([
+					Vector2(0.12, 0.62), Vector2(0.38, 0.56), Vector2(0.43, 0.64), Vector2(0.30, 0.74),
+					Vector2(0.16, 0.76)
 				])
 			]
 		"forge":
 			walkable_polygons = [
 				PackedVector2Array([
-					Vector2(0.78, 0.36), Vector2(0.89, 0.36), Vector2(0.95, 0.42), Vector2(0.95, 0.54),
-					Vector2(0.86, 0.60), Vector2(0.75, 0.58), Vector2(0.68, 0.63), Vector2(0.71, 0.72),
-					Vector2(0.64, 0.78), Vector2(0.32, 0.78), Vector2(0.23, 0.71), Vector2(0.21, 0.60),
-					Vector2(0.29, 0.53), Vector2(0.39, 0.49), Vector2(0.49, 0.51), Vector2(0.57, 0.46),
-					Vector2(0.68, 0.45)
+					Vector2(0.04, 0.36), Vector2(0.12, 0.27), Vector2(0.87, 0.27), Vector2(0.97, 0.38),
+					Vector2(0.98, 0.78), Vector2(0.03, 0.78)
 				])
 			]
 		"inn":
 			walkable_polygons = [
 				PackedVector2Array([
-					Vector2(0.79, 0.35), Vector2(0.89, 0.35), Vector2(0.95, 0.42), Vector2(0.95, 0.53),
-					Vector2(0.86, 0.60), Vector2(0.78, 0.62), Vector2(0.75, 0.70), Vector2(0.66, 0.78),
-					Vector2(0.39, 0.78), Vector2(0.29, 0.72), Vector2(0.29, 0.62), Vector2(0.36, 0.54),
-					Vector2(0.47, 0.51), Vector2(0.61, 0.53), Vector2(0.72, 0.55)
+					Vector2(0.04, 0.36), Vector2(0.12, 0.27), Vector2(0.87, 0.27), Vector2(0.97, 0.38),
+					Vector2(0.98, 0.78), Vector2(0.03, 0.78)
 				])
 			]
 		"keep":
@@ -1045,9 +1144,9 @@ func _configure_city_walkable_areas() -> void:
 		"gate":
 			walkable_polygons = [
 				PackedVector2Array([
-					Vector2(0.34, 0.39), Vector2(0.66, 0.39), Vector2(0.75, 0.50), Vector2(0.85, 0.60),
-					Vector2(0.96, 0.74), Vector2(0.99, 0.79), Vector2(0.02, 0.79), Vector2(0.05, 0.73),
-					Vector2(0.17, 0.62), Vector2(0.25, 0.53), Vector2(0.31, 0.45)
+					Vector2(0.40, 0.16), Vector2(0.60, 0.16), Vector2(0.66, 0.35), Vector2(0.75, 0.50),
+					Vector2(0.96, 0.72), Vector2(0.99, 0.90), Vector2(0.02, 0.90), Vector2(0.04, 0.72),
+					Vector2(0.25, 0.50), Vector2(0.34, 0.35)
 				])
 			]
 		_:
@@ -1207,6 +1306,43 @@ func _refresh_hotspots() -> void:
 	hotspot_buttons.clear()
 	for transition in _transitions_for_screen(current_screen):
 		_add_hotspot(str(transition.to), str(transition.label), transition.point)
+	for poi in CITY_POIS.get(current_screen, []):
+		_add_hotspot("poi:" + str(poi.get("id", "")), "✦ INSPECT", poi.get("point", Vector2(0.5, 0.6)))
+
+
+func _show_city_poi_dialogue(poi_id: String) -> void:
+	for poi in CITY_POIS.get(current_screen, []):
+		if str(poi.get("id", "")) != poi_id:
+			continue
+		if dialogue_layer and is_instance_valid(dialogue_layer):
+			dialogue_layer.queue_free()
+		dialogue_layer = Control.new()
+		dialogue_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		dialogue_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+		dialogue_layer.z_index = 40
+		add_child(dialogue_layer)
+		var panel := PanelContainer.new()
+		panel.anchor_left = 0.12
+		panel.anchor_top = 0.70
+		panel.anchor_right = 0.88
+		panel.anchor_bottom = 0.96
+		panel.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.035, 0.04, 0.96), Color("d0aa69")))
+		dialogue_layer.add_child(panel)
+		var margin := MarginContainer.new()
+		_set_margins(margin, 18, 12, 18, 10)
+		panel.add_child(margin)
+		var copy := VBoxContainer.new()
+		copy.add_theme_constant_override("separation", 8)
+		margin.add_child(copy)
+		copy.add_child(_label(str(poi.get("label", "CITY DETAIL")), 16, Color("e6bd78")))
+		var words := _label(str(poi.get("text", "Nothing stirs here.")), 14, Color("f0e8d5"))
+		words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		copy.add_child(words)
+		var continue_button := _button("B  •  CLOSE", _close_city_dialogue)
+		copy.add_child(continue_button)
+		joystick_vector = Vector2.ZERO
+		_update_joystick_knob()
+		return
 
 
 func _show_city_screen(screen_id: String, place_hero: bool = true, spawn_override: Vector2 = Vector2(-1.0, -1.0)) -> void:
@@ -1224,7 +1360,7 @@ func _show_city_screen(screen_id: String, place_hero: bool = true, spawn_overrid
 	else:
 		background.texture = _city_background()
 	city_title.text = str(screen.get("title", city_names[0].to_upper())) if region_id == "ashen_wastes" else city_names[0].to_upper()
-	city_subtitle.text = str(region_data.get("name", region_id.replace("_", " ").capitalize())).to_upper()
+	city_subtitle.text = "%s  •  %s" % [str(screen.get("district", "CITY DISTRICT")), str(region_data.get("name", region_id.replace("_", " ").capitalize())).to_upper()]
 	scene_back_button.visible = current_screen != "plaza"
 	if place_hero:
 		var spawn: Vector2 = spawn_override if spawn_override.x >= 0.0 else screen.get("spawn", Vector2(0.5, 0.72))
@@ -1277,12 +1413,13 @@ func _select_location(id: String) -> void:
 		return
 	selected_location = id
 	var descriptions := {
-		"plaza": ["ASHENREACH PLAZA", "Follow the paved lane to the market, enter the keep at its door, or walk south to the city gate."],
-		"market": ["MARKET LANE", "The upper lane returns to the plaza. The forge and inn doors open from this street."],
-		"keep": ["THE KEEP", "Walk back through the great door to return to the plaza."],
-		"forge": ["THE FORGE", "The workshop opens onto Market Lane. Walk to the arched door to leave."],
-		"inn": ["THE INN", "The Wayfarer's Inn opens onto Market Lane. Walk to the doorway to leave."],
-		"gate": ["THE CITY GATE", "Walk back down the road to the city or follow the arch through to the frontier."]
+		"plaza": ["CITADEL CROSSROADS", "Four roads split from the central ward. Walk west for the cinder market, east for the living quarter, north to the keep, or south to the outer gate."],
+		"market": ["CINDER MARKET", "Stalls and the foundry line the ash-dark street. The alley loops back toward the lower ward; walk to each doorway to enter."],
+		"living": ["LIVING QUARTER", "Crowded houses and sealed doors press against the lower ward's road. The inn and side alleys open only from this district."],
+		"keep": ["ASHENREACH KEEP", "The keep's audience hall is cut into the volcanic fortress. Return through the western arch to the central ward."],
+		"forge": ["THE CINDER FOUNDRY", "The foundry opens directly onto Cinder Market. Return through its arch to reach the district street."],
+		"inn": ["THE WAYFARER'S INN", "This smoke-dark refuge opens onto the living quarter. Walk back through the street door to leave."],
+		"gate": ["THE OUTER GATE", "Walk through the inner arch to the citadel or head down the outer road to the Ashen Wastes."]
 	}
 	var data: Array = descriptions.get(id, descriptions["plaza"])
 	info_title.text = str(data[0])
@@ -1291,6 +1428,7 @@ func _select_location(id: String) -> void:
 		"market", "forge": action_button.text = "BROWSE REGIONAL GEAR"
 		"inn": action_button.text = "REST • 25 GOLD"
 		"gate": action_button.text = "FOLLOW FRONTIER ROAD"
+		"living": action_button.text = "VIEW DISTRICT ROUTES"
 		_: action_button.text = "VIEW OPEN ROUTES"
 	scene_back_button.visible = current_screen != "plaza"
 
@@ -1303,6 +1441,8 @@ func _activate_location() -> void:
 			_rest_at_inn()
 		"gate":
 			_travel_to_screen("territory")
+		"living":
+			_open_selection_map()
 		_:
 			var open := CAMPAIGN_SERVICE.open_routes()
 			var names: PackedStringArray = []
